@@ -3,6 +3,8 @@ package storage
 import (
 	"bytes"
 	"context"
+	"fmt"
+	"github.com/filecoin-project/venus-sealer/constants"
 
 	"github.com/ipfs/go-cid"
 	cbg "github.com/whyrusleeping/cbor-gen"
@@ -17,15 +19,14 @@ import (
 
 	market2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
 
-	"github.com/filecoin-project/lotus/api"
 	"github.com/filecoin-project/lotus/api/apibstore"
-	"github.com/filecoin-project/lotus/build"
 	"github.com/filecoin-project/lotus/chain/actors"
 	"github.com/filecoin-project/lotus/chain/actors/builtin/market"
 	"github.com/filecoin-project/lotus/chain/actors/builtin/miner"
 	"github.com/filecoin-project/lotus/chain/store"
 	"github.com/filecoin-project/lotus/chain/types"
-	sealing "github.com/filecoin-project/lotus/extern/storage-sealing"
+	"github.com/filecoin-project/venus-sealer/api"
+	sealing "github.com/filecoin-project/venus-sealer/extern/storage-sealing"
 )
 
 var _ sealing.SealingAPI = new(SealingAPIAdapter)
@@ -103,7 +104,7 @@ func (s SealingAPIAdapter) StateMinerSectorAllocated(ctx context.Context, maddr 
 }
 
 func (s SealingAPIAdapter) StateWaitMsg(ctx context.Context, mcid cid.Cid) (sealing.MsgLookup, error) {
-	wmsg, err := s.delegate.StateWaitMsg(ctx, mcid, build.MessageConfidence)
+	wmsg, err := s.delegate.StateWaitMsg(ctx, mcid, constants.MessageConfidence)
 	if err != nil {
 		return sealing.MsgLookup{}, err
 	}
@@ -154,6 +155,7 @@ func (s SealingAPIAdapter) StateComputeDataCommitment(ctx context.Context, maddr
 		return cid.Undef, xerrors.Errorf("computing params for ComputeDataCommitment: %w", err)
 	}
 
+	fmt.Println(maddr)
 	ccmt := &types.Message{
 		To:     market.Address,
 		From:   maddr,

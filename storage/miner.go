@@ -3,8 +3,6 @@ package storage
 import (
 	"context"
 	"errors"
-	"time"
-
 	"github.com/filecoin-project/go-state-types/network"
 
 	"github.com/filecoin-project/go-state-types/dline"
@@ -14,28 +12,23 @@ import (
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
 	logging "github.com/ipfs/go-log/v2"
-	"github.com/libp2p/go-libp2p-core/host"
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/crypto"
-	sectorstorage "github.com/filecoin-project/lotus/extern/sector-storage"
 	"github.com/filecoin-project/lotus/extern/sector-storage/ffiwrapper"
-	"github.com/filecoin-project/specs-storage/storage"
+	sectorstorage "github.com/filecoin-project/venus-sealer/extern/sector-storage"
 
-	"github.com/filecoin-project/lotus/api"
-	"github.com/filecoin-project/lotus/build"
-	"github.com/filecoin-project/lotus/chain/actors/builtin"
 	"github.com/filecoin-project/lotus/chain/actors/builtin/miner"
 	"github.com/filecoin-project/lotus/chain/actors/policy"
-	"github.com/filecoin-project/lotus/chain/events"
-	"github.com/filecoin-project/lotus/chain/gen"
 	"github.com/filecoin-project/lotus/chain/types"
-	sealing "github.com/filecoin-project/lotus/extern/storage-sealing"
-	"github.com/filecoin-project/lotus/journal"
-	"github.com/filecoin-project/lotus/node/config"
-	"github.com/filecoin-project/lotus/node/modules/dtypes"
+	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus-sealer/config"
+	"github.com/filecoin-project/venus-sealer/dtypes"
+	"github.com/filecoin-project/venus-sealer/events"
+	sealing "github.com/filecoin-project/venus-sealer/extern/storage-sealing"
+	"github.com/filecoin-project/venus-sealer/journal"
 )
 
 var log = logging.Logger("storageminer")
@@ -43,7 +36,6 @@ var log = logging.Logger("storageminer")
 type Miner struct {
 	api     storageMinerApi
 	feeCfg  config.MinerFeeConfig
-	h       host.Host
 	sealer  sectorstorage.SectorManager
 	ds      datastore.Batching
 	sc      sealing.SectorIDCounter
@@ -52,6 +44,7 @@ type Miner struct {
 
 	maddr address.Address
 
+	networkParams *config.NetParamsConfig
 	getSealConfig dtypes.GetSealingConfigFunc
 	sealing       *sealing.Sealing
 
@@ -115,16 +108,16 @@ type storageMinerApi interface {
 	WalletHas(context.Context, address.Address) (bool, error)
 }
 
-func NewMiner(api storageMinerApi, maddr address.Address, h host.Host, ds datastore.Batching, sealer sectorstorage.SectorManager, sc sealing.SectorIDCounter, verif ffiwrapper.Verifier, gsd dtypes.GetSealingConfigFunc, feeCfg config.MinerFeeConfig, journal journal.Journal, as *AddressSelector) (*Miner, error) {
+func NewMiner(api storageMinerApi, maddr address.Address, ds datastore.Batching, sealer sectorstorage.SectorManager, sc sealing.SectorIDCounter, verif ffiwrapper.Verifier, gsd dtypes.GetSealingConfigFunc, feeCfg config.MinerFeeConfig, networkParams *config.NetParamsConfig, journal journal.Journal, as *AddressSelector) (*Miner, error) {
 	m := &Miner{
-		api:     api,
-		feeCfg:  feeCfg,
-		h:       h,
-		sealer:  sealer,
-		ds:      ds,
-		sc:      sc,
-		verif:   verif,
-		addrSel: as,
+		api:           api,
+		feeCfg:        feeCfg,
+		networkParams: networkParams,
+		sealer:        sealer,
+		ds:            ds,
+		sc:            sc,
+		verif:         verif,
+		addrSel:       as,
 
 		maddr:          maddr,
 		getSealConfig:  gsd,
@@ -151,7 +144,7 @@ func (m *Miner) Run(ctx context.Context) error {
 		MaxTerminateGasFee: abi.TokenAmount(m.feeCfg.MaxTerminateGasFee),
 	}
 
-	evts := events.NewEvents(ctx, m.api)
+	evts := events.NewEvents(ctx, m.api, m.networkParams.ForkLengthThreshold)
 	adaptedAPI := NewSealingAPIAdapter(m.api)
 	// TODO: Maybe we update this policy after actor upgrades?
 	pcp := sealing.NewBasicPreCommitPolicy(adaptedAPI, policy.GetMaxSectorExpirationExtension()-(md.WPoStProvingPeriod*2), md.PeriodStart%md.WPoStProvingPeriod)
@@ -160,7 +153,7 @@ func (m *Miner) Run(ctx context.Context) error {
 		return m.addrSel.AddressFor(ctx, m.api, mi, use, goodFunds, minFunds)
 	}
 
-	m.sealing = sealing.New(adaptedAPI, fc, NewEventsAdapter(evts), m.maddr, m.ds, m.sealer, m.sc, m.verif, &pcp, sealing.GetSealingConfigFunc(m.getSealConfig), m.handleSealingNotifications, as)
+	m.sealing = sealing.New(adaptedAPI, fc, m.networkParams, NewEventsAdapter(evts), m.maddr, m.ds, m.sealer, m.sc, m.verif, &pcp, sealing.GetSealingConfigFunc(m.getSealConfig), m.handleSealingNotifications, as)
 
 	go m.sealing.Run(ctx) //nolint:errcheck // logged intside the function
 
@@ -205,60 +198,4 @@ func (m *Miner) runPreflightChecks(ctx context.Context) error {
 
 	log.Infof("starting up miner %s, worker addr %s", m.maddr, workerKey)
 	return nil
-}
-
-type StorageWpp struct {
-	prover   storage.Prover
-	verifier ffiwrapper.Verifier
-	miner    abi.ActorID
-	winnRpt  abi.RegisteredPoStProof
-}
-
-func NewWinningPoStProver(api api.FullNode, prover storage.Prover, verifier ffiwrapper.Verifier, miner dtypes.MinerID) (*StorageWpp, error) {
-	ma, err := address.NewIDAddress(uint64(miner))
-	if err != nil {
-		return nil, err
-	}
-
-	mi, err := api.StateMinerInfo(context.TODO(), ma, types.EmptyTSK)
-	if err != nil {
-		return nil, xerrors.Errorf("getting sector size: %w", err)
-	}
-
-	if build.InsecurePoStValidation {
-		log.Warn("*****************************************************************************")
-		log.Warn(" Generating fake PoSt proof! You should only see this while running tests! ")
-		log.Warn("*****************************************************************************")
-	}
-
-	return &StorageWpp{prover, verifier, abi.ActorID(miner), mi.WindowPoStProofType}, nil
-}
-
-var _ gen.WinningPoStProver = (*StorageWpp)(nil)
-
-func (wpp *StorageWpp) GenerateCandidates(ctx context.Context, randomness abi.PoStRandomness, eligibleSectorCount uint64) ([]uint64, error) {
-	start := build.Clock.Now()
-
-	cds, err := wpp.verifier.GenerateWinningPoStSectorChallenge(ctx, wpp.winnRpt, wpp.miner, randomness, eligibleSectorCount)
-	if err != nil {
-		return nil, xerrors.Errorf("failed to generate candidates: %w", err)
-	}
-	log.Infof("Generate candidates took %s (C: %+v)", time.Since(start), cds)
-	return cds, nil
-}
-
-func (wpp *StorageWpp) ComputeProof(ctx context.Context, ssi []builtin.SectorInfo, rand abi.PoStRandomness) ([]builtin.PoStProof, error) {
-	if build.InsecurePoStValidation {
-		return []builtin.PoStProof{{ProofBytes: []byte("valid proof")}}, nil
-	}
-
-	log.Infof("Computing WinningPoSt ;%+v; %v", ssi, rand)
-
-	start := build.Clock.Now()
-	proof, err := wpp.prover.GenerateWinningPoSt(ctx, wpp.miner, ssi, rand)
-	if err != nil {
-		return nil, err
-	}
-	log.Infof("GenerateWinningPoSt took %s", time.Since(start))
-	return proof, nil
 }

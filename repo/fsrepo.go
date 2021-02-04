@@ -21,13 +21,13 @@ import (
 	"github.com/multiformats/go-multiaddr"
 	"golang.org/x/xerrors"
 
-	"github.com/filecoin-project/lotus/extern/sector-storage/fsutil"
-	"github.com/filecoin-project/lotus/extern/sector-storage/stores"
 	lblockstore "github.com/filecoin-project/lotus/lib/blockstore"
 	badgerbs "github.com/filecoin-project/lotus/lib/blockstore/badger"
+	"github.com/filecoin-project/venus-sealer/extern/sector-storage/fsutil"
+	"github.com/filecoin-project/venus-sealer/extern/sector-storage/stores"
 
 	"github.com/filecoin-project/lotus/chain/types"
-	"github.com/filecoin-project/lotus/node/config"
+	"github.com/filecoin-project/venus-sealer/config"
 )
 
 const (
@@ -43,8 +43,8 @@ const (
 type RepoType int
 
 const (
-	_                 = iota // Default is invalid
-	FullNode RepoType = iota
+	_ = iota // Default is invalid
+	FullNode
 	StorageMiner
 	Worker
 	Wallet
@@ -52,10 +52,8 @@ const (
 
 func defConfForType(t RepoType) interface{} {
 	switch t {
-	case FullNode:
-		return config.DefaultFullNode()
 	case StorageMiner:
-		return config.DefaultStorageMiner()
+		return config.DefaultMainnetStorageMiner()
 	case Worker:
 		return &struct{}{}
 	case Wallet:
@@ -124,7 +122,7 @@ func (fsr *FsRepo) Init(t RepoType) error {
 		return err
 	}
 
-	if err := fsr.initConfig(t); err != nil {
+	if err := fsr.initConfig(t, defConfForType(t)); err != nil {
 		return xerrors.Errorf("init config: %w", err)
 	}
 
@@ -132,7 +130,30 @@ func (fsr *FsRepo) Init(t RepoType) error {
 
 }
 
-func (fsr *FsRepo) initConfig(t RepoType) error {
+func (fsr *FsRepo) InitWithConfig(t RepoType, cfg interface{}) error {
+	exist, err := fsr.Exists()
+	if err != nil {
+		return err
+	}
+	if exist {
+		return nil
+	}
+
+	log.Infof("Initializing repo at '%s'", fsr.path)
+	err = os.MkdirAll(fsr.path, 0755) //nolint: gosec
+	if err != nil && !os.IsExist(err) {
+		return err
+	}
+
+	if err := fsr.initConfig(t, cfg); err != nil {
+		return xerrors.Errorf("init config: %w", err)
+	}
+
+	return fsr.initKeystore()
+
+}
+
+func (fsr *FsRepo) initConfig(t RepoType, cfg interface{}) error {
 	_, err := os.Stat(fsr.configPath)
 	if err == nil {
 		// exists
@@ -146,7 +167,7 @@ func (fsr *FsRepo) initConfig(t RepoType) error {
 		return err
 	}
 
-	comm, err := config.ConfigComment(defConfForType(t))
+	comm, err := config.ConfigComment(cfg)
 	if err != nil {
 		return xerrors.Errorf("comment: %w", err)
 	}

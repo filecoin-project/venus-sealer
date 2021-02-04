@@ -21,14 +21,13 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 
-	"github.com/filecoin-project/lotus/api"
 	"github.com/filecoin-project/lotus/chain/types"
-	lcli "github.com/filecoin-project/lotus/cli"
-	"github.com/filecoin-project/lotus/extern/sector-storage/fsutil"
-	"github.com/filecoin-project/lotus/extern/sector-storage/stores"
-	"github.com/filecoin-project/lotus/extern/sector-storage/storiface"
-	sealing "github.com/filecoin-project/lotus/extern/storage-sealing"
 	"github.com/filecoin-project/lotus/lib/tablewriter"
+	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus-sealer/extern/sector-storage/fsutil"
+	"github.com/filecoin-project/venus-sealer/extern/sector-storage/stores"
+	"github.com/filecoin-project/venus-sealer/extern/sector-storage/storiface"
+	sealing "github.com/filecoin-project/venus-sealer/extern/storage-sealing"
 )
 
 const metaFile = "sectorstore.json"
@@ -90,12 +89,12 @@ over time
 		},
 	},
 	Action: func(cctx *cli.Context) error {
-		nodeApi, closer, err := lcli.GetStorageMinerAPI(cctx)
+		storageAPI, closer, err := api.GetStorageMinerAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
-		ctx := lcli.ReqContext(cctx)
+		ctx := api.ReqContext(cctx)
 
 		if !cctx.Args().Present() {
 			return xerrors.Errorf("must specify storage path to attach")
@@ -142,7 +141,7 @@ over time
 			}
 		}
 
-		return nodeApi.StorageAddLocal(ctx, p)
+		return storageAPI.StorageAddLocal(ctx, p)
 	},
 }
 
@@ -158,19 +157,19 @@ var storageListCmd = &cli.Command{
 	Action: func(cctx *cli.Context) error {
 		color.NoColor = !cctx.Bool("color")
 
-		nodeApi, closer, err := lcli.GetStorageMinerAPI(cctx)
+		storageAPI, closer, err := api.GetStorageMinerAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
-		ctx := lcli.ReqContext(cctx)
+		ctx := api.ReqContext(cctx)
 
-		st, err := nodeApi.StorageList(ctx)
+		st, err := storageAPI.StorageList(ctx)
 		if err != nil {
 			return err
 		}
 
-		local, err := nodeApi.StorageLocal(ctx)
+		local, err := storageAPI.StorageLocal(ctx)
 		if err != nil {
 			return err
 		}
@@ -183,7 +182,7 @@ var storageListCmd = &cli.Command{
 
 		sorted := make([]fsInfo, 0, len(st))
 		for id, decls := range st {
-			st, err := nodeApi.StorageStat(ctx, id)
+			st, err := storageAPI.StorageStat(ctx, id)
 			if err != nil {
 				sorted = append(sorted, fsInfo{ID: id, sectors: decls})
 				continue
@@ -213,7 +212,7 @@ var storageListCmd = &cli.Command{
 			fmt.Printf("%s:\n", s.ID)
 
 			pingStart := time.Now()
-			st, err := nodeApi.StorageStat(ctx, s.ID)
+			st, err := storageAPI.StorageStat(ctx, s.ID)
 			if err != nil {
 				fmt.Printf("\t%s: %s:\n", color.RedString("Error"), err)
 				continue
@@ -246,7 +245,7 @@ var storageListCmd = &cli.Command{
 				color.BlueString("Caches: %d", cnt[2]),
 				types.SizeStr(types.NewInt(uint64(st.Reserved))))
 
-			si, err := nodeApi.StorageInfo(ctx, s.ID)
+			si, err := storageAPI.StorageInfo(ctx, s.ID)
 			if err != nil {
 				return err
 			}
@@ -295,12 +294,12 @@ var storageFindCmd = &cli.Command{
 	Usage:     "find sector in the storage system",
 	ArgsUsage: "[sector number]",
 	Action: func(cctx *cli.Context) error {
-		nodeApi, closer, err := lcli.GetStorageMinerAPI(cctx)
+		nodeApi, closer, err := api.GetStorageMinerAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
-		ctx := lcli.ReqContext(cctx)
+		ctx := api.ReqContext(cctx)
 
 		ma, err := nodeApi.ActorAddress(ctx)
 		if err != nil {
@@ -429,19 +428,19 @@ var storageListSectorsCmd = &cli.Command{
 	Action: func(cctx *cli.Context) error {
 		color.NoColor = !cctx.Bool("color")
 
-		nodeApi, closer, err := lcli.GetStorageMinerAPI(cctx)
+		nodeApi, closer, err := api.GetStorageMinerAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
 
-		napi, closer2, err := lcli.GetFullNodeAPI(cctx)
+		napi, closer2, err := api.GetFullNodeAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer closer2()
 
-		ctx := lcli.ReqContext(cctx)
+		ctx := api.ReqContext(cctx)
 
 		sectors, err := nodeApi.SectorsList(ctx)
 		if err != nil {
@@ -588,22 +587,22 @@ var storageCleanupCmd = &cli.Command{
 		},
 	},
 	Action: func(cctx *cli.Context) error {
-		api, closer, err := lcli.GetStorageMinerAPI(cctx)
+		storageAPI, closer, err := api.GetStorageMinerAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
 
-		napi, closer2, err := lcli.GetFullNodeAPI(cctx)
+		nodeAPI, closer2, err := api.GetFullNodeAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer closer2()
 
-		ctx := lcli.ReqContext(cctx)
+		ctx := api.ReqContext(cctx)
 
 		if cctx.Bool("removed") {
-			if err := cleanupRemovedSectorData(ctx, api, napi); err != nil {
+			if err := cleanupRemovedSectorData(ctx, storageAPI, nodeAPI); err != nil {
 				return err
 			}
 		}

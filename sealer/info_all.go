@@ -3,11 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	lcli "github.com/filecoin-project/lotus/cli"
+	"github.com/filecoin-project/venus-sealer/api"
 	"sort"
 
 	"github.com/urfave/cli/v2"
-
-	lcli "github.com/filecoin-project/lotus/cli"
 )
 
 var _test = false
@@ -16,25 +16,25 @@ var infoAllCmd = &cli.Command{
 	Name:  "all",
 	Usage: "dump all related miner info",
 	Action: func(cctx *cli.Context) error {
-		nodeApi, closer, err := lcli.GetStorageMinerAPI(cctx)
+		storageAPI, closer, err := api.GetStorageMinerAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
 
-		api, acloser, err := lcli.GetFullNodeAPI(cctx)
+		nodeAPI, acloser, err := api.GetFullNodeAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer acloser()
-		_ = api
+		_ = nodeAPI
 
-		ctx := lcli.ReqContext(cctx)
+		ctx := api.ReqContext(cctx)
 
 		// Top-level info
 
 		fmt.Println("#: Version")
-		if err := lcli.VersionCmd.Action(cctx); err != nil {
+		if err := VersionCmd.Action(cctx); err != nil {
 			return err
 		}
 
@@ -86,21 +86,6 @@ var infoAllCmd = &cli.Command{
 			return err
 		}
 
-		fmt.Println("\n#: Storage Ask")
-		if err := getAskCmd.Action(cctx); err != nil {
-			return err
-		}
-
-		fmt.Println("\n#: Storage Deals")
-		if err := dealsListCmd.Action(cctx); err != nil {
-			return err
-		}
-
-		fmt.Println("\n#: Retrieval Deals")
-		if err := retrievalDealsListCmd.Action(cctx); err != nil {
-			return err
-		}
-
 		fmt.Println("\n#: Sector List")
 		if err := sectorsListCmd.Action(cctx); err != nil {
 			return err
@@ -114,7 +99,7 @@ var infoAllCmd = &cli.Command{
 		// Very Very Verbose info
 		fmt.Println("\n#: Per Sector Info")
 
-		list, err := nodeApi.SectorsList(ctx)
+		list, err := storageAPI.SectorsList(ctx)
 		if err != nil {
 			return err
 		}

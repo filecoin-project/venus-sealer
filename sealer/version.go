@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/filecoin-project/venus-sealer/api"
 
 	"github.com/urfave/cli/v2"
 )
@@ -10,7 +11,7 @@ var VersionCmd = &cli.Command{
 	Name:  "version",
 	Usage: "Print version",
 	Action: func(cctx *cli.Context) error {
-		api, closer, err := GetAPI(cctx)
+		nodeAPI, closer, err := api.GetAPI(cctx)
 		if err != nil {
 			return err
 		}
@@ -19,7 +20,7 @@ var VersionCmd = &cli.Command{
 		ctx := api.ReqContext(cctx)
 		// TODO: print more useful things
 
-		v, err := api.Version(ctx)
+		v, err := nodeAPI.Version(ctx)
 		if err != nil {
 			return err
 		}

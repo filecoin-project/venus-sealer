@@ -16,11 +16,11 @@ import (
 
 	cborutil "github.com/filecoin-project/go-cbor-util"
 	"github.com/filecoin-project/go-state-types/abi"
-	sealing "github.com/filecoin-project/lotus/extern/storage-sealing"
+	sealing "github.com/filecoin-project/venus-sealer/extern/storage-sealing"
 
-	"github.com/filecoin-project/lotus/api"
-	"github.com/filecoin-project/lotus/node/modules/dtypes"
-	"github.com/filecoin-project/lotus/storage"
+	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus-sealer/dtypes"
+	"github.com/filecoin-project/venus-sealer/storage"
 )
 
 type SealSerialization uint8

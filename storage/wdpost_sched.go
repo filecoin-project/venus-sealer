@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"github.com/filecoin-project/venus-sealer/constants"
 	"time"
 
 	"golang.org/x/xerrors"
@@ -11,13 +12,12 @@ import (
 	"github.com/filecoin-project/go-state-types/dline"
 	"github.com/filecoin-project/specs-storage/storage"
 
-	"github.com/filecoin-project/lotus/api"
-	"github.com/filecoin-project/lotus/build"
 	"github.com/filecoin-project/lotus/chain/store"
 	"github.com/filecoin-project/lotus/chain/types"
-	sectorstorage "github.com/filecoin-project/lotus/extern/sector-storage"
-	"github.com/filecoin-project/lotus/journal"
-	"github.com/filecoin-project/lotus/node/config"
+	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus-sealer/config"
+	sectorstorage "github.com/filecoin-project/venus-sealer/extern/sector-storage"
+	"github.com/filecoin-project/venus-sealer/journal"
 
 	"go.opencensus.io/trace"
 )
@@ -25,6 +25,7 @@ import (
 type WindowPoStScheduler struct {
 	api              storageMinerApi
 	feeCfg           config.MinerFeeConfig
+	networkParams    *config.NetParamsConfig
 	addrSel          *AddressSelector
 	prover           storage.Prover
 	faultTracker     sectorstorage.FaultTracker
@@ -41,7 +42,7 @@ type WindowPoStScheduler struct {
 	// failLk sync.Mutex
 }
 
-func NewWindowedPoStScheduler(api storageMinerApi, fc config.MinerFeeConfig, as *AddressSelector, sb storage.Prover, ft sectorstorage.FaultTracker, j journal.Journal, actor address.Address) (*WindowPoStScheduler, error) {
+func NewWindowedPoStScheduler(api storageMinerApi, fc config.MinerFeeConfig, networkParams *config.NetParamsConfig, as *AddressSelector, sb storage.Prover, ft sectorstorage.FaultTracker, j journal.Journal, actor address.Address) (*WindowPoStScheduler, error) {
 	mi, err := api.StateMinerInfo(context.TODO(), actor, types.EmptyTSK)
 	if err != nil {
 		return nil, xerrors.Errorf("getting sector size: %w", err)
@@ -50,6 +51,7 @@ func NewWindowedPoStScheduler(api storageMinerApi, fc config.MinerFeeConfig, as 
 	return &WindowPoStScheduler{
 		api:              api,
 		feeCfg:           fc,
+		networkParams:    networkParams,
 		addrSel:          as,
 		prover:           sb,
 		faultTracker:     ft,
@@ -90,7 +92,7 @@ func (s *WindowPoStScheduler) Run(ctx context.Context) {
 			if err != nil {
 				log.Errorf("ChainNotify error: %+v", err)
 
-				build.Clock.Sleep(10 * time.Second)
+				constants.Clock.Sleep(10 * time.Second)
 				continue
 			}
 

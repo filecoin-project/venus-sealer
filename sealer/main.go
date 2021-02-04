@@ -3,13 +3,13 @@ package main
 import (
 	"fmt"
 	"github.com/filecoin-project/lotus/build"
+	lcli "github.com/filecoin-project/lotus/cli"
 	"github.com/filecoin-project/lotus/lib/lotuslog"
 	"github.com/filecoin-project/lotus/lib/tracing"
 	"github.com/filecoin-project/lotus/node/repo"
-	"go.opencensus.io/trace"
 	logging "github.com/ipfs/go-log/v2"
 	"github.com/urfave/cli/v2"
-	lcli "github.com/filecoin-project/lotus/cli"
+	"go.opencensus.io/trace"
 )
 
 var log = logging.Logger("main")
@@ -23,7 +23,7 @@ func main() {
 	lotuslog.SetupLogLevels()
 
 	local := []*cli.Command{
-		runCmd,
+		initCmd, runCmd, sectorsCmd, actorCmd, infoCmd, sealingCmd, storageCmd, VersionCmd,
 	}
 	jaeger := tracing.SetupJaegerTracing("lotus")
 	defer func() {
@@ -65,13 +65,13 @@ func main() {
 				Name:    "repo",
 				EnvVars: []string{"LOTUS_PATH"},
 				Hidden:  true,
-				Value:   "~/.lotus", // TODO: Consider XDG_DATA_HOME
+				Value:   "~/.venus", // TODO: Consider XDG_DATA_HOME
 			},
 			&cli.StringFlag{
 				Name:    FlagMinerRepo,
 				Aliases: []string{FlagMinerRepoDeprecation},
 				EnvVars: []string{"LOTUS_MINER_PATH", "LOTUS_STORAGE_PATH"},
-				Value:   "~/.lotusminer", // TODO: Consider XDG_DATA_HOME
+				Value:   "~/.venusminer", // TODO: Consider XDG_DATA_HOME
 				Usage:   fmt.Sprintf("Specify miner repo path. flag(%s) and env(LOTUS_STORAGE_PATH) are DEPRECATION, will REMOVE SOON", FlagMinerRepoDeprecation),
 			},
 		},

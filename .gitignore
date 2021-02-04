@@ -1,0 +1,15 @@
+./venus-sealer
+./sealer
+./sealer/sealer
+
+.task
+.idea
+.vscode
+
+*.coverprofile
+*.out
+*.so
+
+**/*.h
+**/*.a
+**/*.pc

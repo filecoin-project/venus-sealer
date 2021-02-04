@@ -3,6 +3,7 @@ package storage
 import (
 	"bytes"
 	"context"
+	"github.com/filecoin-project/venus-sealer/constants"
 	"time"
 
 	"github.com/filecoin-project/go-bitfield"
@@ -21,13 +22,13 @@ import (
 
 	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 
-	"github.com/filecoin-project/lotus/api"
-	"github.com/filecoin-project/lotus/build"
+	lotusAPI "github.com/filecoin-project/lotus/api"
 	"github.com/filecoin-project/lotus/chain/actors"
 	"github.com/filecoin-project/lotus/chain/actors/builtin/miner"
 	"github.com/filecoin-project/lotus/chain/actors/policy"
 	"github.com/filecoin-project/lotus/chain/messagepool"
 	"github.com/filecoin-project/lotus/chain/types"
+	"github.com/filecoin-project/venus-sealer/api"
 )
 
 func (s *WindowPoStScheduler) failPost(err error, ts *types.TipSet, deadline *dline.Info) {
@@ -312,7 +313,7 @@ func (s *WindowPoStScheduler) checkNextRecoveries(ctx context.Context, dlIdx uin
 
 	log.Warnw("declare faults recovered Message CID", "cid", sm.Cid())
 
-	rec, err := s.api.StateWaitMsg(context.TODO(), sm.Cid(), build.MessageConfidence)
+	rec, err := s.api.StateWaitMsg(context.TODO(), sm.Cid(), constants.MessageConfidence)
 	if err != nil {
 		return recoveries, sm, xerrors.Errorf("declare faults recovered wait error: %w", err)
 	}
@@ -397,7 +398,7 @@ func (s *WindowPoStScheduler) checkNextFaults(ctx context.Context, dlIdx uint64,
 
 	log.Warnw("declare faults Message CID", "cid", sm.Cid())
 
-	rec, err := s.api.StateWaitMsg(context.TODO(), sm.Cid(), build.MessageConfidence)
+	rec, err := s.api.StateWaitMsg(context.TODO(), sm.Cid(), constants.MessageConfidence)
 	if err != nil {
 		return faults, sm, xerrors.Errorf("declare faults wait error: %w", err)
 	}
@@ -457,7 +458,7 @@ func (s *WindowPoStScheduler) runPost(ctx context.Context, di dline.Info, ts *ty
 			return j
 		})
 
-		if ts.Height() > build.UpgradeIgnitionHeight {
+		if ts.Height() > s.networkParams.UpgradeIgnitionHeight {
 			return // FORK: declaring faults after ignition upgrade makes no sense
 		}
 
@@ -581,7 +582,7 @@ func (s *WindowPoStScheduler) runPost(ctx context.Context, di dline.Info, ts *ty
 				"height", ts.Height(),
 				"skipped", skipCount)
 
-			tsStart := build.Clock.Now()
+			tsStart := constants.Clock.Now()
 
 			mid, err := address.IDFromAddress(s.actor)
 			if err != nil {
@@ -750,7 +751,7 @@ func (s *WindowPoStScheduler) submitPost(ctx context.Context, proof *miner.Submi
 	log.Infof("Submitted window post: %s", sm.Cid())
 
 	go func() {
-		rec, err := s.api.StateWaitMsg(context.TODO(), sm.Cid(), build.MessageConfidence)
+		rec, err := s.api.StateWaitMsg(context.TODO(), sm.Cid(), constants.MessageConfidence)
 		if err != nil {
 			log.Error(err)
 			return
@@ -812,7 +813,7 @@ func (s *WindowPoStScheduler) setSender(ctx context.Context, msg *types.Message,
 			return msg.RequiredFunds(), nil
 		}
 
-		messagepool.CapGasFee(mff, msg, &api.MessageSendSpec{MaxFee: big.Min(big.Sub(avail, msg.Value), msg.RequiredFunds())})
+		messagepool.CapGasFee(mff, msg, &lotusAPI.MessageSendSpec{MaxFee: big.Min(big.Sub(avail, msg.Value), msg.RequiredFunds())})
 	}
 	return nil
 }

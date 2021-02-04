@@ -3,6 +3,7 @@ package storage
 import (
 	"bytes"
 	"context"
+	"github.com/filecoin-project/venus-sealer/constants"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -23,12 +24,11 @@ import (
 	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 	tutils "github.com/filecoin-project/specs-actors/v2/support/testing"
 
-	"github.com/filecoin-project/lotus/api"
-	"github.com/filecoin-project/lotus/build"
 	"github.com/filecoin-project/lotus/chain/actors/builtin/miner"
 	"github.com/filecoin-project/lotus/chain/types"
-	"github.com/filecoin-project/lotus/extern/sector-storage/storiface"
-	"github.com/filecoin-project/lotus/journal"
+	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus-sealer/extern/sector-storage/storiface"
+	"github.com/filecoin-project/venus-sealer/journal"
 )
 
 type mockStorageMinerAPI struct {
@@ -51,7 +51,7 @@ func (m *mockStorageMinerAPI) StateMinerInfo(ctx context.Context, a address.Addr
 }
 
 func (m *mockStorageMinerAPI) StateNetworkVersion(ctx context.Context, key types.TipSetKey) (network.Version, error) {
-	return build.NewestNetworkVersion, nil
+	return constants.NewestNetworkVersion, nil
 }
 
 func (m *mockStorageMinerAPI) ChainGetRandomnessFromTickets(ctx context.Context, tsk types.TipSetKey, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte) (abi.Randomness, error) {

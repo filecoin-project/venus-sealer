@@ -3,13 +3,13 @@ package journal
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/filecoin-project/venus-sealer/constants"
 	"os"
 	"path/filepath"
 
 	"golang.org/x/xerrors"
 
-	"github.com/filecoin-project/lotus/build"
-	"github.com/filecoin-project/lotus/node/repo"
+	"github.com/filecoin-project/venus-sealer/repo"
 )
 
 const RFC3339nocolon = "2006-01-02T150405Z0700"
@@ -69,7 +69,7 @@ func (f *fsJournal) RecordEvent(evtType EventType, supplier func() interface{}) 
 
 	je := &Event{
 		EventType: evtType,
-		Timestamp: build.Clock.Now(),
+		Timestamp: constants.Clock.Now(),
 		Data:      supplier(),
 	}
 	select {
@@ -109,7 +109,7 @@ func (f *fsJournal) rollJournalFile() error {
 		_ = f.fi.Close()
 	}
 
-	nfi, err := os.Create(filepath.Join(f.dir, fmt.Sprintf("lotus-journal-%s.ndjson", build.Clock.Now().Format(RFC3339nocolon))))
+	nfi, err := os.Create(filepath.Join(f.dir, fmt.Sprintf("lotus-journal-%s.ndjson", constants.Clock.Now().Format(RFC3339nocolon))))
 	if err != nil {
 		return xerrors.Errorf("failed to open journal file: %w", err)
 	}

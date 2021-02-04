@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/filecoin-project/venus-sealer/api"
 	"os"
 	"strconv"
 	"text/tabwriter"
@@ -12,11 +13,9 @@ import (
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
-	"github.com/filecoin-project/lotus/api/apibstore"
 	"github.com/filecoin-project/lotus/chain/actors/builtin/miner"
 	"github.com/filecoin-project/lotus/chain/store"
 	"github.com/filecoin-project/lotus/chain/types"
-	lcli "github.com/filecoin-project/lotus/cli"
 	"github.com/filecoin-project/specs-storage/storage"
 )
 
@@ -38,28 +37,28 @@ var provingFaultsCmd = &cli.Command{
 	Action: func(cctx *cli.Context) error {
 		color.NoColor = !cctx.Bool("color")
 
-		nodeApi, closer, err := lcli.GetStorageMinerAPI(cctx)
+		storageAPI, closer, err := api.GetStorageMinerAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
 
-		api, acloser, err := lcli.GetFullNodeAPI(cctx)
+		nodeAPI, acloser, err := api.GetFullNodeAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer acloser()
 
-		ctx := lcli.ReqContext(cctx)
+		ctx := api.ReqContext(cctx)
 
-		stor := store.ActorStore(ctx, apibstore.NewAPIBlockstore(api))
+		stor := store.ActorStore(ctx, api.NewAPIBlockstore(nodeAPI))
 
-		maddr, err := getActorAddress(ctx, nodeApi, cctx.String("actor"))
+		maddr, err := getActorAddress(ctx, storageAPI, cctx.String("actor"))
 		if err != nil {
 			return err
 		}
 
-		mact, err := api.StateGetActor(ctx, maddr, types.EmptyTSK)
+		mact, err := nodeAPI.StateGetActor(ctx, maddr, types.EmptyTSK)
 		if err != nil {
 			return err
 		}
@@ -98,43 +97,47 @@ var provingInfoCmd = &cli.Command{
 	Action: func(cctx *cli.Context) error {
 		color.NoColor = !cctx.Bool("color")
 
-		nodeApi, closer, err := lcli.GetStorageMinerAPI(cctx)
+		storageAPI, closer, err := api.GetStorageMinerAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
 
-		api, acloser, err := lcli.GetFullNodeAPI(cctx)
+		nodeAPI, acloser, err := api.GetFullNodeAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer acloser()
 
-		ctx := lcli.ReqContext(cctx)
+		ctx := api.ReqContext(cctx)
 
-		maddr, err := getActorAddress(ctx, nodeApi, cctx.String("actor"))
+		networkParams, err := storageAPI.NetParamsConfig(ctx)
+		if err != nil {
+			return err
+		}
+		maddr, err := getActorAddress(ctx, storageAPI, cctx.String("actor"))
 		if err != nil {
 			return err
 		}
 
-		head, err := api.ChainHead(ctx)
+		head, err := nodeAPI.ChainHead(ctx)
 		if err != nil {
 			return xerrors.Errorf("getting chain head: %w", err)
 		}
 
-		mact, err := api.StateGetActor(ctx, maddr, head.Key())
+		mact, err := nodeAPI.StateGetActor(ctx, maddr, head.Key())
 		if err != nil {
 			return err
 		}
 
-		stor := store.ActorStore(ctx, apibstore.NewAPIBlockstore(api))
+		stor := store.ActorStore(ctx, api.NewAPIBlockstore(nodeAPI))
 
 		mas, err := miner.Load(stor, mact)
 		if err != nil {
 			return err
 		}
 
-		cd, err := api.StateMinerProvingDeadline(ctx, maddr, head.Key())
+		cd, err := nodeAPI.StateMinerProvingDeadline(ctx, maddr, head.Key())
 		if err != nil {
 			return xerrors.Errorf("getting miner info: %w", err)
 		}
@@ -189,18 +192,18 @@ var provingInfoCmd = &cli.Command{
 		fmt.Printf("Current Epoch:           %d\n", cd.CurrentEpoch)
 
 		fmt.Printf("Proving Period Boundary: %d\n", cd.PeriodStart%cd.WPoStProvingPeriod)
-		fmt.Printf("Proving Period Start:    %s\n", lcli.EpochTime(cd.CurrentEpoch, cd.PeriodStart))
-		fmt.Printf("Next Period Start:       %s\n\n", lcli.EpochTime(cd.CurrentEpoch, cd.PeriodStart+cd.WPoStProvingPeriod))
+		fmt.Printf("Proving Period Start:    %s\n", EpochTime(cd.CurrentEpoch, cd.PeriodStart, networkParams.BlockDelaySecs))
+		fmt.Printf("Next Period Start:       %s\n\n", EpochTime(cd.CurrentEpoch, cd.PeriodStart+cd.WPoStProvingPeriod, networkParams.BlockDelaySecs))
 
 		fmt.Printf("Faults:      %d (%.2f%%)\n", faults, faultPerc)
 		fmt.Printf("Recovering:  %d\n", recovering)
 
 		fmt.Printf("Deadline Index:       %d\n", cd.Index)
 		fmt.Printf("Deadline Sectors:     %d\n", curDeadlineSectors)
-		fmt.Printf("Deadline Open:        %s\n", lcli.EpochTime(cd.CurrentEpoch, cd.Open))
-		fmt.Printf("Deadline Close:       %s\n", lcli.EpochTime(cd.CurrentEpoch, cd.Close))
-		fmt.Printf("Deadline Challenge:   %s\n", lcli.EpochTime(cd.CurrentEpoch, cd.Challenge))
-		fmt.Printf("Deadline FaultCutoff: %s\n", lcli.EpochTime(cd.CurrentEpoch, cd.FaultCutoff))
+		fmt.Printf("Deadline Open:        %s\n", EpochTime(cd.CurrentEpoch, cd.Open, networkParams.BlockDelaySecs))
+		fmt.Printf("Deadline Close:       %s\n", EpochTime(cd.CurrentEpoch, cd.Close, networkParams.BlockDelaySecs))
+		fmt.Printf("Deadline Challenge:   %s\n", EpochTime(cd.CurrentEpoch, cd.Challenge, networkParams.BlockDelaySecs))
+		fmt.Printf("Deadline FaultCutoff: %s\n", EpochTime(cd.CurrentEpoch, cd.FaultCutoff, networkParams.BlockDelaySecs))
 		return nil
 	},
 }
@@ -211,31 +214,31 @@ var provingDeadlinesCmd = &cli.Command{
 	Action: func(cctx *cli.Context) error {
 		color.NoColor = !cctx.Bool("color")
 
-		nodeApi, closer, err := lcli.GetStorageMinerAPI(cctx)
+		storageAPI, closer, err := api.GetStorageMinerAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
 
-		api, acloser, err := lcli.GetFullNodeAPI(cctx)
+		nodeAPI, acloser, err := api.GetFullNodeAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer acloser()
 
-		ctx := lcli.ReqContext(cctx)
+		ctx := api.ReqContext(cctx)
 
-		maddr, err := getActorAddress(ctx, nodeApi, cctx.String("actor"))
+		maddr, err := getActorAddress(ctx, storageAPI, cctx.String("actor"))
 		if err != nil {
 			return err
 		}
 
-		deadlines, err := api.StateMinerDeadlines(ctx, maddr, types.EmptyTSK)
+		deadlines, err := nodeAPI.StateMinerDeadlines(ctx, maddr, types.EmptyTSK)
 		if err != nil {
 			return xerrors.Errorf("getting deadlines: %w", err)
 		}
 
-		di, err := api.StateMinerProvingDeadline(ctx, maddr, types.EmptyTSK)
+		di, err := nodeAPI.StateMinerProvingDeadline(ctx, maddr, types.EmptyTSK)
 		if err != nil {
 			return xerrors.Errorf("getting deadlines: %w", err)
 		}
@@ -246,7 +249,7 @@ var provingDeadlinesCmd = &cli.Command{
 		_, _ = fmt.Fprintln(tw, "deadline\tpartitions\tsectors (faults)\tproven partitions")
 
 		for dlIdx, deadline := range deadlines {
-			partitions, err := api.StateMinerPartitions(ctx, maddr, uint64(dlIdx), types.EmptyTSK)
+			partitions, err := nodeAPI.StateMinerPartitions(ctx, maddr, uint64(dlIdx), types.EmptyTSK)
 			if err != nil {
 				return xerrors.Errorf("getting partitions for deadline %d: %w", dlIdx, err)
 			}
@@ -301,36 +304,36 @@ var provingDeadlineInfoCmd = &cli.Command{
 			return xerrors.Errorf("could not parse deadline index: %w", err)
 		}
 
-		nodeApi, closer, err := lcli.GetStorageMinerAPI(cctx)
+		storageAPI, closer, err := api.GetStorageMinerAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
 
-		api, acloser, err := lcli.GetFullNodeAPI(cctx)
+		nodeAPI, acloser, err := api.GetFullNodeAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer acloser()
 
-		ctx := lcli.ReqContext(cctx)
+		ctx := api.ReqContext(cctx)
 
-		maddr, err := getActorAddress(ctx, nodeApi, cctx.String("actor"))
+		maddr, err := getActorAddress(ctx, storageAPI, cctx.String("actor"))
 		if err != nil {
 			return err
 		}
 
-		deadlines, err := api.StateMinerDeadlines(ctx, maddr, types.EmptyTSK)
+		deadlines, err := nodeAPI.StateMinerDeadlines(ctx, maddr, types.EmptyTSK)
 		if err != nil {
 			return xerrors.Errorf("getting deadlines: %w", err)
 		}
 
-		di, err := api.StateMinerProvingDeadline(ctx, maddr, types.EmptyTSK)
+		di, err := nodeAPI.StateMinerProvingDeadline(ctx, maddr, types.EmptyTSK)
 		if err != nil {
 			return xerrors.Errorf("getting deadlines: %w", err)
 		}
 
-		partitions, err := api.StateMinerPartitions(ctx, maddr, dlIdx, types.EmptyTSK)
+		partitions, err := nodeAPI.StateMinerPartitions(ctx, maddr, dlIdx, types.EmptyTSK)
 		if err != nil {
 			return xerrors.Errorf("getting partitions for deadline %d: %w", dlIdx, err)
 		}
@@ -401,21 +404,21 @@ var provingCheckProvableCmd = &cli.Command{
 			return xerrors.Errorf("could not parse deadline index: %w", err)
 		}
 
-		api, closer, err := lcli.GetFullNodeAPI(cctx)
+		nodeAPI, closer, err := api.GetFullNodeAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
 
-		sapi, scloser, err := lcli.GetStorageMinerAPI(cctx)
+		storageAPI, scloser, err := api.GetStorageMinerAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer scloser()
 
-		ctx := lcli.ReqContext(cctx)
+		ctx := api.ReqContext(cctx)
 
-		addr, err := sapi.ActorAddress(ctx)
+		addr, err := storageAPI.ActorAddress(ctx)
 		if err != nil {
 			return err
 		}
@@ -425,12 +428,12 @@ var provingCheckProvableCmd = &cli.Command{
 			return err
 		}
 
-		info, err := api.StateMinerInfo(ctx, addr, types.EmptyTSK)
+		info, err := nodeAPI.StateMinerInfo(ctx, addr, types.EmptyTSK)
 		if err != nil {
 			return err
 		}
 
-		partitions, err := api.StateMinerPartitions(ctx, addr, dlIdx, types.EmptyTSK)
+		partitions, err := nodeAPI.StateMinerPartitions(ctx, addr, dlIdx, types.EmptyTSK)
 		if err != nil {
 			return err
 		}
@@ -441,7 +444,7 @@ var provingCheckProvableCmd = &cli.Command{
 		for parIdx, par := range partitions {
 			sectors := make(map[abi.SectorNumber]struct{})
 
-			sectorInfos, err := api.StateMinerSectors(ctx, addr, &par.LiveSectors, types.EmptyTSK)
+			sectorInfos, err := nodeAPI.StateMinerSectors(ctx, addr, &par.LiveSectors, types.EmptyTSK)
 			if err != nil {
 				return err
 			}
@@ -458,7 +461,7 @@ var provingCheckProvableCmd = &cli.Command{
 				})
 			}
 
-			bad, err := sapi.CheckProvable(ctx, info.WindowPoStProofType, tocheck, cctx.Bool("slow"))
+			bad, err := storageAPI.CheckProvable(ctx, info.WindowPoStProofType, tocheck, cctx.Bool("slow"))
 			if err != nil {
 				return err
 			}

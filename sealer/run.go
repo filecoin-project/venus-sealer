@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"github.com/filecoin-project/lotus/api/apistruct"
+	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/constants"
 	"net"
 	"net/http"
@@ -22,14 +22,13 @@ import (
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/go-jsonrpc/auth"
 
-	"github.com/filecoin-project/venus-sealer/api"
-	lcli "github.com/filecoin-project/lotus/cli"
 	"github.com/filecoin-project/lotus/lib/ulimit"
 	"github.com/filecoin-project/lotus/metrics"
-	"github.com/filecoin-project/lotus/node/impl"
-	"github.com/filecoin-project/lotus/node/repo"
 	sealer "github.com/filecoin-project/venus-sealer"
+	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus-sealer/api/impl"
 	"github.com/filecoin-project/venus-sealer/dtypes"
+	"github.com/filecoin-project/venus-sealer/repo"
 )
 
 var runCmd = &cli.Command{
@@ -68,7 +67,7 @@ var runCmd = &cli.Command{
 			return xerrors.Errorf("getting full node api: %w", err)
 		}
 		defer ncloser()
-		ctx := lcli.DaemonContext(cctx)
+		ctx := api.DaemonContext(cctx)
 
 		// Register all metric views
 		if err := view.Register(
@@ -92,14 +91,6 @@ var runCmd = &cli.Command{
 			return xerrors.Errorf("lotus-daemon API version doesn't match: expected: %s", api.Version{APIVersion: constants.FullAPIVersion})
 		}
 
-		log.Info("Checking full node sync status")
-
-		if !cctx.Bool("nosync") {
-			if err := api.SyncWait(ctx, nodeApi, false); err != nil {
-				return xerrors.Errorf("sync wait: %w", err)
-			}
-		}
-
 		minerRepoPath := cctx.String(FlagMinerRepo)
 		r, err := repo.NewFS(minerRepoPath)
 		if err != nil {
@@ -114,19 +105,38 @@ var runCmd = &cli.Command{
 			return xerrors.Errorf("repo at '%s' is not initialized, run 'lotus-miner init' to set it up", minerRepoPath)
 		}
 
+		log.Info("Checking full node sync status")
+
+		lr, err := r.Lock(repo.StorageMiner)
+		if err != nil {
+			return err
+		}
+
+		icfg, err := lr.Config()
+		if err != nil {
+			return err
+		}
+
+		cfg := icfg.(*config.StorageMiner)
+		if !cctx.Bool("nosync") {
+			if err := api.SyncWait(ctx, nodeApi, cfg.NetParams.BlockDelaySecs, false); err != nil {
+				return xerrors.Errorf("sync wait: %w", err)
+			}
+		}
+
 		shutdownChan := make(chan struct{})
 
 		var minerapi api.StorageMiner
 		stop, err := sealer.New(ctx,
-			//sealer.StorageMiner(&minerapi),
-			sealer.Override(new(dtypes.ShutdownChan), shutdownChan),
-			sealer.Repo(r),
+			sealer.ConfigStorageAPIImpl(&minerapi),
+			sealer.Repo(lr),
 			sealer.Online(),
 			sealer.ApplyIf(func(s *sealer.Settings) bool { return cctx.IsSet("miner-api") },
 				sealer.Override(new(dtypes.APIEndpoint), func() (dtypes.APIEndpoint, error) {
 					return multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/" + cctx.String("miner-api"))
 				})),
 			sealer.Override(new(api.FullNode), nodeApi),
+			sealer.Override(new(dtypes.ShutdownChan), shutdownChan),
 		)
 		if err != nil {
 			return xerrors.Errorf("creating node: %w", err)
@@ -136,7 +146,6 @@ var runCmd = &cli.Command{
 		if err != nil {
 			return xerrors.Errorf("getting API endpoint: %w", err)
 		}
-
 
 		log.Infof("Remote version %s", v)
 
@@ -148,7 +157,7 @@ var runCmd = &cli.Command{
 		mux := mux.NewRouter()
 
 		rpcServer := jsonrpc.NewServer()
-		rpcServer.Register("Filecoin", apistruct.PermissionedStorMinerAPI(metrics.MetricedStorMinerAPI(minerapi)))
+		rpcServer.Register("Filecoin", minerapi)
 
 		mux.Handle("/rpc/v0", rpcServer)
 		mux.PathPrefix("/remote").HandlerFunc(minerapi.(*impl.StorageMinerAPI).ServeRemote)

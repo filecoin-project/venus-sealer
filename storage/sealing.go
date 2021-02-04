@@ -9,7 +9,7 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 
-	sealing "github.com/filecoin-project/lotus/extern/storage-sealing"
+	sealing "github.com/filecoin-project/venus-sealer/extern/storage-sealing"
 )
 
 // TODO: refactor this to be direct somehow

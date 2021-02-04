@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/filecoin-project/venus-sealer/api"
 	"os"
 	"sort"
 	"strings"
@@ -15,10 +16,9 @@ import (
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
-	"github.com/filecoin-project/lotus/extern/sector-storage/storiface"
+	"github.com/filecoin-project/venus-sealer/extern/sector-storage/storiface"
 
 	"github.com/filecoin-project/lotus/chain/types"
-	lcli "github.com/filecoin-project/lotus/cli"
 )
 
 var sealingCmd = &cli.Command{
@@ -41,13 +41,13 @@ var sealingWorkersCmd = &cli.Command{
 	Action: func(cctx *cli.Context) error {
 		color.NoColor = !cctx.Bool("color")
 
-		nodeApi, closer, err := lcli.GetStorageMinerAPI(cctx)
+		nodeApi, closer, err := api.GetStorageMinerAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
 
-		ctx := lcli.ReqContext(cctx)
+		ctx := api.ReqContext(cctx)
 
 		stats, err := nodeApi.WorkerStats(ctx)
 		if err != nil {
@@ -136,13 +136,13 @@ var sealingJobsCmd = &cli.Command{
 	Action: func(cctx *cli.Context) error {
 		color.NoColor = !cctx.Bool("color")
 
-		nodeApi, closer, err := lcli.GetStorageMinerAPI(cctx)
+		nodeApi, closer, err := api.GetStorageMinerAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
 
-		ctx := lcli.ReqContext(cctx)
+		ctx := api.ReqContext(cctx)
 
 		jobs, err := nodeApi.WorkerJobs(ctx)
 		if err != nil {
@@ -238,13 +238,13 @@ var sealingSchedDiagCmd = &cli.Command{
 		},
 	},
 	Action: func(cctx *cli.Context) error {
-		nodeApi, closer, err := lcli.GetStorageMinerAPI(cctx)
+		nodeApi, closer, err := api.GetStorageMinerAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
 
-		ctx := lcli.ReqContext(cctx)
+		ctx := api.ReqContext(cctx)
 
 		st, err := nodeApi.SealingSchedDiag(ctx, cctx.Bool("force-sched"))
 		if err != nil {
@@ -271,13 +271,13 @@ var sealingAbortCmd = &cli.Command{
 			return xerrors.Errorf("expected 1 argument")
 		}
 
-		nodeApi, closer, err := lcli.GetStorageMinerAPI(cctx)
+		nodeApi, closer, err := api.GetStorageMinerAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
 
-		ctx := lcli.ReqContext(cctx)
+		ctx := api.ReqContext(cctx)
 
 		jobs, err := nodeApi.WorkerJobs(ctx)
 		if err != nil {

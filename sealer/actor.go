@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus-sealer/constants"
 	"os"
 	"strings"
 
@@ -19,13 +21,10 @@ import (
 
 	miner2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/miner"
 
-	"github.com/filecoin-project/lotus/api/apibstore"
-	"github.com/filecoin-project/lotus/build"
 	"github.com/filecoin-project/lotus/chain/actors"
 	"github.com/filecoin-project/lotus/chain/actors/adt"
 	"github.com/filecoin-project/lotus/chain/actors/builtin/miner"
 	"github.com/filecoin-project/lotus/chain/types"
-	lcli "github.com/filecoin-project/lotus/cli"
 	"github.com/filecoin-project/lotus/lib/tablewriter"
 )
 
@@ -55,19 +54,19 @@ var actorSetAddrsCmd = &cli.Command{
 		},
 	},
 	Action: func(cctx *cli.Context) error {
-		nodeAPI, closer, err := lcli.GetStorageMinerAPI(cctx)
+		storageAPI, closer, err := api.GetStorageMinerAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
 
-		api, acloser, err := lcli.GetFullNodeAPI(cctx)
+		nodeAPI, acloser, err := api.GetFullNodeAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer acloser()
 
-		ctx := lcli.ReqContext(cctx)
+		ctx := api.ReqContext(cctx)
 
 		var addrs []abi.Multiaddrs
 		for _, a := range cctx.Args().Slice() {
@@ -86,12 +85,12 @@ var actorSetAddrsCmd = &cli.Command{
 			addrs = append(addrs, maddrNop2p.Bytes())
 		}
 
-		maddr, err := nodeAPI.ActorAddress(ctx)
+		maddr, err := storageAPI.ActorAddress(ctx)
 		if err != nil {
 			return err
 		}
 
-		minfo, err := api.StateMinerInfo(ctx, maddr, types.EmptyTSK)
+		minfo, err := nodeAPI.StateMinerInfo(ctx, maddr, types.EmptyTSK)
 		if err != nil {
 			return err
 		}
@@ -103,7 +102,7 @@ var actorSetAddrsCmd = &cli.Command{
 
 		gasLimit := cctx.Int64("gas-limit")
 
-		smsg, err := api.MpoolPushMessage(ctx, &types.Message{
+		smsg, err := nodeAPI.MpoolPushMessage(ctx, &types.Message{
 			To:       maddr,
 			From:     minfo.Worker,
 			Value:    types.NewInt(0),
@@ -132,31 +131,31 @@ var actorSetPeeridCmd = &cli.Command{
 		},
 	},
 	Action: func(cctx *cli.Context) error {
-		nodeAPI, closer, err := lcli.GetStorageMinerAPI(cctx)
+		storageAPI, closer, err := api.GetStorageMinerAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
 
-		api, acloser, err := lcli.GetFullNodeAPI(cctx)
+		nodeAPI, acloser, err := api.GetFullNodeAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer acloser()
 
-		ctx := lcli.ReqContext(cctx)
+		ctx := api.ReqContext(cctx)
 
 		pid, err := peer.Decode(cctx.Args().Get(0))
 		if err != nil {
 			return fmt.Errorf("failed to parse input as a peerId: %w", err)
 		}
 
-		maddr, err := nodeAPI.ActorAddress(ctx)
+		maddr, err := storageAPI.ActorAddress(ctx)
 		if err != nil {
 			return err
 		}
 
-		minfo, err := api.StateMinerInfo(ctx, maddr, types.EmptyTSK)
+		minfo, err := nodeAPI.StateMinerInfo(ctx, maddr, types.EmptyTSK)
 		if err != nil {
 			return err
 		}
@@ -168,7 +167,7 @@ var actorSetPeeridCmd = &cli.Command{
 
 		gasLimit := cctx.Int64("gas-limit")
 
-		smsg, err := api.MpoolPushMessage(ctx, &types.Message{
+		smsg, err := nodeAPI.MpoolPushMessage(ctx, &types.Message{
 			To:       maddr,
 			From:     minfo.Worker,
 			Value:    types.NewInt(0),
@@ -191,31 +190,31 @@ var actorWithdrawCmd = &cli.Command{
 	Usage:     "withdraw available balance",
 	ArgsUsage: "[amount (FIL)]",
 	Action: func(cctx *cli.Context) error {
-		nodeApi, closer, err := lcli.GetStorageMinerAPI(cctx)
+		storageAPI, closer, err := api.GetStorageMinerAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
 
-		api, acloser, err := lcli.GetFullNodeAPI(cctx)
+		nodeAPI, acloser, err := api.GetFullNodeAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer acloser()
 
-		ctx := lcli.ReqContext(cctx)
+		ctx := api.ReqContext(cctx)
 
-		maddr, err := nodeApi.ActorAddress(ctx)
+		maddr, err := storageAPI.ActorAddress(ctx)
 		if err != nil {
 			return err
 		}
 
-		mi, err := api.StateMinerInfo(ctx, maddr, types.EmptyTSK)
+		mi, err := nodeAPI.StateMinerInfo(ctx, maddr, types.EmptyTSK)
 		if err != nil {
 			return err
 		}
 
-		available, err := api.StateMinerAvailableBalance(ctx, maddr, types.EmptyTSK)
+		available, err := nodeAPI.StateMinerAvailableBalance(ctx, maddr, types.EmptyTSK)
 		if err != nil {
 			return err
 		}
@@ -241,7 +240,7 @@ var actorWithdrawCmd = &cli.Command{
 			return err
 		}
 
-		smsg, err := api.MpoolPushMessage(ctx, &types.Message{
+		smsg, err := nodeAPI.MpoolPushMessage(ctx, &types.Message{
 			To:     maddr,
 			From:   mi.Owner,
 			Value:  types.NewInt(0),
@@ -269,26 +268,26 @@ var actorRepayDebtCmd = &cli.Command{
 		},
 	},
 	Action: func(cctx *cli.Context) error {
-		nodeApi, closer, err := lcli.GetStorageMinerAPI(cctx)
+		storageAPI, closer, err := api.GetStorageMinerAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
 
-		api, acloser, err := lcli.GetFullNodeAPI(cctx)
+		nodeAPI, acloser, err := api.GetFullNodeAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer acloser()
 
-		ctx := lcli.ReqContext(cctx)
+		ctx := api.ReqContext(cctx)
 
-		maddr, err := nodeApi.ActorAddress(ctx)
+		maddr, err := storageAPI.ActorAddress(ctx)
 		if err != nil {
 			return err
 		}
 
-		mi, err := api.StateMinerInfo(ctx, maddr, types.EmptyTSK)
+		mi, err := nodeAPI.StateMinerInfo(ctx, maddr, types.EmptyTSK)
 		if err != nil {
 			return err
 		}
@@ -302,12 +301,12 @@ var actorRepayDebtCmd = &cli.Command{
 
 			amount = abi.TokenAmount(f)
 		} else {
-			mact, err := api.StateGetActor(ctx, maddr, types.EmptyTSK)
+			mact, err := nodeAPI.StateGetActor(ctx, maddr, types.EmptyTSK)
 			if err != nil {
 				return err
 			}
 
-			store := adt.WrapStore(ctx, cbor.NewCborStore(apibstore.NewAPIBlockstore(api)))
+			store := adt.WrapStore(ctx, cbor.NewCborStore(api.NewAPIBlockstore(nodeAPI)))
 
 			mst, err := miner.Load(store, mact)
 			if err != nil {
@@ -331,7 +330,7 @@ var actorRepayDebtCmd = &cli.Command{
 			fromAddr = addr
 		}
 
-		fromId, err := api.StateLookupID(ctx, fromAddr, types.EmptyTSK)
+		fromId, err := nodeAPI.StateLookupID(ctx, fromAddr, types.EmptyTSK)
 		if err != nil {
 			return err
 		}
@@ -340,7 +339,7 @@ var actorRepayDebtCmd = &cli.Command{
 			return xerrors.Errorf("sender isn't a controller of miner: %s", fromId)
 		}
 
-		smsg, err := api.MpoolPushMessage(ctx, &types.Message{
+		smsg, err := nodeAPI.MpoolPushMessage(ctx, &types.Message{
 			To:     maddr,
 			From:   fromId,
 			Value:  amount,
@@ -381,26 +380,26 @@ var actorControlList = &cli.Command{
 	Action: func(cctx *cli.Context) error {
 		color.NoColor = !cctx.Bool("color")
 
-		nodeApi, closer, err := lcli.GetStorageMinerAPI(cctx)
+		storageAPI, closer, err := api.GetStorageMinerAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
 
-		api, acloser, err := lcli.GetFullNodeAPI(cctx)
+		nodeAPI, acloser, err := api.GetFullNodeAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer acloser()
 
-		ctx := lcli.ReqContext(cctx)
+		ctx := api.ReqContext(cctx)
 
-		maddr, err := nodeApi.ActorAddress(ctx)
+		maddr, err := storageAPI.ActorAddress(ctx)
 		if err != nil {
 			return err
 		}
 
-		mi, err := api.StateMinerInfo(ctx, maddr, types.EmptyTSK)
+		mi, err := nodeAPI.StateMinerInfo(ctx, maddr, types.EmptyTSK)
 		if err != nil {
 			return err
 		}
@@ -413,7 +412,7 @@ var actorControlList = &cli.Command{
 			tablewriter.Col("balance"),
 		)
 
-		ac, err := nodeApi.ActorAddressConfig(ctx)
+		ac, err := storageAPI.ActorAddressConfig(ctx)
 		if err != nil {
 			return err
 		}
@@ -427,7 +426,7 @@ var actorControlList = &cli.Command{
 		}
 
 		for _, ca := range ac.PreCommitControl {
-			ca, err := api.StateLookupID(ctx, ca, types.EmptyTSK)
+			ca, err := nodeAPI.StateLookupID(ctx, ca, types.EmptyTSK)
 			if err != nil {
 				return err
 			}
@@ -437,7 +436,7 @@ var actorControlList = &cli.Command{
 		}
 
 		for _, ca := range ac.CommitControl {
-			ca, err := api.StateLookupID(ctx, ca, types.EmptyTSK)
+			ca, err := nodeAPI.StateLookupID(ctx, ca, types.EmptyTSK)
 			if err != nil {
 				return err
 			}
@@ -447,13 +446,13 @@ var actorControlList = &cli.Command{
 		}
 
 		printKey := func(name string, a address.Address) {
-			b, err := api.WalletBalance(ctx, a)
+			b, err := nodeAPI.WalletBalance(ctx, a)
 			if err != nil {
 				fmt.Printf("%s\t%s: error getting balance: %s\n", name, a, err)
 				return
 			}
 
-			k, err := api.StateAccountKey(ctx, a, types.EmptyTSK)
+			k, err := nodeAPI.StateAccountKey(ctx, a, types.EmptyTSK)
 			if err != nil {
 				fmt.Printf("%s\t%s: error getting account key: %s\n", name, a, err)
 				return
@@ -519,26 +518,26 @@ var actorControlSet = &cli.Command{
 		},
 	},
 	Action: func(cctx *cli.Context) error {
-		nodeApi, closer, err := lcli.GetStorageMinerAPI(cctx)
+		storageAPI, closer, err := api.GetStorageMinerAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
 
-		api, acloser, err := lcli.GetFullNodeAPI(cctx)
+		nodeAPI, acloser, err := api.GetFullNodeAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer acloser()
 
-		ctx := lcli.ReqContext(cctx)
+		ctx := api.ReqContext(cctx)
 
-		maddr, err := nodeApi.ActorAddress(ctx)
+		maddr, err := storageAPI.ActorAddress(ctx)
 		if err != nil {
 			return err
 		}
 
-		mi, err := api.StateMinerInfo(ctx, maddr, types.EmptyTSK)
+		mi, err := nodeAPI.StateMinerInfo(ctx, maddr, types.EmptyTSK)
 		if err != nil {
 			return err
 		}
@@ -546,7 +545,7 @@ var actorControlSet = &cli.Command{
 		del := map[address.Address]struct{}{}
 		existing := map[address.Address]struct{}{}
 		for _, controlAddress := range mi.ControlAddresses {
-			ka, err := api.StateAccountKey(ctx, controlAddress, types.EmptyTSK)
+			ka, err := nodeAPI.StateAccountKey(ctx, controlAddress, types.EmptyTSK)
 			if err != nil {
 				return err
 			}
@@ -563,13 +562,13 @@ var actorControlSet = &cli.Command{
 				return xerrors.Errorf("parsing address %d: %w", i, err)
 			}
 
-			ka, err := api.StateAccountKey(ctx, a, types.EmptyTSK)
+			ka, err := nodeAPI.StateAccountKey(ctx, a, types.EmptyTSK)
 			if err != nil {
 				return err
 			}
 
 			// make sure the address exists on chain
-			_, err = api.StateLookupID(ctx, ka, types.EmptyTSK)
+			_, err = nodeAPI.StateLookupID(ctx, ka, types.EmptyTSK)
 			if err != nil {
 				return xerrors.Errorf("looking up %s: %w", ka, err)
 			}
@@ -602,7 +601,7 @@ var actorControlSet = &cli.Command{
 			return xerrors.Errorf("serializing params: %w", err)
 		}
 
-		smsg, err := api.MpoolPushMessage(ctx, &types.Message{
+		smsg, err := nodeAPI.MpoolPushMessage(ctx, &types.Message{
 			From:   mi.Owner,
 			To:     maddr,
 			Method: miner.Methods.ChangeWorkerAddress,
@@ -641,26 +640,26 @@ var actorSetOwnerCmd = &cli.Command{
 			return fmt.Errorf("must pass new owner address and sender address")
 		}
 
-		nodeApi, closer, err := lcli.GetStorageMinerAPI(cctx)
+		storageAPI, closer, err := api.GetStorageMinerAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
 
-		api, acloser, err := lcli.GetFullNodeAPI(cctx)
+		nodeAPI, acloser, err := api.GetFullNodeAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer acloser()
 
-		ctx := lcli.ReqContext(cctx)
+		ctx := api.ReqContext(cctx)
 
 		na, err := address.NewFromString(cctx.Args().First())
 		if err != nil {
 			return err
 		}
 
-		newAddrId, err := api.StateLookupID(ctx, na, types.EmptyTSK)
+		newAddrId, err := nodeAPI.StateLookupID(ctx, na, types.EmptyTSK)
 		if err != nil {
 			return err
 		}
@@ -670,17 +669,17 @@ var actorSetOwnerCmd = &cli.Command{
 			return err
 		}
 
-		fromAddrId, err := api.StateLookupID(ctx, fa, types.EmptyTSK)
+		fromAddrId, err := nodeAPI.StateLookupID(ctx, fa, types.EmptyTSK)
 		if err != nil {
 			return err
 		}
 
-		maddr, err := nodeApi.ActorAddress(ctx)
+		maddr, err := storageAPI.ActorAddress(ctx)
 		if err != nil {
 			return err
 		}
 
-		mi, err := api.StateMinerInfo(ctx, maddr, types.EmptyTSK)
+		mi, err := nodeAPI.StateMinerInfo(ctx, maddr, types.EmptyTSK)
 		if err != nil {
 			return err
 		}
@@ -694,7 +693,7 @@ var actorSetOwnerCmd = &cli.Command{
 			return xerrors.Errorf("serializing params: %w", err)
 		}
 
-		smsg, err := api.MpoolPushMessage(ctx, &types.Message{
+		smsg, err := nodeAPI.MpoolPushMessage(ctx, &types.Message{
 			From:   fromAddrId,
 			To:     maddr,
 			Method: miner.Methods.ChangeOwnerAddress,
@@ -708,7 +707,7 @@ var actorSetOwnerCmd = &cli.Command{
 		fmt.Println("Message CID:", smsg.Cid())
 
 		// wait for it to get mined into a block
-		wait, err := api.StateWaitMsg(ctx, smsg.Cid(), build.MessageConfidence)
+		wait, err := nodeAPI.StateWaitMsg(ctx, smsg.Cid(), constants.MessageConfidence)
 		if err != nil {
 			return err
 		}
@@ -741,36 +740,36 @@ var actorProposeChangeWorker = &cli.Command{
 			return fmt.Errorf("must pass address of new worker address")
 		}
 
-		nodeApi, closer, err := lcli.GetStorageMinerAPI(cctx)
+		storageAPI, closer, err := api.GetStorageMinerAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
 
-		api, acloser, err := lcli.GetFullNodeAPI(cctx)
+		nodeAPI, acloser, err := api.GetFullNodeAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer acloser()
 
-		ctx := lcli.ReqContext(cctx)
+		ctx := api.ReqContext(cctx)
 
 		na, err := address.NewFromString(cctx.Args().First())
 		if err != nil {
 			return err
 		}
 
-		newAddr, err := api.StateLookupID(ctx, na, types.EmptyTSK)
+		newAddr, err := nodeAPI.StateLookupID(ctx, na, types.EmptyTSK)
 		if err != nil {
 			return err
 		}
 
-		maddr, err := nodeApi.ActorAddress(ctx)
+		maddr, err := storageAPI.ActorAddress(ctx)
 		if err != nil {
 			return err
 		}
 
-		mi, err := api.StateMinerInfo(ctx, maddr, types.EmptyTSK)
+		mi, err := nodeAPI.StateMinerInfo(ctx, maddr, types.EmptyTSK)
 		if err != nil {
 			return err
 		}
@@ -800,7 +799,7 @@ var actorProposeChangeWorker = &cli.Command{
 			return xerrors.Errorf("serializing params: %w", err)
 		}
 
-		smsg, err := api.MpoolPushMessage(ctx, &types.Message{
+		smsg, err := nodeAPI.MpoolPushMessage(ctx, &types.Message{
 			From:   mi.Owner,
 			To:     maddr,
 			Method: miner.Methods.ChangeWorkerAddress,
@@ -814,7 +813,7 @@ var actorProposeChangeWorker = &cli.Command{
 		fmt.Fprintln(cctx.App.Writer, "Propose Message CID:", smsg.Cid())
 
 		// wait for it to get mined into a block
-		wait, err := api.StateWaitMsg(ctx, smsg.Cid(), build.MessageConfidence)
+		wait, err := nodeAPI.StateWaitMsg(ctx, smsg.Cid(), constants.MessageConfidence)
 		if err != nil {
 			return err
 		}
@@ -825,7 +824,7 @@ var actorProposeChangeWorker = &cli.Command{
 			return err
 		}
 
-		mi, err = api.StateMinerInfo(ctx, maddr, wait.TipSet)
+		mi, err = nodeAPI.StateMinerInfo(ctx, maddr, wait.TipSet)
 		if err != nil {
 			return err
 		}
@@ -856,26 +855,26 @@ var actorConfirmChangeWorker = &cli.Command{
 			return fmt.Errorf("must pass address of new worker address")
 		}
 
-		nodeApi, closer, err := lcli.GetStorageMinerAPI(cctx)
+		nodeApi, closer, err := api.GetStorageMinerAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
 
-		api, acloser, err := lcli.GetFullNodeAPI(cctx)
+		nodeAPI, acloser, err := api.GetFullNodeAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer acloser()
 
-		ctx := lcli.ReqContext(cctx)
+		ctx := api.ReqContext(cctx)
 
 		na, err := address.NewFromString(cctx.Args().First())
 		if err != nil {
 			return err
 		}
 
-		newAddr, err := api.StateLookupID(ctx, na, types.EmptyTSK)
+		newAddr, err := nodeAPI.StateLookupID(ctx, na, types.EmptyTSK)
 		if err != nil {
 			return err
 		}
@@ -885,7 +884,7 @@ var actorConfirmChangeWorker = &cli.Command{
 			return err
 		}
 
-		mi, err := api.StateMinerInfo(ctx, maddr, types.EmptyTSK)
+		mi, err := nodeAPI.StateMinerInfo(ctx, maddr, types.EmptyTSK)
 		if err != nil {
 			return err
 		}
@@ -896,7 +895,7 @@ var actorConfirmChangeWorker = &cli.Command{
 			return xerrors.Errorf("worker key %s does not match current worker key proposal %s", newAddr, mi.NewWorker)
 		}
 
-		if head, err := api.ChainHead(ctx); err != nil {
+		if head, err := nodeAPI.ChainHead(ctx); err != nil {
 			return xerrors.Errorf("failed to get the chain head: %w", err)
 		} else if head.Height() < mi.WorkerChangeEpoch {
 			return xerrors.Errorf("worker key change cannot be confirmed until %d, current height is %d", mi.WorkerChangeEpoch, head.Height())
@@ -907,7 +906,7 @@ var actorConfirmChangeWorker = &cli.Command{
 			return nil
 		}
 
-		smsg, err := api.MpoolPushMessage(ctx, &types.Message{
+		smsg, err := nodeAPI.MpoolPushMessage(ctx, &types.Message{
 			From:   mi.Owner,
 			To:     maddr,
 			Method: miner.Methods.ConfirmUpdateWorkerKey,
@@ -920,7 +919,7 @@ var actorConfirmChangeWorker = &cli.Command{
 		fmt.Fprintln(cctx.App.Writer, "Confirm Message CID:", smsg.Cid())
 
 		// wait for it to get mined into a block
-		wait, err := api.StateWaitMsg(ctx, smsg.Cid(), build.MessageConfidence)
+		wait, err := nodeAPI.StateWaitMsg(ctx, smsg.Cid(), constants.MessageConfidence)
 		if err != nil {
 			return err
 		}
@@ -931,7 +930,7 @@ var actorConfirmChangeWorker = &cli.Command{
 			return err
 		}
 
-		mi, err = api.StateMinerInfo(ctx, maddr, wait.TipSet)
+		mi, err = nodeAPI.StateMinerInfo(ctx, maddr, wait.TipSet)
 		if err != nil {
 			return err
 		}

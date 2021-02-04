@@ -4,13 +4,22 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	cborutil "github.com/filecoin-project/go-cbor-util"
+	"github.com/filecoin-project/lotus/genesis"
+	"github.com/filecoin-project/lotus/node/modules"
+	market2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
 	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/constants"
+	"github.com/filecoin-project/venus-sealer/dtypes"
+	sealing "github.com/filecoin-project/venus-sealer/extern/storage-sealing"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/docker/go-units"
 	"github.com/google/uuid"
@@ -25,18 +34,14 @@ import (
 	paramfetch "github.com/filecoin-project/go-paramfetch"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/stores"
-
-	miner2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/miner"
-	power2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/power"
-
-	lapi "github.com/filecoin-project/lotus/api"
 	"github.com/filecoin-project/lotus/build"
 	"github.com/filecoin-project/lotus/chain/actors"
 	"github.com/filecoin-project/lotus/chain/actors/builtin/miner"
 	"github.com/filecoin-project/lotus/chain/actors/builtin/power"
 	"github.com/filecoin-project/lotus/chain/actors/policy"
 	"github.com/filecoin-project/lotus/chain/types"
+	power2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/power"
+	"github.com/filecoin-project/venus-sealer/extern/sector-storage/stores"
 	"github.com/filecoin-project/venus-sealer/repo"
 )
 
@@ -101,6 +106,12 @@ var initCmd = &cli.Command{
 			Name:  "from",
 			Usage: "select which address to send actor creation message from",
 		},
+		&cli.StringFlag{
+			Name:        "network",
+			Usage:       "set network type mainnet calibration 2k",
+			Value:       "mainnet",
+			DefaultText: "mainnet",
+		},
 	},
 	Action: func(cctx *cli.Context) error {
 		log.Info("Initializing lotus miner")
@@ -137,10 +148,16 @@ var initCmd = &cli.Command{
 		}
 		defer closer()
 
+		network := cctx.String("network")
+		netParamsConfig, err := config.GetDefaultStorageConfig(network)
+		if err != nil {
+			return err
+		}
+
 		log.Info("Checking full node sync status")
 
 		if !cctx.Bool("genesis-miner") && !cctx.Bool("nosync") {
-			if err := api.SyncWait(ctx, fullNode, false); err != nil {
+			if err := api.SyncWait(ctx, fullNode, netParamsConfig.NetParams.BlockDelaySecs, false); err != nil {
 				return xerrors.Errorf("sync wait: %w", err)
 			}
 		}
@@ -169,12 +186,11 @@ var initCmd = &cli.Command{
 		}
 
 		if !v.APIVersion.EqMajorMinor(constants.FullAPIVersion) {
-			return xerrors.Errorf("Remote API version didn't match (expected %s, remote %s)", build.FullAPIVersion, v.APIVersion)
+			return xerrors.Errorf("Remote API version didn't match (expected %s, remote %s)", constants.FullAPIVersion, v.APIVersion)
 		}
 
 		log.Info("Initializing repo")
-
-		if err := r.Init(repo.StorageMiner); err != nil {
+		if err := r.InitWithConfig(repo.StorageMiner, netParamsConfig); err != nil {
 			return err
 		}
 
@@ -281,6 +297,40 @@ func storageMinerInit(ctx context.Context, cctx *cli.Context, api api.FullNode, 
 		if err != nil {
 			return xerrors.Errorf("failed parsing actor flag value (%q): %w", act, err)
 		}
+
+		if cctx.Bool("genesis-miner") {
+			if err := mds.Put(datastore.NewKey("miner-address"), a.Bytes()); err != nil {
+				return err
+			}
+			if pssb := cctx.String("pre-sealed-metadata"); pssb != "" {
+				pssb, err := homedir.Expand(pssb)
+				if err != nil {
+					return err
+				}
+
+				log.Infof("Importing pre-sealed sector metadata for %s", a)
+
+				if err := migratePreSealMeta(ctx, api, pssb, a, mds); err != nil {
+					return xerrors.Errorf("migrating presealed sector metadata: %w", err)
+				}
+			}
+
+			return nil
+		}
+
+		if pssb := cctx.String("pre-sealed-metadata"); pssb != "" {
+			pssb, err := homedir.Expand(pssb)
+			if err != nil {
+				return err
+			}
+
+			log.Infof("Importing pre-sealed sector metadata for %s", a)
+
+			if err := migratePreSealMeta(ctx, api, pssb, a, mds); err != nil {
+				return xerrors.Errorf("migrating presealed sector metadata: %w", err)
+			}
+		}
+
 		addr = a
 	} else {
 		a, err := createStorageMiner(ctx, api, peerid, gasPrice, cctx)
@@ -325,51 +375,13 @@ func makeHostKey(lr repo.LockedRepo) (crypto.PrivKey, error) {
 	return pk, nil
 }
 
-func configureStorageMiner(ctx context.Context, api lapi.FullNode, addr address.Address, peerid peer.ID, gasPrice types.BigInt) error {
-	mi, err := api.StateMinerInfo(ctx, addr, types.EmptyTSK)
-	if err != nil {
-		return xerrors.Errorf("getWorkerAddr returned bad address: %w", err)
-	}
-
-	enc, err := actors.SerializeParams(&miner2.ChangePeerIDParams{NewID: abi.PeerID(peerid)})
-	if err != nil {
-		return err
-	}
-
-	msg := &types.Message{
-		To:         addr,
-		From:       mi.Worker,
-		Method:     miner.Methods.ChangePeerID,
-		Params:     enc,
-		Value:      types.NewInt(0),
-		GasPremium: gasPrice,
-	}
-
-	smsg, err := api.MpoolPushMessage(ctx, msg, nil)
-	if err != nil {
-		return err
-	}
-
-	log.Info("Waiting for message: ", smsg.Cid())
-	ret, err := api.StateWaitMsg(ctx, smsg.Cid(), constants.MessageConfidence)
-	if err != nil {
-		return err
-	}
-
-	if ret.Receipt.ExitCode != 0 {
-		return xerrors.Errorf("update peer id message failed with exit code %d", ret.Receipt.ExitCode)
-	}
-
-	return nil
-}
-
-func createStorageMiner(ctx context.Context, api api.FullNode, peerid peer.ID, gasPrice types.BigInt, cctx *cli.Context) (address.Address, error) {
+func createStorageMiner(ctx context.Context, nodeAPI api.FullNode, peerid peer.ID, gasPrice types.BigInt, cctx *cli.Context) (address.Address, error) {
 	var err error
 	var owner address.Address
 	if cctx.String("owner") != "" {
 		owner, err = address.NewFromString(cctx.String("owner"))
 	} else {
-		owner, err = api.WalletDefaultAddress(ctx)
+		owner, err = nodeAPI.WalletDefaultAddress(ctx)
 	}
 	if err != nil {
 		return address.Undef, err
@@ -384,16 +396,16 @@ func createStorageMiner(ctx context.Context, api api.FullNode, peerid peer.ID, g
 	if cctx.String("worker") != "" {
 		worker, err = address.NewFromString(cctx.String("worker"))
 	} else if cctx.Bool("create-worker-key") { // TODO: Do we need to force this if owner is Secpk?
-		worker, err = api.WalletNew(ctx, types.KTBLS)
+		worker, err = nodeAPI.WalletNew(ctx, types.KTBLS)
 	}
 	if err != nil {
 		return address.Address{}, err
 	}
 
 	// make sure the worker account exists on chain
-	_, err = api.StateLookupID(ctx, worker, types.EmptyTSK)
+	_, err = nodeAPI.StateLookupID(ctx, worker, types.EmptyTSK)
 	if err != nil {
-		signed, err := api.MpoolPushMessage(ctx, &types.Message{
+		signed, err := nodeAPI.MpoolPushMessage(ctx, &types.Message{
 			From:  owner,
 			To:    worker,
 			Value: types.NewInt(0),
@@ -405,7 +417,7 @@ func createStorageMiner(ctx context.Context, api api.FullNode, peerid peer.ID, g
 		log.Infof("Initializing worker account %s, message: %s", worker, signed.Cid())
 		log.Infof("Waiting for confirmation")
 
-		mw, err := api.StateWaitMsg(ctx, signed.Cid(), constants.MessageConfidence)
+		mw, err := nodeAPI.StateWaitMsg(ctx, signed.Cid(), constants.MessageConfidence)
 		if err != nil {
 			return address.Undef, xerrors.Errorf("waiting for worker init: %w", err)
 		}
@@ -414,7 +426,7 @@ func createStorageMiner(ctx context.Context, api api.FullNode, peerid peer.ID, g
 		}
 	}
 
-	nv, err := api.StateNetworkVersion(ctx, types.EmptyTSK)
+	nv, err := nodeAPI.StateNetworkVersion(ctx, types.EmptyTSK)
 	if err != nil {
 		return address.Undef, xerrors.Errorf("getting network version: %w", err)
 	}
@@ -455,7 +467,7 @@ func createStorageMiner(ctx context.Context, api api.FullNode, peerid peer.ID, g
 		GasPremium: gasPrice,
 	}
 
-	signed, err := api.MpoolPushMessage(ctx, createStorageMinerMsg, nil)
+	signed, err := nodeAPI.MpoolPushMessage(ctx, createStorageMinerMsg, &api.MessageSendSpec{MaxFee: types.FromFil(1)})
 	if err != nil {
 		return address.Undef, xerrors.Errorf("pushing createMiner message: %w", err)
 	}
@@ -463,7 +475,7 @@ func createStorageMiner(ctx context.Context, api api.FullNode, peerid peer.ID, g
 	log.Infof("Pushed CreateMiner message: %s", signed.Cid())
 	log.Infof("Waiting for confirmation")
 
-	mw, err := api.StateWaitMsg(ctx, signed.Cid(), constants.MessageConfidence)
+	mw, err := nodeAPI.StateWaitMsg(ctx, signed.Cid(), constants.MessageConfidence)
 	if err != nil {
 		return address.Undef, xerrors.Errorf("waiting for createMiner message: %w", err)
 	}
@@ -479,4 +491,132 @@ func createStorageMiner(ctx context.Context, api api.FullNode, peerid peer.ID, g
 
 	log.Infof("New miners address is: %s (%s)", retval.IDAddress, retval.RobustAddress)
 	return retval.IDAddress, nil
+}
+
+func migratePreSealMeta(ctx context.Context, api api.FullNode, metadata string, maddr address.Address, mds dtypes.MetadataDS) error {
+	metadata, err := homedir.Expand(metadata)
+	if err != nil {
+		return xerrors.Errorf("expanding preseal dir: %w", err)
+	}
+
+	b, err := ioutil.ReadFile(metadata)
+	if err != nil {
+		return xerrors.Errorf("reading preseal metadata: %w", err)
+	}
+
+	psm := map[string]genesis.Miner{}
+	if err := json.Unmarshal(b, &psm); err != nil {
+		return xerrors.Errorf("unmarshaling preseal metadata: %w", err)
+	}
+
+	meta, ok := psm[maddr.String()]
+	if !ok {
+		return xerrors.Errorf("preseal file didn't contain metadata for miner %s", maddr)
+	}
+
+	maxSectorID := abi.SectorNumber(0)
+	for _, sector := range meta.Sectors {
+		sectorKey := datastore.NewKey(sealing.SectorStorePrefix).ChildString(fmt.Sprint(sector.SectorID))
+
+		dealID, err := findMarketDealID(ctx, api, sector.Deal)
+		if err != nil {
+			return xerrors.Errorf("finding storage deal for pre-sealed sector %d: %w", sector.SectorID, err)
+		}
+		commD := sector.CommD
+		commR := sector.CommR
+
+		info := &sealing.SectorInfo{
+			State:        sealing.Proving,
+			SectorNumber: sector.SectorID,
+			Pieces: []sealing.Piece{
+				{
+					Piece: abi.PieceInfo{
+						Size:     abi.PaddedPieceSize(meta.SectorSize),
+						PieceCID: commD,
+					},
+					DealInfo: &sealing.DealInfo{
+						DealID: dealID,
+						DealSchedule: sealing.DealSchedule{
+							StartEpoch: sector.Deal.StartEpoch,
+							EndEpoch:   sector.Deal.EndEpoch,
+						},
+					},
+				},
+			},
+			CommD:            &commD,
+			CommR:            &commR,
+			Proof:            nil,
+			TicketValue:      abi.SealRandomness{},
+			TicketEpoch:      0,
+			PreCommitMessage: nil,
+			SeedValue:        abi.InteractiveSealRandomness{},
+			SeedEpoch:        0,
+			CommitMessage:    nil,
+		}
+
+		b, err := cborutil.Dump(info)
+		if err != nil {
+			return err
+		}
+
+		if err := mds.Put(sectorKey, b); err != nil {
+			return err
+		}
+
+		if sector.SectorID > maxSectorID {
+			maxSectorID = sector.SectorID
+		}
+
+		/* // TODO: Import deals into market
+		pnd, err := cborutil.AsIpld(sector.Deal)
+		if err != nil {
+			return err
+		}
+
+		dealKey := datastore.NewKey(deals.ProviderDsPrefix).ChildString(pnd.Cid().String())
+
+		deal := &deals.MinerDeal{
+			MinerDeal: storagemarket.MinerDeal{
+				ClientDealProposal: sector.Deal,
+				ProposalCid: pnd.Cid(),
+				State:       storagemarket.StorageDealActive,
+				Ref:         &storagemarket.DataRef{Root: proposalCid}, // TODO: This is super wrong, but there
+				// are no params for CommP CIDs, we can't recover unixfs cid easily,
+				// and this isn't even used after the deal enters Complete state
+				DealID: dealID,
+			},
+		}
+
+		b, err = cborutil.Dump(deal)
+		if err != nil {
+			return err
+		}
+
+		if err := mds.Put(dealKey, b); err != nil {
+			return err
+		}*/
+	}
+
+	buf := make([]byte, binary.MaxVarintLen64)
+	size := binary.PutUvarint(buf, uint64(maxSectorID))
+	return mds.Put(datastore.NewKey(modules.StorageCounterDSPrefix), buf[:size])
+}
+
+func findMarketDealID(ctx context.Context, api api.FullNode, deal market2.DealProposal) (abi.DealID, error) {
+	// TODO: find a better way
+	//  (this is only used by genesis miners)
+
+	deals, err := api.StateMarketDeals(ctx, types.EmptyTSK)
+	if err != nil {
+		return 0, xerrors.Errorf("getting market deals: %w", err)
+	}
+
+	for k, v := range deals {
+		if v.Proposal.PieceCID.Equals(deal.PieceCID) {
+			id, err := strconv.ParseUint(k, 10, 64)
+			return abi.DealID(id), err
+		}
+	}
+
+	return 0, xerrors.New("deal not found")
 }
