@@ -55,27 +55,6 @@ var infoAllCmd = &cli.Command{
 			return err
 		}
 
-		fmt.Println("\n#: PeerID")
-		if err := lcli.NetId.Action(cctx); err != nil {
-			return err
-		}
-
-		fmt.Println("\n#: Listen Addresses")
-		if err := lcli.NetListen.Action(cctx); err != nil {
-			return err
-		}
-
-		fmt.Println("\n#: Reachability")
-		if err := lcli.NetReachability.Action(cctx); err != nil {
-			return err
-		}
-
-		// Very Verbose info
-		fmt.Println("\n#: Peers")
-		if err := lcli.NetPeers.Action(cctx); err != nil {
-			return err
-		}
-
 		fmt.Println("\n#: Sealing Jobs")
 		if err := sealingJobsCmd.Action(cctx); err != nil {
 			return err

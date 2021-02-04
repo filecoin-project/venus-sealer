@@ -3,13 +3,13 @@ package main
 import (
 	"fmt"
 	"github.com/filecoin-project/lotus/build"
-	lcli "github.com/filecoin-project/lotus/cli"
-	"github.com/filecoin-project/lotus/lib/lotuslog"
-	"github.com/filecoin-project/lotus/lib/tracing"
-	"github.com/filecoin-project/lotus/node/repo"
+	sealer "github.com/filecoin-project/venus-sealer"
+	"github.com/filecoin-project/venus-sealer/lib/tracing"
 	logging "github.com/ipfs/go-log/v2"
 	"github.com/urfave/cli/v2"
 	"go.opencensus.io/trace"
+	"golang.org/x/xerrors"
+	"os"
 )
 
 var log = logging.Logger("main")
@@ -20,7 +20,7 @@ const FlagMinerRepo = "miner-repo"
 const FlagMinerRepoDeprecation = "storagerepo"
 
 func main() {
-	lotuslog.SetupLogLevels()
+	sealer.SetupLogLevels()
 
 	local := []*cli.Command{
 		initCmd, runCmd, sectorsCmd, actorCmd, infoCmd, sealingCmd, storageCmd, VersionCmd,
@@ -80,5 +80,20 @@ func main() {
 	app.Setup()
 	app.Metadata["repoType"] = repo.StorageMiner
 
-	lcli.RunApp(app)
+	RunApp(app)
+}
+
+func RunApp(app *cli.App) {
+	if err := app.Run(os.Args); err != nil {
+		if os.Getenv("LOTUS_DEV") != "" {
+			log.Warnf("%+v", err)
+		} else {
+			fmt.Fprintf(os.Stderr, "ERROR: %s\n\n", err) // nolint:errcheck
+		}
+		var phe *PrintHelpErr
+		if xerrors.As(err, &phe) {
+			_ = cli.ShowCommandHelp(phe.Ctx, phe.Ctx.Command.Name)
+		}
+		os.Exit(1)
+	}
 }

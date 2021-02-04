@@ -25,7 +25,7 @@ import (
 	"github.com/filecoin-project/lotus/chain/actors/adt"
 	"github.com/filecoin-project/lotus/chain/actors/builtin/miner"
 	"github.com/filecoin-project/lotus/chain/types"
-	"github.com/filecoin-project/lotus/lib/tablewriter"
+	"github.com/filecoin-project/venus-sealer/lib/tablewriter"
 )
 
 var actorCmd = &cli.Command{

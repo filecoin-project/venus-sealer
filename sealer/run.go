@@ -22,12 +22,12 @@ import (
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/go-jsonrpc/auth"
 
-	"github.com/filecoin-project/lotus/lib/ulimit"
 	"github.com/filecoin-project/lotus/metrics"
 	sealer "github.com/filecoin-project/venus-sealer"
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/api/impl"
 	"github.com/filecoin-project/venus-sealer/dtypes"
+	"github.com/filecoin-project/venus-sealer/lib/ulimit"
 	"github.com/filecoin-project/venus-sealer/repo"
 )
 

@@ -20,8 +20,8 @@ import (
 	"github.com/filecoin-project/lotus/chain/actors/builtin/miner"
 	"github.com/filecoin-project/lotus/chain/actors/policy"
 	"github.com/filecoin-project/lotus/chain/types"
-	"github.com/filecoin-project/lotus/lib/tablewriter"
 	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus-sealer/lib/tablewriter"
 
 	sealing "github.com/filecoin-project/venus-sealer/extern/storage-sealing"
 )

@@ -20,9 +20,9 @@ import (
 	"github.com/filecoin-project/lotus/chain/actors/adt"
 	"github.com/filecoin-project/lotus/chain/actors/builtin/miner"
 	"github.com/filecoin-project/lotus/chain/types"
-	"github.com/filecoin-project/lotus/lib/blockstore"
-	"github.com/filecoin-project/lotus/lib/bufbstore"
 	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus-sealer/lib/blockstore"
+	"github.com/filecoin-project/venus-sealer/lib/bufbstore"
 )
 
 var infoCmd = &cli.Command{
