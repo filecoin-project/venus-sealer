@@ -31,7 +31,8 @@ require (
 	github.com/filecoin-project/specs-actors v0.9.13
 	github.com/filecoin-project/specs-actors/v2 v2.3.4
 	github.com/filecoin-project/specs-storage v0.1.1-0.20201105051918-5188d9774506
-	github.com/gbrlsnchs/jwt/v3 v3.0.0-beta.1
+	github.com/filecoin-project/venus v0.9.1-0.20210205054738-f37bd33c730e // indirect
+	github.com/gbrlsnchs/jwt/v3 v3.0.0
 	github.com/google/uuid v1.2.0
 	github.com/gorilla/mux v1.8.0
 	github.com/hako/durafmt v0.0.0-20200710122514-c0fb7b4da026
@@ -60,7 +61,7 @@ require (
 	github.com/raulk/clock v1.1.0
 	github.com/stretchr/testify v1.7.0
 	github.com/syndtr/goleveldb v1.0.0
-	github.com/urfave/cli/v2 v2.2.0
+	github.com/urfave/cli/v2 v2.3.0
 	github.com/whyrusleeping/cbor-gen v0.0.0-20210118024343-169e9d70c0c2
 	go.opencensus.io v0.22.6
 	go.uber.org/fx v1.9.0

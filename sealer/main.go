@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/filecoin-project/lotus/build"
 	sealer "github.com/filecoin-project/venus-sealer"
+	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus-sealer/lib/tracing"
+	"github.com/filecoin-project/venus-sealer/repo"
 	logging "github.com/ipfs/go-log/v2"
 	"github.com/urfave/cli/v2"
 	"go.opencensus.io/trace"
@@ -49,7 +50,7 @@ func main() {
 	app := &cli.App{
 		Name:                 "lotus-miner",
 		Usage:                "Filecoin decentralized storage network miner",
-		Version:              build.UserVersion(),
+		Version:              constants.UserVersion(),
 		EnableBashCompletion: true,
 		Flags: []cli.Flag{
 			&cli.StringFlag{

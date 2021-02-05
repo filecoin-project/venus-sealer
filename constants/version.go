@@ -2,6 +2,8 @@ package constants
 
 import "fmt"
 
+var CurrentCommit string
+
 //nolint:varcheck,deadcode
 const (
 	majorMask = 0xff0000
@@ -34,3 +36,9 @@ func (ve Version) EqMajorMinor(v2 Version) bool {
 	return ve&minorMask == v2&minorMask
 }
 
+// BuildVersion is the local build version, set by build system
+const BuildVersion = "1.4.1"
+
+func UserVersion() string {
+	return BuildVersion + CurrentCommit
+}
