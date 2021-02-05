@@ -7,7 +7,7 @@ import (
 
 	"github.com/filecoin-project/go-state-types/exitcode"
 	"github.com/filecoin-project/go-statemachine"
-	"github.com/filecoin-project/lotus/chain/actors/policy"
+	"github.com/filecoin-project/venus/pkg/specactors/policy"
 )
 
 func (m *Sealing) handleFaulty(ctx statemachine.Context, sector SectorInfo) error {

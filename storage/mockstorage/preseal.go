@@ -1,24 +1,24 @@
 package mockstorage
 
 import (
+	"crypto/rand"
 	"fmt"
+	"github.com/filecoin-project/venus/pkg/crypto"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-commp-utils/zerocomm"
 	commcid "github.com/filecoin-project/go-fil-commcid"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
-	"github.com/filecoin-project/lotus/extern/sector-storage/mock"
+	"github.com/filecoin-project/venus-sealer/extern/sector-storage/mock"
 
 	market2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
 
-	"github.com/filecoin-project/lotus/chain/types"
-	"github.com/filecoin-project/lotus/chain/wallet"
-	"github.com/filecoin-project/lotus/genesis"
+	"github.com/filecoin-project/venus/pkg/gen/genesis"
 )
 
-func PreSeal(spt abi.RegisteredSealProof, maddr address.Address, sectors int) (*genesis.Miner, *types.KeyInfo, error) {
-	k, err := wallet.GenerateKey(types.KTBLS)
+func PreSeal(spt abi.RegisteredSealProof, maddr address.Address, sectors int) (*genesis.Miner, *crypto.KeyInfo, error) {
+	k, err := crypto.NewBLSKeyFromSeed(rand.Reader)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -28,10 +28,14 @@ func PreSeal(spt abi.RegisteredSealProof, maddr address.Address, sectors int) (*
 		return nil, nil, err
 	}
 
+	addr, err := k.Address()
+	if err != nil {
+		return nil, nil, err
+	}
 	genm := &genesis.Miner{
 		ID:            maddr,
-		Owner:         k.Address,
-		Worker:        k.Address,
+		Owner:         addr,
+		Worker:        addr,
 		MarketBalance: big.NewInt(0),
 		PowerBalance:  big.NewInt(0),
 		SectorSize:    ssize,
@@ -50,7 +54,7 @@ func PreSeal(spt abi.RegisteredSealProof, maddr address.Address, sectors int) (*
 		preseal.Deal = market2.DealProposal{
 			PieceCID:             preseal.CommD,
 			PieceSize:            abi.PaddedPieceSize(ssize),
-			Client:               k.Address,
+			Client:               addr,
 			Provider:             maddr,
 			Label:                fmt.Sprintf("%d", i),
 			StartEpoch:           1,
@@ -63,5 +67,5 @@ func PreSeal(spt abi.RegisteredSealProof, maddr address.Address, sectors int) (*
 		genm.Sectors[i] = preseal
 	}
 
-	return genm, &k.KeyInfo, nil
+	return genm, &k, nil
 }

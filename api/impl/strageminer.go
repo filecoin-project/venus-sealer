@@ -28,32 +28,32 @@ import (
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/storiface"
 	sealing "github.com/filecoin-project/venus-sealer/extern/storage-sealing"
 
-	"github.com/filecoin-project/lotus/chain/types"
 	sto "github.com/filecoin-project/specs-storage/storage"
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/dtypes"
 	"github.com/filecoin-project/venus-sealer/storage"
 	"github.com/filecoin-project/venus-sealer/storage/sectorblocks"
+	"github.com/filecoin-project/venus/pkg/types"
 )
 
 type StorageMinerAPI struct {
 	CommonAPI
 
-	SectorBlocks 	*sectorblocks.SectorBlocks
-	Miner             *storage.Miner
-	Full              api.FullNode
-	StorageMgr        *sectorstorage.Manager `optional:"true"`
-	IStorageMgr       sectorstorage.SectorManager
+	SectorBlocks *sectorblocks.SectorBlocks
+	Miner        *storage.Miner
+	Full         api.FullNode
+	StorageMgr   *sectorstorage.Manager `optional:"true"`
+	IStorageMgr  sectorstorage.SectorManager
 	*stores.Index
 	storiface.WorkerReturn
 
-	AddrSel      *storage.AddressSelector
+	AddrSel *storage.AddressSelector
 
 	DS dtypes.MetadataDS
 
-	NetParams    *config.NetParamsConfig
-	SetSealingConfigFunc                        dtypes.SetSealingConfigFunc
-	GetSealingConfigFunc                        dtypes.GetSealingConfigFunc
+	NetParams            *config.NetParamsConfig
+	SetSealingConfigFunc dtypes.SetSealingConfigFunc
+	GetSealingConfigFunc dtypes.GetSealingConfigFunc
 }
 
 func (sm *StorageMinerAPI) ServeRemote(w http.ResponseWriter, r *http.Request) {
@@ -65,7 +65,6 @@ func (sm *StorageMinerAPI) ServeRemote(w http.ResponseWriter, r *http.Request) {
 
 	sm.StorageMgr.ServeHTTP(w, r)
 }
-
 
 func (sm *StorageMinerAPI) WorkerStats(context.Context) (map[uuid.UUID]storiface.WorkerStats, error) {
 	return sm.StorageMgr.WorkerStats(), nil
@@ -335,13 +334,13 @@ func (sm *StorageMinerAPI) SealingAbort(ctx context.Context, call storiface.Call
 }
 
 func (sm *StorageMinerAPI) MarketImportDealData(ctx context.Context, propCid cid.Cid, path string) error {
-/*	fi, err := os.Open(path)
-	if err != nil {
-		return xerrors.Errorf("failed to open file: %w", err)
-	}
-	defer fi.Close() //nolint:errcheck
+	/*	fi, err := os.Open(path)
+		if err != nil {
+			return xerrors.Errorf("failed to open file: %w", err)
+		}
+		defer fi.Close() //nolint:errcheck
 
-	return sm.StorageProvider.ImportDataForDeal(ctx, propCid, fi)*/
+		return sm.StorageProvider.ImportDataForDeal(ctx, propCid, fi)*/
 	panic("not impl")
 }
 

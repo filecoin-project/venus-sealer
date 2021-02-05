@@ -21,13 +21,13 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 
-	"github.com/filecoin-project/lotus/chain/types"
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/fsutil"
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/stores"
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/storiface"
 	sealing "github.com/filecoin-project/venus-sealer/extern/storage-sealing"
 	"github.com/filecoin-project/venus-sealer/lib/tablewriter"
+	"github.com/filecoin-project/venus/pkg/types"
 )
 
 const metaFile = "sectorstore.json"

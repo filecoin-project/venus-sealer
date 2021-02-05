@@ -22,7 +22,6 @@ import (
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/go-jsonrpc/auth"
 
-	"github.com/filecoin-project/lotus/metrics"
 	sealer "github.com/filecoin-project/venus-sealer"
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/api/impl"
@@ -70,9 +69,7 @@ var runCmd = &cli.Command{
 		ctx := api.DaemonContext(cctx)
 
 		// Register all metric views
-		if err := view.Register(
-			metrics.DefaultViews...,
-		); err != nil {
+		if err := view.Register(); err != nil {
 			log.Fatalf("Cannot register the view: %v", err)
 		}
 
@@ -171,7 +168,8 @@ var runCmd = &cli.Command{
 		srv := &http.Server{
 			Handler: ah,
 			BaseContext: func(listener net.Listener) context.Context {
-				ctx, _ := tag.New(context.Background(), tag.Upsert(metrics.APIInterface, "lotus-miner"))
+				key, _ := tag.NewKey("api")
+				ctx, _ := tag.New(context.Background(), tag.Upsert(key, "lotus-miner"))
 				return ctx
 			},
 		}

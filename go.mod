@@ -31,7 +31,7 @@ require (
 	github.com/filecoin-project/specs-actors v0.9.13
 	github.com/filecoin-project/specs-actors/v2 v2.3.4
 	github.com/filecoin-project/specs-storage v0.1.1-0.20201105051918-5188d9774506
-	github.com/filecoin-project/venus v0.9.1-0.20210205054738-f37bd33c730e // indirect
+	github.com/filecoin-project/venus v0.9.1-0.20210205054738-f37bd33c730e
 	github.com/gbrlsnchs/jwt/v3 v3.0.0
 	github.com/google/uuid v1.2.0
 	github.com/gorilla/mux v1.8.0
@@ -46,11 +46,13 @@ require (
 	github.com/ipfs/go-fs-lock v0.0.6
 	github.com/ipfs/go-ipfs-blockstore v1.0.3
 	github.com/ipfs/go-ipfs-ds-help v1.0.0
+	github.com/ipfs/go-ipfs-util v0.0.2
 	github.com/ipfs/go-ipld-cbor v0.0.5
 	github.com/ipfs/go-log v1.0.4
 	github.com/ipfs/go-log/v2 v2.1.2-0.20200626104915-0016c0b4b3e4
 	github.com/ipfs/go-metrics-interface v0.0.1
 	github.com/kelseyhightower/envconfig v1.4.0
+	github.com/libp2p/go-buffer-pool v0.0.2
 	github.com/libp2p/go-libp2p-core v0.7.0
 	github.com/libp2p/go-libp2p-pubsub v0.4.1
 	github.com/mitchellh/go-homedir v1.1.0
@@ -66,9 +68,16 @@ require (
 	go.opencensus.io v0.22.6
 	go.uber.org/fx v1.9.0
 	go.uber.org/multierr v1.6.0
+	go.uber.org/zap v1.16.0
 	golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 	gotest.tools v2.2.0+incompatible
 )
 
 replace github.com/filecoin-project/filecoin-ffi => ./extern/filecoin-ffi
+
+replace github.com/filecoin-project/venus => /Users/lijunlong/Desktop/workload/venus
+
+replace github.com/supranational/blst => ./extern/fil-blst/blst
+
+replace github.com/filecoin-project/fil-blst => ./extern/fil-blst

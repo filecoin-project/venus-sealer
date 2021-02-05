@@ -3,7 +3,6 @@ package venus_sealer
 import (
 	"context"
 	"github.com/filecoin-project/go-state-types/abi"
-	"github.com/filecoin-project/lotus/chain/types"
 	storage2 "github.com/filecoin-project/specs-storage/storage"
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/api/impl"
@@ -18,6 +17,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/repo"
 	"github.com/filecoin-project/venus-sealer/storage"
 	"github.com/filecoin-project/venus-sealer/storage/sectorblocks"
+	"github.com/filecoin-project/venus/pkg/crypto"
 	logging "github.com/ipfs/go-log/v2"
 	metricsi "github.com/ipfs/go-metrics-interface"
 	"github.com/multiformats/go-multiaddr"
@@ -155,7 +155,7 @@ func Repo(lr repo.LockedRepo) Option {
 		return Options(
 			Override(new(repo.LockedRepo), LockedRepo(lr)), // module handles closing
 			Override(new(dtypes.MetadataDS), Datastore),
-			Override(new(types.KeyStore), KeyStore),
+			Override(new(crypto.KeyInfo), KeyStore),
 			Override(new(*dtypes.APIAlg), APISecret),
 
 			Override(new(config.NetParamsConfig), cfg.NetParams),

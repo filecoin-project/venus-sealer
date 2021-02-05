@@ -21,11 +21,11 @@ import (
 
 	miner2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/miner"
 
-	"github.com/filecoin-project/lotus/chain/actors"
-	"github.com/filecoin-project/lotus/chain/actors/adt"
-	"github.com/filecoin-project/lotus/chain/actors/builtin/miner"
-	"github.com/filecoin-project/lotus/chain/types"
 	"github.com/filecoin-project/venus-sealer/lib/tablewriter"
+	actors "github.com/filecoin-project/venus/pkg/specactors"
+	"github.com/filecoin-project/venus/pkg/specactors/adt"
+	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/types"
 )
 
 var actorCmd = &cli.Command{

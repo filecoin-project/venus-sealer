@@ -2,6 +2,7 @@ package repo
 
 import (
 	"encoding/json"
+	types2 "github.com/filecoin-project/lotus/chain/types"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -14,11 +15,11 @@ import (
 	"github.com/multiformats/go-multiaddr"
 	"golang.org/x/xerrors"
 
-	"github.com/filecoin-project/lotus/chain/types"
-	"github.com/filecoin-project/lotus/lib/blockstore"
 	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/fsutil"
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/stores"
+	"github.com/filecoin-project/venus-sealer/lib/blockstore"
+	"github.com/filecoin-project/venus/pkg/types"
 )
 
 type MemRepo struct {
@@ -32,7 +33,7 @@ type MemRepo struct {
 	token    *byte
 
 	datastore  datastore.Datastore
-	keystore   map[string]types.KeyInfo
+	keystore   map[string]types2.KeyInfo
 	blockstore blockstore.Blockstore
 
 	// given a repo type, produce the default config
@@ -138,7 +139,7 @@ var _ Repo = &MemRepo{}
 type MemRepoOptions struct {
 	Ds       datastore.Datastore
 	ConfigF  func(RepoType) interface{}
-	KeyStore map[string]types.KeyInfo
+	KeyStore map[string]types2.KeyInfo
 }
 
 // NewMemory creates new memory based repo with provided options.
@@ -155,7 +156,7 @@ func NewMemory(opts *MemRepoOptions) *MemRepo {
 		opts.Ds = dssync.MutexWrap(datastore.NewMapDatastore())
 	}
 	if opts.KeyStore == nil {
-		opts.KeyStore = make(map[string]types.KeyInfo)
+		opts.KeyStore = make(map[string]types2.KeyInfo)
 	}
 
 	return &MemRepo{
@@ -312,7 +313,7 @@ func (lmem *lockedMemRepo) SetAPIToken(token []byte) error {
 	return nil
 }
 
-func (lmem *lockedMemRepo) KeyStore() (types.KeyStore, error) {
+func (lmem *lockedMemRepo) KeyStore() (types2.KeyStore, error) {
 	if err := lmem.checkToken(); err != nil {
 		return nil, err
 	}
@@ -337,22 +338,22 @@ func (lmem *lockedMemRepo) List() ([]string, error) {
 }
 
 // Get gets a key out of keystore and returns types.KeyInfo coresponding to named key
-func (lmem *lockedMemRepo) Get(name string) (types.KeyInfo, error) {
+func (lmem *lockedMemRepo) Get(name string) (types2.KeyInfo, error) {
 	if err := lmem.checkToken(); err != nil {
-		return types.KeyInfo{}, err
+		return types2.KeyInfo{}, err
 	}
 	lmem.RLock()
 	defer lmem.RUnlock()
 
 	key, ok := lmem.mem.keystore[name]
 	if !ok {
-		return types.KeyInfo{}, xerrors.Errorf("getting key '%s': %w", name, types.ErrKeyInfoNotFound)
+		return types2.KeyInfo{}, xerrors.Errorf("getting key '%s': %w", name, types.ErrKeyInfoNotFound)
 	}
 	return key, nil
 }
 
 // Put saves key info under given name
-func (lmem *lockedMemRepo) Put(name string, key types.KeyInfo) error {
+func (lmem *lockedMemRepo) Put(name string, key types2.KeyInfo) error {
 	if err := lmem.checkToken(); err != nil {
 		return err
 	}

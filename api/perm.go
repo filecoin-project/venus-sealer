@@ -10,3 +10,6 @@ const (
 	PermSign  auth.Permission = "sign"  // Use wallet keys for signing
 	PermAdmin auth.Permission = "admin" // Manage permissions
 )
+
+var AllPermissions = []auth.Permission{PermRead, PermWrite, PermSign, PermAdmin}
+var DefaultPerms = []auth.Permission{PermRead}

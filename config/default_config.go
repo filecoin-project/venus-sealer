@@ -2,9 +2,9 @@ package config
 
 import (
 	"errors"
-	"github.com/filecoin-project/lotus/chain/actors/policy"
-	"github.com/filecoin-project/lotus/chain/types"
 	sectorstorage "github.com/filecoin-project/venus-sealer/extern/sector-storage"
+	"github.com/filecoin-project/venus/pkg/specactors/policy"
+	"github.com/filecoin-project/venus/pkg/types"
 	"time"
 )
 
@@ -58,7 +58,7 @@ func DefaultMainnetStorageMiner() *StorageMiner {
 			PreCommitControl: []string{},
 			CommitControl:    []string{},
 		},
-		NetParams:NetParamsConfig{
+		NetParams: NetParamsConfig{
 			UpgradeIgnitionHeight:  94000,
 			ForkLengthThreshold:    policy.ChainFinality,
 			InsecurePoStValidation: false,
@@ -107,7 +107,7 @@ func DefaultCalibrationStorageMiner() *StorageMiner {
 			PreCommitControl: []string{},
 			CommitControl:    []string{},
 		},
-		NetParams:NetParamsConfig{
+		NetParams: NetParamsConfig{
 			UpgradeIgnitionHeight:  94000,
 			ForkLengthThreshold:    policy.ChainFinality,
 			InsecurePoStValidation: false,
@@ -156,7 +156,7 @@ func Default2kStorageMiner() *StorageMiner {
 			PreCommitControl: []string{},
 			CommitControl:    []string{},
 		},
-		NetParams:NetParamsConfig{
+		NetParams: NetParamsConfig{
 			UpgradeIgnitionHeight:  -2,
 			ForkLengthThreshold:    policy.ChainFinality,
 			InsecurePoStValidation: false,

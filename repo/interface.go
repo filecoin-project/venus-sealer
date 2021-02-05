@@ -2,15 +2,14 @@ package repo
 
 import (
 	"errors"
+	types2 "github.com/filecoin-project/lotus/chain/types"
 
-	"github.com/filecoin-project/lotus/lib/blockstore"
+	"github.com/filecoin-project/venus-sealer/lib/blockstore"
 	"github.com/ipfs/go-datastore"
 	"github.com/multiformats/go-multiaddr"
 
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/fsutil"
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/stores"
-
-	"github.com/filecoin-project/lotus/chain/types"
 )
 
 // BlockstoreDomain represents the domain of a blockstore.
@@ -73,7 +72,7 @@ type LockedRepo interface {
 	SetAPIToken([]byte) error
 
 	// KeyStore returns store of private keys for Filecoin transactions
-	KeyStore() (types.KeyStore, error)
+	KeyStore() (types2.KeyStore, error)
 
 	// Path returns absolute path of the repo
 	Path() string

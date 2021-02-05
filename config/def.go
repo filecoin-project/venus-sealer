@@ -5,19 +5,18 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"time"
 
-	"github.com/filecoin-project/lotus/chain/types"
 	sectorstorage "github.com/filecoin-project/venus-sealer/extern/sector-storage"
+	"github.com/filecoin-project/venus/pkg/types"
 )
-
 
 // StorageMiner is a miner config
 type StorageMiner struct {
-	API    API
-	Sealing    SealingConfig
-	Storage    sectorstorage.SealerConfig
-	Fees       MinerFeeConfig
-	Addresses  MinerAddressConfig
-	NetParams  NetParamsConfig
+	API       API
+	Sealing   SealingConfig
+	Storage   sectorstorage.SealerConfig
+	Fees      MinerFeeConfig
+	Addresses MinerAddressConfig
+	NetParams NetParamsConfig
 }
 
 type SealingConfig struct {
@@ -59,15 +58,14 @@ type FeeConfig struct {
 }
 
 type NetParamsConfig struct {
-	UpgradeIgnitionHeight abi.ChainEpoch
-	ForkLengthThreshold abi.ChainEpoch
+	UpgradeIgnitionHeight  abi.ChainEpoch
+	ForkLengthThreshold    abi.ChainEpoch
 	InsecurePoStValidation bool
-	BlockDelaySecs uint64
+	BlockDelaySecs         uint64
 }
 
 var DefaultDefaultMaxFee = types.MustParseFIL("0.007")
 var DefaultSimultaneousTransfers = uint64(20)
-
 
 var _ encoding.TextMarshaler = (*Duration)(nil)
 var _ encoding.TextUnmarshaler = (*Duration)(nil)

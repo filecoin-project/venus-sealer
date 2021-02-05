@@ -8,14 +8,15 @@ import (
 	"encoding/json"
 	"fmt"
 	cborutil "github.com/filecoin-project/go-cbor-util"
-	"github.com/filecoin-project/lotus/genesis"
-	"github.com/filecoin-project/lotus/node/modules"
 	market2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
+	venus_sealer "github.com/filecoin-project/venus-sealer"
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus-sealer/dtypes"
 	sealing "github.com/filecoin-project/venus-sealer/extern/storage-sealing"
+	"github.com/filecoin-project/venus/fixtures/asset"
+	"github.com/filecoin-project/venus/pkg/gen/genesis"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -34,15 +35,14 @@ import (
 	paramfetch "github.com/filecoin-project/go-paramfetch"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
-	"github.com/filecoin-project/lotus/build"
-	"github.com/filecoin-project/lotus/chain/actors"
-	"github.com/filecoin-project/lotus/chain/actors/builtin/miner"
-	"github.com/filecoin-project/lotus/chain/actors/builtin/power"
-	"github.com/filecoin-project/lotus/chain/actors/policy"
-	"github.com/filecoin-project/lotus/chain/types"
 	power2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/power"
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/stores"
 	"github.com/filecoin-project/venus-sealer/repo"
+	actors "github.com/filecoin-project/venus/pkg/specactors"
+	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/specactors/builtin/power"
+	"github.com/filecoin-project/venus/pkg/specactors/policy"
+	"github.com/filecoin-project/venus/pkg/types"
 )
 
 var initCmd = &cli.Command{
@@ -135,8 +135,11 @@ var initCmd = &cli.Command{
 		ctx := api.ReqContext(cctx)
 
 		log.Info("Checking proof parameters")
-
-		if err := paramfetch.GetParams(ctx, build.ParametersJSON(), uint64(ssize)); err != nil {
+		ps, err := asset.Asset("fixtures/_assets/proof-params/parameters.json")
+		if err != nil {
+			return err
+		}
+		if err := paramfetch.GetParams(ctx, ps, uint64(ssize)); err != nil {
 			return xerrors.Errorf("fetching proof parameters: %w", err)
 		}
 
@@ -276,7 +279,7 @@ func storageMinerInit(ctx context.Context, cctx *cli.Context, api api.FullNode, 
 
 	log.Info("Initializing libp2p identity")
 
-	p2pSk, err := makeHostKey(lr)
+	p2pSk, _, err := crypto.GenerateEd25519Key(rand.Reader)
 	if err != nil {
 		return xerrors.Errorf("make host key: %w", err)
 	}
@@ -347,32 +350,6 @@ func storageMinerInit(ctx context.Context, cctx *cli.Context, api api.FullNode, 
 	}
 
 	return nil
-}
-
-func makeHostKey(lr repo.LockedRepo) (crypto.PrivKey, error) {
-	pk, _, err := crypto.GenerateEd25519Key(rand.Reader)
-	if err != nil {
-		return nil, err
-	}
-
-	ks, err := lr.KeyStore()
-	if err != nil {
-		return nil, err
-	}
-
-	kbytes, err := pk.Bytes()
-	if err != nil {
-		return nil, err
-	}
-
-	if err := ks.Put("libp2p-host", types.KeyInfo{
-		Type:       "libp2p-host",
-		PrivateKey: kbytes,
-	}); err != nil {
-		return nil, err
-	}
-
-	return pk, nil
 }
 
 func createStorageMiner(ctx context.Context, nodeAPI api.FullNode, peerid peer.ID, gasPrice types.BigInt, cctx *cli.Context) (address.Address, error) {
@@ -485,7 +462,7 @@ func createStorageMiner(ctx context.Context, nodeAPI api.FullNode, peerid peer.I
 	}
 
 	var retval power2.CreateMinerReturn
-	if err := retval.UnmarshalCBOR(bytes.NewReader(mw.Receipt.Return)); err != nil {
+	if err := retval.UnmarshalCBOR(bytes.NewReader(mw.Receipt.ReturnValue)); err != nil {
 		return address.Undef, err
 	}
 
@@ -599,7 +576,8 @@ func migratePreSealMeta(ctx context.Context, api api.FullNode, metadata string, 
 
 	buf := make([]byte, binary.MaxVarintLen64)
 	size := binary.PutUvarint(buf, uint64(maxSectorID))
-	return mds.Put(datastore.NewKey(modules.StorageCounterDSPrefix), buf[:size])
+
+	return mds.Put(datastore.NewKey(venus_sealer.StorageCounterDSPrefix), buf[:size])
 }
 
 func findMarketDealID(ctx context.Context, api api.FullNode, deal market2.DealProposal) (abi.DealID, error) {

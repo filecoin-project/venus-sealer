@@ -38,7 +38,7 @@ func main() {
 		originBefore := cmd.Before
 		cmd.Before = func(cctx *cli.Context) error {
 			trace.UnregisterExporter(jaeger)
-			jaeger = tracing.SetupJaegerTracing("lotus/" + cmd.Name)
+			jaeger = tracing.SetupJaegerTracing("venus-sealer/" + cmd.Name)
 
 			if originBefore != nil {
 				return originBefore(cctx)

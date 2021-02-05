@@ -22,13 +22,12 @@ import (
 
 	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 
-	lotusAPI "github.com/filecoin-project/lotus/api"
-	"github.com/filecoin-project/lotus/chain/actors"
-	"github.com/filecoin-project/lotus/chain/actors/builtin/miner"
-	"github.com/filecoin-project/lotus/chain/actors/policy"
-	"github.com/filecoin-project/lotus/chain/messagepool"
-	"github.com/filecoin-project/lotus/chain/types"
 	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus/pkg/messagepool"
+	actors "github.com/filecoin-project/venus/pkg/specactors"
+	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/specactors/policy"
+	"github.com/filecoin-project/venus/pkg/types"
 )
 
 func (s *WindowPoStScheduler) failPost(err error, ts *types.TipSet, deadline *dline.Info) {
@@ -813,7 +812,7 @@ func (s *WindowPoStScheduler) setSender(ctx context.Context, msg *types.Message,
 			return msg.RequiredFunds(), nil
 		}
 
-		messagepool.CapGasFee(mff, msg, &lotusAPI.MessageSendSpec{MaxFee: big.Min(big.Sub(avail, msg.Value), msg.RequiredFunds())})
+		messagepool.CapGasFee(mff, msg, big.Min(big.Sub(avail, msg.Value), msg.RequiredFunds()))
 	}
 	return nil
 }

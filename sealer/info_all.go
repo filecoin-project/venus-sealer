@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	lcli "github.com/filecoin-project/lotus/cli"
 	"github.com/filecoin-project/venus-sealer/api"
 	"sort"
 
@@ -118,7 +117,7 @@ var infoAllCmd = &cli.Command{
 
 		if !_test {
 			fmt.Println("\n#: Goroutines")
-			if err := lcli.PprofGoroutines.Action(cctx); err != nil {
+			if err := PprofGoroutines.Action(cctx); err != nil {
 				return err
 			}
 		}

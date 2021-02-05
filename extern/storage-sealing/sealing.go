@@ -26,10 +26,10 @@ import (
 	"github.com/filecoin-project/specs-storage/storage"
 
 	"github.com/filecoin-project/venus-sealer/api"
-	"github.com/filecoin-project/lotus/chain/actors/builtin/market"
-	"github.com/filecoin-project/lotus/chain/actors/builtin/miner"
 	sectorstorage "github.com/filecoin-project/venus-sealer/extern/sector-storage"
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/ffiwrapper"
+	"github.com/filecoin-project/venus/pkg/specactors/builtin/market"
+	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
 )
 
 const SectorStorePrefix = "/sectors"
@@ -76,10 +76,10 @@ type SectorStateNotifee func(before, after SectorInfo)
 type AddrSel func(ctx context.Context, mi miner.MinerInfo, use api.AddrUse, goodFunds, minFunds abi.TokenAmount) (address.Address, abi.TokenAmount, error)
 
 type Sealing struct {
-	api    SealingAPI
-	feeCfg FeeConfig
+	api           SealingAPI
+	feeCfg        FeeConfig
 	networkParams *config.NetParamsConfig
-	events Events
+	events        Events
 
 	maddr address.Address
 
@@ -125,10 +125,10 @@ type UnsealedSectorInfo struct {
 
 func New(api SealingAPI, fc FeeConfig, networkParams *config.NetParamsConfig, events Events, maddr address.Address, ds datastore.Batching, sealer sectorstorage.SectorManager, sc SectorIDCounter, verif ffiwrapper.Verifier, pcp PreCommitPolicy, gc GetSealingConfigFunc, notifee SectorStateNotifee, as AddrSel) *Sealing {
 	s := &Sealing{
-		api:    api,
-		feeCfg: fc,
+		api:           api,
+		feeCfg:        fc,
 		networkParams: networkParams,
-		events: events,
+		events:        events,
 
 		maddr:  maddr,
 		sealer: sealer,

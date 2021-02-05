@@ -11,9 +11,9 @@ import (
 	"github.com/filecoin-project/go-state-types/exitcode"
 	"github.com/filecoin-project/specs-storage/storage"
 
-	"github.com/filecoin-project/lotus/chain/actors/builtin/miner"
 	sectorstorage "github.com/filecoin-project/venus-sealer/extern/sector-storage"
 	"github.com/filecoin-project/venus-sealer/extern/storage-sealing/sealiface"
+	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
 )
 
 // Piece is a tuple of piece and deal info

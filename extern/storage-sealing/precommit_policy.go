@@ -3,7 +3,7 @@ package sealing
 import (
 	"context"
 
-	"github.com/filecoin-project/lotus/chain/actors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
 
 	"github.com/filecoin-project/go-state-types/network"
 

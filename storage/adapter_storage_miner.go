@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/filecoin-project/venus-sealer/constants"
+	"github.com/filecoin-project/venus/pkg/chain"
 
 	"github.com/ipfs/go-cid"
 	cbg "github.com/whyrusleeping/cbor-gen"
@@ -19,14 +20,12 @@ import (
 
 	market2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
 
-	"github.com/filecoin-project/lotus/api/apibstore"
-	"github.com/filecoin-project/lotus/chain/actors"
-	"github.com/filecoin-project/lotus/chain/actors/builtin/market"
-	"github.com/filecoin-project/lotus/chain/actors/builtin/miner"
-	"github.com/filecoin-project/lotus/chain/store"
-	"github.com/filecoin-project/lotus/chain/types"
 	"github.com/filecoin-project/venus-sealer/api"
 	sealing "github.com/filecoin-project/venus-sealer/extern/storage-sealing"
+	actors "github.com/filecoin-project/venus/pkg/specactors"
+	"github.com/filecoin-project/venus/pkg/specactors/builtin/market"
+	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/types"
 )
 
 var _ sealing.SealingAPI = new(SealingAPIAdapter)
@@ -112,7 +111,7 @@ func (s SealingAPIAdapter) StateWaitMsg(ctx context.Context, mcid cid.Cid) (seal
 	return sealing.MsgLookup{
 		Receipt: sealing.MessageReceipt{
 			ExitCode: wmsg.Receipt.ExitCode,
-			Return:   wmsg.Receipt.Return,
+			Return:   wmsg.Receipt.ReturnValue,
 			GasUsed:  wmsg.Receipt.GasUsed,
 		},
 		TipSetTok: wmsg.TipSet.Bytes(),
@@ -133,7 +132,7 @@ func (s SealingAPIAdapter) StateSearchMsg(ctx context.Context, c cid.Cid) (*seal
 	return &sealing.MsgLookup{
 		Receipt: sealing.MessageReceipt{
 			ExitCode: wmsg.Receipt.ExitCode,
-			Return:   wmsg.Receipt.Return,
+			Return:   wmsg.Receipt.ReturnValue,
 			GasUsed:  wmsg.Receipt.GasUsed,
 		},
 		TipSetTok: wmsg.TipSet.Bytes(),
@@ -172,7 +171,7 @@ func (s SealingAPIAdapter) StateComputeDataCommitment(ctx context.Context, maddr
 	}
 
 	var c cbg.CborCid
-	if err := c.UnmarshalCBOR(bytes.NewReader(r.MsgRct.Return)); err != nil {
+	if err := c.UnmarshalCBOR(bytes.NewReader(r.MsgRct.ReturnValue)); err != nil {
 		return cid.Undef, xerrors.Errorf("failed to unmarshal CBOR to CborCid: %w", err)
 	}
 
@@ -190,7 +189,7 @@ func (s SealingAPIAdapter) StateSectorPreCommitInfo(ctx context.Context, maddr a
 		return nil, xerrors.Errorf("handleSealFailed(%d): temp error: %+v", sectorNumber, err)
 	}
 
-	stor := store.ActorStore(ctx, apibstore.NewAPIBlockstore(s.delegate))
+	stor := chain.ActorStore(ctx, api.NewAPIBlockstore(s.delegate))
 
 	state, err := miner.Load(stor, act)
 	if err != nil {

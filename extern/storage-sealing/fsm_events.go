@@ -1,7 +1,7 @@
 package sealing
 
 import (
-	"github.com/filecoin-project/lotus/chain/actors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
 	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
 

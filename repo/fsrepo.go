@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	types2 "github.com/filecoin-project/lotus/chain/types"
 	"io"
 	"io/ioutil"
 	"os"
@@ -12,7 +13,7 @@ import (
 	"sync"
 
 	"github.com/BurntSushi/toml"
-	"github.com/filecoin-project/lotus/lib/blockstore"
+	"github.com/filecoin-project/venus-sealer/lib/blockstore"
 	"github.com/ipfs/go-datastore"
 	fslock "github.com/ipfs/go-fs-lock"
 	logging "github.com/ipfs/go-log/v2"
@@ -21,13 +22,13 @@ import (
 	"github.com/multiformats/go-multiaddr"
 	"golang.org/x/xerrors"
 
-	lblockstore "github.com/filecoin-project/lotus/lib/blockstore"
-	badgerbs "github.com/filecoin-project/lotus/lib/blockstore/badger"
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/fsutil"
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/stores"
+	lblockstore "github.com/filecoin-project/venus-sealer/lib/blockstore"
+	badgerbs "github.com/filecoin-project/venus-sealer/lib/blockstore/badger"
 
-	"github.com/filecoin-project/lotus/chain/types"
 	"github.com/filecoin-project/venus-sealer/config"
+	"github.com/filecoin-project/venus/pkg/types"
 )
 
 const (
@@ -463,7 +464,7 @@ func (fsr *fsLockedRepo) SetAPIToken(token []byte) error {
 	return ioutil.WriteFile(fsr.join(fsAPIToken), token, 0600)
 }
 
-func (fsr *fsLockedRepo) KeyStore() (types.KeyStore, error) {
+func (fsr *fsLockedRepo) KeyStore() (types2.KeyStore, error) {
 	if err := fsr.stillValid(); err != nil {
 		return nil, err
 	}
@@ -504,9 +505,9 @@ func (fsr *fsLockedRepo) List() ([]string, error) {
 }
 
 // Get gets a key out of keystore and returns types.KeyInfo coresponding to named key
-func (fsr *fsLockedRepo) Get(name string) (types.KeyInfo, error) {
+func (fsr *fsLockedRepo) Get(name string) (types2.KeyInfo, error) {
 	if err := fsr.stillValid(); err != nil {
-		return types.KeyInfo{}, err
+		return types2.KeyInfo{}, err
 	}
 
 	encName := base32.RawStdEncoding.EncodeToString([]byte(name))
@@ -514,37 +515,37 @@ func (fsr *fsLockedRepo) Get(name string) (types.KeyInfo, error) {
 
 	fstat, err := os.Stat(keyPath)
 	if os.IsNotExist(err) {
-		return types.KeyInfo{}, xerrors.Errorf("opening key '%s': %w", name, types.ErrKeyInfoNotFound)
+		return types2.KeyInfo{}, xerrors.Errorf("opening key '%s': %w", name, types.ErrKeyInfoNotFound)
 	} else if err != nil {
-		return types.KeyInfo{}, xerrors.Errorf("opening key '%s': %w", name, err)
+		return types2.KeyInfo{}, xerrors.Errorf("opening key '%s': %w", name, err)
 	}
 
 	if fstat.Mode()&0077 != 0 {
-		return types.KeyInfo{}, xerrors.Errorf(kstrPermissionMsg, name, fstat.Mode())
+		return types2.KeyInfo{}, xerrors.Errorf(kstrPermissionMsg, name, fstat.Mode())
 	}
 
 	file, err := os.Open(keyPath)
 	if err != nil {
-		return types.KeyInfo{}, xerrors.Errorf("opening key '%s': %w", name, err)
+		return types2.KeyInfo{}, xerrors.Errorf("opening key '%s': %w", name, err)
 	}
 	defer file.Close() //nolint: errcheck // read only op
 
 	data, err := ioutil.ReadAll(file)
 	if err != nil {
-		return types.KeyInfo{}, xerrors.Errorf("reading key '%s': %w", name, err)
+		return types2.KeyInfo{}, xerrors.Errorf("reading key '%s': %w", name, err)
 	}
 
-	var res types.KeyInfo
+	var res types2.KeyInfo
 	err = json.Unmarshal(data, &res)
 	if err != nil {
-		return types.KeyInfo{}, xerrors.Errorf("decoding key '%s': %w", name, err)
+		return types2.KeyInfo{}, xerrors.Errorf("decoding key '%s': %w", name, err)
 	}
 
 	return res, nil
 }
 
 // Put saves key info under given name
-func (fsr *fsLockedRepo) Put(name string, info types.KeyInfo) error {
+func (fsr *fsLockedRepo) Put(name string, info types2.KeyInfo) error {
 	if err := fsr.stillValid(); err != nil {
 		return err
 	}

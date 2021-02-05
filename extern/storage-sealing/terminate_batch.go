@@ -18,7 +18,7 @@ import (
 	miner2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/miner"
 
 	"github.com/filecoin-project/venus-sealer/api"
-	"github.com/filecoin-project/lotus/chain/actors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
 )
 
 var (

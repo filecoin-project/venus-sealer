@@ -4,10 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/filecoin-project/go-jsonrpc"
-	cliutil "github.com/filecoin-project/lotus/cli/util"
 	"github.com/filecoin-project/venus-sealer/repo"
 	"github.com/mitchellh/go-homedir"
-	"github.com/prometheus/common/log"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 	"net/http"
@@ -77,7 +75,7 @@ func envForRepoDeprecation(t repo.RepoType) string {
 	}
 }
 
-func GetAPIInfo(ctx *cli.Context, t repo.RepoType) (cliutil.APIInfo, error) {
+func GetAPIInfo(ctx *cli.Context, t repo.RepoType) (APIInfo, error) {
 	// Check if there was a flag passed with the listen address of the API
 	// server (only used by the tests)
 	apiFlag := flagForAPI(t)
@@ -85,7 +83,7 @@ func GetAPIInfo(ctx *cli.Context, t repo.RepoType) (cliutil.APIInfo, error) {
 		strma := ctx.String(apiFlag)
 		strma = strings.TrimSpace(strma)
 
-		return cliutil.APIInfo{Addr: strma}, nil
+		return APIInfo{Addr: strma}, nil
 	}
 
 	envKey := envForRepo(t)
@@ -99,24 +97,24 @@ func GetAPIInfo(ctx *cli.Context, t repo.RepoType) (cliutil.APIInfo, error) {
 		}
 	}
 	if ok {
-		return cliutil.ParseApiInfo(env), nil
+		return ParseApiInfo(env), nil
 	}
 
 	repoFlag := flagForRepo(t)
 
 	p, err := homedir.Expand(ctx.String(repoFlag))
 	if err != nil {
-		return cliutil.APIInfo{}, xerrors.Errorf("could not expand home dir (%s): %w", repoFlag, err)
+		return APIInfo{}, xerrors.Errorf("could not expand home dir (%s): %w", repoFlag, err)
 	}
 
 	r, err := repo.NewFS(p)
 	if err != nil {
-		return cliutil.APIInfo{}, xerrors.Errorf("could not open repo at path: %s; %w", p, err)
+		return APIInfo{}, xerrors.Errorf("could not open repo at path: %s; %w", p, err)
 	}
 
 	ma, err := r.APIEndpoint()
 	if err != nil {
-		return cliutil.APIInfo{}, xerrors.Errorf("could not get api endpoint: %w", err)
+		return APIInfo{}, xerrors.Errorf("could not get api endpoint: %w", err)
 	}
 
 	token, err := r.APIToken()
@@ -124,7 +122,7 @@ func GetAPIInfo(ctx *cli.Context, t repo.RepoType) (cliutil.APIInfo, error) {
 		log.Warnf("Couldn't load CLI token, capabilities may be limited: %v", err)
 	}
 
-	return cliutil.APIInfo{
+	return APIInfo{
 		Addr:  ma.String(),
 		Token: token,
 	}, nil
@@ -239,7 +237,6 @@ func GetStorageMinerAPI(ctx *cli.Context, opts ...GetStorageMinerOption) (Storag
 	return NewStorageMinerRPC(ctx.Context, addr, headers)
 }
 
-
 // NewFullNodeRPC creates a new http jsonrpc client.
 func NewFullNodeRPC(ctx context.Context, addr string, requestHeader http.Header) (FullNode, jsonrpc.ClientCloser, error) {
 	var res FullNodeStruct
@@ -266,7 +263,6 @@ func NewStorageMinerRPC(ctx context.Context, addr string, requestHeader http.Hea
 
 	return &res, closer, err
 }
-
 
 func DaemonContext(cctx *cli.Context) context.Context {
 	if mtCtx, ok := cctx.App.Metadata[metadataTraceContext]; ok {

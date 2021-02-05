@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"github.com/filecoin-project/venus-sealer/constants"
+	"github.com/filecoin-project/venus/pkg/chain"
 	"time"
 
 	"golang.org/x/xerrors"
@@ -12,12 +13,10 @@ import (
 	"github.com/filecoin-project/go-state-types/dline"
 	"github.com/filecoin-project/specs-storage/storage"
 
-	"github.com/filecoin-project/lotus/chain/store"
-	"github.com/filecoin-project/lotus/chain/types"
-	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/config"
 	sectorstorage "github.com/filecoin-project/venus-sealer/extern/sector-storage"
 	"github.com/filecoin-project/venus-sealer/journal"
+	"github.com/filecoin-project/venus/pkg/types"
 
 	"go.opencensus.io/trace"
 )
@@ -81,7 +80,7 @@ func (s *WindowPoStScheduler) Run(ctx context.Context) {
 	defer s.ch.shutdown()
 	s.ch.start()
 
-	var notifs <-chan []*api.HeadChange
+	var notifs <-chan []*chain.HeadChange
 	var err error
 	var gotCur bool
 
@@ -113,7 +112,7 @@ func (s *WindowPoStScheduler) Run(ctx context.Context) {
 					continue
 				}
 				chg := changes[0]
-				if chg.Type != store.HCCurrent {
+				if chg.Type != chain.HCCurrent {
 					log.Errorf("expected first notif to tell current ts")
 					continue
 				}
@@ -136,9 +135,9 @@ func (s *WindowPoStScheduler) Run(ctx context.Context) {
 					log.Errorf("change.Val was nil")
 				}
 				switch change.Type {
-				case store.HCRevert:
+				case chain.HCRevert:
 					lowest = change.Val
-				case store.HCApply:
+				case chain.HCApply:
 					highest = change.Val
 				}
 			}

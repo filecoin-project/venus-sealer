@@ -1,3 +1,4 @@
+//TODO refer api types in venus project
 package api
 
 import (
@@ -11,12 +12,12 @@ import (
 	"github.com/filecoin-project/go-multistore"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
-	"github.com/filecoin-project/lotus/chain/actors/builtin"
-	"github.com/filecoin-project/lotus/chain/types"
-	"github.com/filecoin-project/lotus/chain/actors/builtin/market"
-	"github.com/filecoin-project/lotus/chain/actors/builtin/paych"
 	"github.com/filecoin-project/specs-actors/actors/builtin/power"
 	"github.com/filecoin-project/venus-sealer/constants"
+	"github.com/filecoin-project/venus/pkg/specactors/builtin"
+	"github.com/filecoin-project/venus/pkg/specactors/builtin/market"
+	"github.com/filecoin-project/venus/pkg/specactors/builtin/paych"
+	"github.com/filecoin-project/venus/pkg/types"
 	"github.com/ipfs/go-cid"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -24,7 +25,6 @@ import (
 	"github.com/polydawn/refmt/json"
 	"time"
 )
-
 
 type FileRef struct {
 	Path  string
@@ -93,15 +93,6 @@ type MsgGasCost struct {
 	MinerTip           abi.TokenAmount
 	Refund             abi.TokenAmount
 	TotalCost          abi.TokenAmount
-}
-
-// BlsMessages[x].cid = Cids[x]
-// SecpkMessages[y].cid = Cids[BlsMessages.length + y]
-type BlockMessages struct {
-	BlsMessages   []*types.Message
-	SecpkMessages []*types.SignedMessage
-
-	Cids []cid.Cid
 }
 
 type Message struct {
@@ -406,10 +397,6 @@ type DataCIDSize struct {
 type CommPRet struct {
 	Root cid.Cid
 	Size abi.UnpaddedPieceSize
-}
-type HeadChange struct {
-	Type string
-	Val  *types.TipSet
 }
 
 type MsigProposeResponse int

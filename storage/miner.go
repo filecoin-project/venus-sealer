@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"github.com/filecoin-project/go-state-types/network"
+	chain2 "github.com/filecoin-project/venus/app/submodule/chain"
+	"github.com/filecoin-project/venus/pkg/chain"
 
 	"github.com/filecoin-project/go-state-types/dline"
 
@@ -17,18 +19,18 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/crypto"
-	"github.com/filecoin-project/lotus/extern/sector-storage/ffiwrapper"
 	sectorstorage "github.com/filecoin-project/venus-sealer/extern/sector-storage"
+	"github.com/filecoin-project/venus-sealer/extern/sector-storage/ffiwrapper"
 
-	"github.com/filecoin-project/lotus/chain/actors/builtin/miner"
-	"github.com/filecoin-project/lotus/chain/actors/policy"
-	"github.com/filecoin-project/lotus/chain/types"
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/dtypes"
-	"github.com/filecoin-project/venus-sealer/events"
 	sealing "github.com/filecoin-project/venus-sealer/extern/storage-sealing"
 	"github.com/filecoin-project/venus-sealer/journal"
+	"github.com/filecoin-project/venus/pkg/events"
+	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/specactors/policy"
+	"github.com/filecoin-project/venus/pkg/types"
 )
 
 var log = logging.Logger("storageminer")
@@ -94,11 +96,11 @@ type storageMinerApi interface {
 	GasEstimateGasPremium(_ context.Context, nblocksincl uint64, sender address.Address, gaslimit int64, tsk types.TipSetKey) (types.BigInt, error)
 
 	ChainHead(context.Context) (*types.TipSet, error)
-	ChainNotify(context.Context) (<-chan []*api.HeadChange, error)
+	ChainNotify(context.Context) (<-chan []*chain.HeadChange, error)
 	ChainGetRandomnessFromTickets(ctx context.Context, tsk types.TipSetKey, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte) (abi.Randomness, error)
 	ChainGetRandomnessFromBeacon(ctx context.Context, tsk types.TipSetKey, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte) (abi.Randomness, error)
 	ChainGetTipSetByHeight(context.Context, abi.ChainEpoch, types.TipSetKey) (*types.TipSet, error)
-	ChainGetBlockMessages(context.Context, cid.Cid) (*api.BlockMessages, error)
+	ChainGetBlockMessages(context.Context, cid.Cid) (*chain2.BlockMessages, error)
 	ChainReadObj(context.Context, cid.Cid) ([]byte, error)
 	ChainHasObj(context.Context, cid.Cid) (bool, error)
 	ChainGetTipSet(ctx context.Context, key types.TipSetKey) (*types.TipSet, error)
@@ -144,7 +146,7 @@ func (m *Miner) Run(ctx context.Context) error {
 		MaxTerminateGasFee: abi.TokenAmount(m.feeCfg.MaxTerminateGasFee),
 	}
 
-	evts := events.NewEvents(ctx, m.api, m.networkParams.ForkLengthThreshold)
+	evts := events.NewEvents(ctx, m.api)
 	adaptedAPI := NewSealingAPIAdapter(m.api)
 	// TODO: Maybe we update this policy after actor upgrades?
 	pcp := sealing.NewBasicPreCommitPolicy(adaptedAPI, policy.GetMaxSectorExpirationExtension()-(md.WPoStProvingPeriod*2), md.PeriodStart%md.WPoStProvingPeriod)

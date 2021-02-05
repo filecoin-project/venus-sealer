@@ -1,13 +1,13 @@
 package api
 
 import (
-"context"
+	"context"
 
-blocks "github.com/ipfs/go-block-format"
-"github.com/ipfs/go-cid"
-"golang.org/x/xerrors"
+	blocks "github.com/ipfs/go-block-format"
+	"github.com/ipfs/go-cid"
+	"golang.org/x/xerrors"
 
-"github.com/filecoin-project/lotus/lib/blockstore"
+	"github.com/filecoin-project/venus-sealer/lib/blockstore"
 )
 
 type ChainIO interface {
@@ -66,4 +66,3 @@ func (a *apiBStore) HashOnRead(enabled bool) {
 }
 
 var _ blockstore.Blockstore = &apiBStore{}
-

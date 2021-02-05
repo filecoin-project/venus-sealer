@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	lcli "github.com/filecoin-project/lotus/cli"
 	"os"
 	"sort"
 	"strconv"
@@ -17,11 +16,11 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 
-	"github.com/filecoin-project/lotus/chain/actors/builtin/miner"
-	"github.com/filecoin-project/lotus/chain/actors/policy"
-	"github.com/filecoin-project/lotus/chain/types"
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/lib/tablewriter"
+	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/specactors/policy"
+	"github.com/filecoin-project/venus/pkg/types"
 
 	sealing "github.com/filecoin-project/venus-sealer/extern/storage-sealing"
 )
@@ -53,7 +52,7 @@ var sectorsPledgeCmd = &cli.Command{
 			return err
 		}
 		defer closer()
-		ctx := lcli.ReqContext(cctx)
+		ctx := api.ReqContext(cctx)
 
 		return nodeApi.PledgeSector(ctx)
 	},
@@ -74,12 +73,12 @@ var sectorsStatusCmd = &cli.Command{
 		},
 	},
 	Action: func(cctx *cli.Context) error {
-		nodeApi, closer, err := lcli.GetStorageMinerAPI(cctx)
+		nodeApi, closer, err := api.GetStorageMinerAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
-		ctx := lcli.ReqContext(cctx)
+		ctx := api.ReqContext(cctx)
 
 		if !cctx.Args().Present() {
 			return fmt.Errorf("must specify sector number to get status of")
@@ -495,7 +494,6 @@ var sectorsTerminatePendingCmd = &cli.Command{
 		if err != nil {
 			return xerrors.Errorf("getting proving deadline info failed: %w", err)
 		}
-
 		for _, id := range pending {
 			loc, err := nodeAPI.StateSectorPartition(ctx, maddr, id.Number, types.EmptyTSK)
 			if err != nil {

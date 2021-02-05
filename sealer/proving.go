@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus/pkg/chain"
 	"os"
 	"strconv"
 	"text/tabwriter"
@@ -13,10 +14,9 @@ import (
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
-	"github.com/filecoin-project/lotus/chain/actors/builtin/miner"
-	"github.com/filecoin-project/lotus/chain/store"
-	"github.com/filecoin-project/lotus/chain/types"
 	"github.com/filecoin-project/specs-storage/storage"
+	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/types"
 )
 
 var provingCmd = &cli.Command{
@@ -51,7 +51,7 @@ var provingFaultsCmd = &cli.Command{
 
 		ctx := api.ReqContext(cctx)
 
-		stor := store.ActorStore(ctx, api.NewAPIBlockstore(nodeAPI))
+		stor := chain.ActorStore(ctx, api.NewAPIBlockstore(nodeAPI))
 
 		maddr, err := getActorAddress(ctx, storageAPI, cctx.String("actor"))
 		if err != nil {
@@ -130,7 +130,7 @@ var provingInfoCmd = &cli.Command{
 			return err
 		}
 
-		stor := store.ActorStore(ctx, api.NewAPIBlockstore(nodeAPI))
+		stor := chain.ActorStore(ctx, api.NewAPIBlockstore(nodeAPI))
 
 		mas, err := miner.Load(stor, mact)
 		if err != nil {
