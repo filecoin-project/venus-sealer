@@ -44,4 +44,4 @@ func (r *remoteWorker) Close() error {
 }
 
 /*var _ sectorstorage.Worker = &remoteWorker{}
-*/
+ */

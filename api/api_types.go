@@ -9,171 +9,20 @@ import (
 	datatransfer "github.com/filecoin-project/go-data-transfer"
 	"github.com/filecoin-project/go-fil-markets/retrievalmarket"
 	"github.com/filecoin-project/go-fil-markets/storagemarket"
-	"github.com/filecoin-project/go-multistore"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
-	"github.com/filecoin-project/specs-actors/actors/builtin/power"
 	"github.com/filecoin-project/venus-sealer/constants"
-	"github.com/filecoin-project/venus/pkg/specactors/builtin"
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/market"
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/paych"
 	"github.com/filecoin-project/venus/pkg/types"
 	"github.com/ipfs/go-cid"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/polydawn/refmt/json"
-	"time"
 )
-
-type FileRef struct {
-	Path  string
-	IsCAR bool
-}
-
-type MinerSectors struct {
-	// Live sectors that should be proven.
-	Live uint64
-	// Sectors actively contributing to power.
-	Active uint64
-	// Sectors with failed proofs.
-	Faulty uint64
-}
-
-type ImportRes struct {
-	Root     cid.Cid
-	ImportID multistore.StoreID
-}
-
-type Import struct {
-	Key multistore.StoreID
-	Err string
-
-	Root     *cid.Cid
-	Source   string
-	FilePath string
-}
-
-type DealInfo struct {
-	ProposalCid cid.Cid
-	State       storagemarket.StorageDealStatus
-	Message     string // more information about deal state, particularly errors
-	Provider    address.Address
-
-	DataRef  *storagemarket.DataRef
-	PieceCID cid.Cid
-	Size     uint64
-
-	PricePerEpoch types.BigInt
-	Duration      uint64
-
-	DealID abi.DealID
-
-	CreationTime time.Time
-	Verified     bool
-
-	TransferChannelID *datatransfer.ChannelID
-	DataTransfer      *DataTransferChannel
-}
-
-type MsgLookup struct {
-	Message   cid.Cid // Can be different than requested, in case it was replaced, but only gas values changed
-	Receipt   types.MessageReceipt
-	ReturnDec interface{}
-	TipSet    types.TipSetKey
-	Height    abi.ChainEpoch
-}
-
-type MsgGasCost struct {
-	Message            cid.Cid // Can be different than requested, in case it was replaced, but only gas values changed
-	GasUsed            abi.TokenAmount
-	BaseFeeBurn        abi.TokenAmount
-	OverEstimationBurn abi.TokenAmount
-	MinerPenalty       abi.TokenAmount
-	MinerTip           abi.TokenAmount
-	Refund             abi.TokenAmount
-	TotalCost          abi.TokenAmount
-}
-
-type Message struct {
-	Cid     cid.Cid
-	Message *types.Message
-}
 
 type ActorState struct {
 	Balance types.BigInt
 	State   interface{}
-}
-
-type PCHDir int
-
-const (
-	PCHUndef PCHDir = iota
-	PCHInbound
-	PCHOutbound
-)
-
-type PaychStatus struct {
-	ControlAddr address.Address
-	Direction   PCHDir
-}
-
-type ChannelInfo struct {
-	Channel      address.Address
-	WaitSentinel cid.Cid
-}
-
-type ChannelAvailableFunds struct {
-	// Channel is the address of the channel
-	Channel *address.Address
-	// From is the from address of the channel (channel creator)
-	From address.Address
-	// To is the to address of the channel
-	To address.Address
-	// ConfirmedAmt is the amount of funds that have been confirmed on-chain
-	// for the channel
-	ConfirmedAmt types.BigInt
-	// PendingAmt is the amount of funds that are pending confirmation on-chain
-	PendingAmt types.BigInt
-	// PendingWaitSentinel can be used with PaychGetWaitReady to wait for
-	// confirmation of pending funds
-	PendingWaitSentinel *cid.Cid
-	// QueuedAmt is the amount that is queued up behind a pending request
-	QueuedAmt types.BigInt
-	// VoucherRedeemedAmt is the amount that is redeemed by vouchers on-chain
-	// and in the local datastore
-	VoucherReedeemedAmt types.BigInt
-}
-
-type PaymentInfo struct {
-	Channel      address.Address
-	WaitSentinel cid.Cid
-	Vouchers     []*paych.SignedVoucher
-}
-
-type VoucherSpec struct {
-	Amount      types.BigInt
-	TimeLockMin abi.ChainEpoch
-	TimeLockMax abi.ChainEpoch
-	MinSettle   abi.ChainEpoch
-
-	Extra *paych.ModVerifyParams
-}
-
-// VoucherCreateResult is the response to calling PaychVoucherCreate
-type VoucherCreateResult struct {
-	// Voucher that was created, or nil if there was an error or if there
-	// were insufficient funds in the channel
-	Voucher *paych.SignedVoucher
-	// Shortfall is the additional amount that would be needed in the channel
-	// in order to be able to create the voucher
-	Shortfall types.BigInt
-}
-
-type MinerPower struct {
-	MinerPower  power.Claim
-	TotalPower  power.Claim
-	HasMinPower bool
 }
 
 type QueryOffer struct {
@@ -207,16 +56,6 @@ func (o *QueryOffer) Order(client address.Address) RetrievalOrder {
 	}
 }
 
-type MarketBalance struct {
-	Escrow big.Int
-	Locked big.Int
-}
-
-type MarketDeal struct {
-	Proposal market.DealProposal
-	State    market.DealState
-}
-
 type RetrievalOrder struct {
 	// TODO: make this less unixfs specific
 	Root  cid.Cid
@@ -230,16 +69,6 @@ type RetrievalOrder struct {
 	Client                  address.Address
 	Miner                   address.Address
 	MinerPeer               retrievalmarket.RetrievalPeer
-}
-
-type InvocResult struct {
-	MsgCid         cid.Cid
-	Msg            *types.Message
-	MsgRct         *types.MessageReceipt
-	GasCost        MsgGasCost
-	ExecutionTrace types.ExecutionTrace
-	Error          string
-	Duration       time.Duration
 }
 
 type MethodCall struct {
@@ -280,107 +109,9 @@ type IpldObject struct {
 	Obj interface{}
 }
 
-type ActiveSync struct {
-	WorkerID uint64
-	Base     *types.TipSet
-	Target   *types.TipSet
-
-	Stage  SyncStateStage
-	Height abi.ChainEpoch
-
-	Start   time.Time
-	End     time.Time
-	Message string
-}
-
-type SyncState struct {
-	ActiveSyncs []ActiveSync
-
-	VMApplied uint64
-}
-
-type SyncStateStage int
-
-const (
-	StageIdle = SyncStateStage(iota)
-	StageHeaders
-	StagePersistHeaders
-	StageMessages
-	StageSyncComplete
-	StageSyncErrored
-	StageFetchingMessages
-)
-
-func (v SyncStateStage) String() string {
-	switch v {
-	case StageHeaders:
-		return "header sync"
-	case StagePersistHeaders:
-		return "persisting headers"
-	case StageMessages:
-		return "message sync"
-	case StageSyncComplete:
-		return "complete"
-	case StageSyncErrored:
-		return "error"
-	case StageFetchingMessages:
-		return "fetching messages"
-	default:
-		return fmt.Sprintf("<unknown: %d>", v)
-	}
-}
-
-type MpoolChange int
-
-const (
-	MpoolAdd MpoolChange = iota
-	MpoolRemove
-)
-
-type MpoolUpdate struct {
-	Type    MpoolChange
-	Message *types.SignedMessage
-}
-
-type ComputeStateOutput struct {
-	Root  cid.Cid
-	Trace []*InvocResult
-}
-
 type DealCollateralBounds struct {
 	Min abi.TokenAmount
 	Max abi.TokenAmount
-}
-
-type CirculatingSupply struct {
-	FilVested      abi.TokenAmount
-	FilMined       abi.TokenAmount
-	FilBurnt       abi.TokenAmount
-	FilLocked      abi.TokenAmount
-	FilCirculating abi.TokenAmount
-}
-
-type MiningBaseInfo struct {
-	MinerPower        types.BigInt
-	NetworkPower      types.BigInt
-	Sectors           []builtin.SectorInfo
-	WorkerKey         address.Address
-	SectorSize        abi.SectorSize
-	PrevBeaconEntry   types.BeaconEntry
-	BeaconEntries     []types.BeaconEntry
-	EligibleForMining bool
-}
-
-type BlockTemplate struct {
-	Miner            address.Address
-	Parents          types.TipSetKey
-	Ticket           *types.Ticket
-	Eproof           *types.ElectionProof
-	BeaconValues     []types.BeaconEntry
-	Messages         []*types.SignedMessage
-	Epoch            abi.ChainEpoch
-	Timestamp        uint64
-	WinningPoStProof []builtin.PoStProof
 }
 
 type DataSize struct {

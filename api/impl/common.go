@@ -22,9 +22,9 @@ var session = uuid.New()
 type CommonAPI struct {
 	fx.In
 
-	APISecret    *dtypes.APIAlg
-	ShutdownChan dtypes.ShutdownChan
-	NetworkParams    config.NetParamsConfig
+	APISecret     *dtypes.APIAlg
+	ShutdownChan  dtypes.ShutdownChan
+	NetworkParams config.NetParamsConfig
 }
 
 type jwtPayload struct {

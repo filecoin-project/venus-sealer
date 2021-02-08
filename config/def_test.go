@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-
 func TestDefaultMinerRoundtrip(t *testing.T) {
 	c := DefaultMainnetStorageMiner()
 

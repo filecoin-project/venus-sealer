@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/venus/app/submodule/syncer"
 	"github.com/ipfs/go-cid"
 	"time"
 )
@@ -43,10 +44,10 @@ func SyncWait(ctx context.Context, napi FullNode, blockDelay uint64, watch bool)
 		working := -1
 		for i, ss := range state.ActiveSyncs {
 			switch ss.Stage {
-			case StageSyncComplete:
+			case syncer.StageSyncComplete:
 			default:
 				working = i
-			case StageIdle:
+			case syncer.StageIdle:
 				// not complete, not actively working
 			}
 		}

@@ -8,6 +8,7 @@ import (
 	"github.com/filecoin-project/go-fil-markets/retrievalmarket"
 	"github.com/filecoin-project/go-fil-markets/storagemarket"
 	"github.com/filecoin-project/venus-sealer/config"
+	chain2 "github.com/filecoin-project/venus/app/submodule/chain"
 	"net/http"
 	"strconv"
 	"time"
@@ -344,7 +345,7 @@ func (sm *StorageMinerAPI) MarketImportDealData(ctx context.Context, propCid cid
 	panic("not impl")
 }
 
-func (sm *StorageMinerAPI) listDeals(ctx context.Context) ([]api.MarketDeal, error) {
+func (sm *StorageMinerAPI) listDeals(ctx context.Context) ([]chain2.MarketDeal, error) {
 	ts, err := sm.Full.ChainHead(ctx)
 	if err != nil {
 		return nil, err
@@ -355,7 +356,7 @@ func (sm *StorageMinerAPI) listDeals(ctx context.Context) ([]api.MarketDeal, err
 		return nil, err
 	}
 
-	var out []api.MarketDeal
+	var out []chain2.MarketDeal
 
 	for _, deal := range allDeals {
 		if deal.Proposal.Provider == sm.Miner.Address() {
@@ -366,7 +367,7 @@ func (sm *StorageMinerAPI) listDeals(ctx context.Context) ([]api.MarketDeal, err
 	return out, nil
 }
 
-func (sm *StorageMinerAPI) MarketListDeals(ctx context.Context) ([]api.MarketDeal, error) {
+func (sm *StorageMinerAPI) MarketListDeals(ctx context.Context) ([]chain2.MarketDeal, error) {
 	return sm.listDeals(ctx)
 }
 
@@ -483,7 +484,7 @@ func (sm *StorageMinerAPI) MarketDataTransferUpdates(ctx context.Context) (<-cha
 	panic("not impl")
 }
 
-func (sm *StorageMinerAPI) DealsList(ctx context.Context) ([]api.MarketDeal, error) {
+func (sm *StorageMinerAPI) DealsList(ctx context.Context) ([]chain2.MarketDeal, error) {
 	return sm.listDeals(ctx)
 }
 

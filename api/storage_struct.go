@@ -13,6 +13,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/fsutil"
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/stores"
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/storiface"
+	chain2 "github.com/filecoin-project/venus/app/submodule/chain"
 	"github.com/filecoin-project/venus/pkg/types"
 	"github.com/google/uuid"
 	"github.com/ipfs/go-cid"
@@ -92,7 +93,7 @@ type StorageMiner interface {
 	stores.SectorIndex
 
 	MarketImportDealData(ctx context.Context, propcid cid.Cid, path string) error
-	MarketListDeals(ctx context.Context) ([]MarketDeal, error)
+	MarketListDeals(ctx context.Context) ([]chain2.MarketDeal, error)
 	MarketListRetrievalDeals(ctx context.Context) ([]retrievalmarket.ProviderDealState, error)
 	MarketGetDealUpdates(ctx context.Context) (<-chan storagemarket.MinerDeal, error)
 	MarketListIncompleteDeals(ctx context.Context) ([]storagemarket.MinerDeal, error)
@@ -108,7 +109,7 @@ type StorageMiner interface {
 	MarketCancelDataTransfer(ctx context.Context, transferID datatransfer.TransferID, otherPeer peer.ID, isInitiator bool) error
 
 	DealsImportData(ctx context.Context, dealPropCid cid.Cid, file string) error
-	DealsList(ctx context.Context) ([]MarketDeal, error)
+	DealsList(ctx context.Context) ([]chain2.MarketDeal, error)
 	DealsConsiderOnlineStorageDeals(context.Context) (bool, error)
 	DealsSetConsiderOnlineStorageDeals(context.Context, bool) error
 	DealsConsiderOnlineRetrievalDeals(context.Context) (bool, error)
@@ -150,7 +151,7 @@ type StorageMinerStruct struct {
 		NetParamsConfig    func(ctx context.Context) (*config.NetParamsConfig, error)     `perm:"read"`
 
 		MarketImportDealData      func(context.Context, cid.Cid, string) error                                                                                                                                 `perm:"write"`
-		MarketListDeals           func(ctx context.Context) ([]MarketDeal, error)                                                                                                                              `perm:"read"`
+		MarketListDeals           func(ctx context.Context) ([]chain2.MarketDeal, error)                                                                                                                       `perm:"read"`
 		MarketListRetrievalDeals  func(ctx context.Context) ([]retrievalmarket.ProviderDealState, error)                                                                                                       `perm:"read"`
 		MarketGetDealUpdates      func(ctx context.Context) (<-chan storagemarket.MinerDeal, error)                                                                                                            `perm:"read"`
 		MarketListIncompleteDeals func(ctx context.Context) ([]storagemarket.MinerDeal, error)                                                                                                                 `perm:"read"`
@@ -215,7 +216,7 @@ type StorageMinerStruct struct {
 		StorageTryLock       func(ctx context.Context, sector abi.SectorID, read storiface.SectorFileType, write storiface.SectorFileType) (bool, error)                  `perm:"admin"`
 
 		DealsImportData                        func(ctx context.Context, dealPropCid cid.Cid, file string) error `perm:"write"`
-		DealsList                              func(ctx context.Context) ([]MarketDeal, error)                   `perm:"read"`
+		DealsList                              func(ctx context.Context) ([]chain2.MarketDeal, error)            `perm:"read"`
 		DealsConsiderOnlineStorageDeals        func(context.Context) (bool, error)                               `perm:"read"`
 		DealsSetConsiderOnlineStorageDeals     func(context.Context, bool) error                                 `perm:"admin"`
 		DealsConsiderOnlineRetrievalDeals      func(context.Context) (bool, error)                               `perm:"read"`
@@ -446,7 +447,7 @@ func (c *StorageMinerStruct) MarketImportDealData(ctx context.Context, propcid c
 	return c.Internal.MarketImportDealData(ctx, propcid, path)
 }
 
-func (c *StorageMinerStruct) MarketListDeals(ctx context.Context) ([]MarketDeal, error) {
+func (c *StorageMinerStruct) MarketListDeals(ctx context.Context) ([]chain2.MarketDeal, error) {
 	return c.Internal.MarketListDeals(ctx)
 }
 
@@ -498,7 +499,7 @@ func (c *StorageMinerStruct) DealsImportData(ctx context.Context, dealPropCid ci
 	return c.Internal.DealsImportData(ctx, dealPropCid, file)
 }
 
-func (c *StorageMinerStruct) DealsList(ctx context.Context) ([]MarketDeal, error) {
+func (c *StorageMinerStruct) DealsList(ctx context.Context) ([]chain2.MarketDeal, error) {
 	return c.Internal.DealsList(ctx)
 }
 
