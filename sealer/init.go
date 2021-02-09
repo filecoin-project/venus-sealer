@@ -481,12 +481,20 @@ func migratePreSealMeta(ctx context.Context, api api.FullNode, metadata string, 
 		return xerrors.Errorf("reading preseal metadata: %w", err)
 	}
 
-	psm := map[string]genesis.Miner{}
-	if err := json.Unmarshal(b, &psm); err != nil {
+	apsm := map[string]genesis.Miner{}
+	if err := json.Unmarshal(b, &apsm); err != nil {
 		return xerrors.Errorf("unmarshaling preseal metadata: %w", err)
 	}
 
-	meta, ok := psm[maddr.String()]
+	psm := map[address.Address]genesis.Miner{}
+	for addrStr, miner := range apsm {
+		addr, err := address.NewFromString(addrStr)
+		if err != nil {
+			return xerrors.Errorf("unable to decode address : %w", err)
+		}
+		psm[addr] = miner
+	}
+	meta, ok := psm[maddr]
 	if !ok {
 		return xerrors.Errorf("preseal file didn't contain metadata for miner %s", maddr)
 	}

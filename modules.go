@@ -209,7 +209,7 @@ func SectorStorage(mctx MetricsCtx, lc fx.Lifecycle, ls stores.LocalStorage, si 
 	return sst, nil
 }
 
-func GetParams(ctx context.Context, spt abi.RegisteredSealProof) error {
+func GetParams(mctx MetricsCtx, spt abi.RegisteredSealProof) error {
 	ssize, err := spt.SectorSize()
 	if err != nil {
 		return err
@@ -220,7 +220,7 @@ func GetParams(ctx context.Context, spt abi.RegisteredSealProof) error {
 	if err != nil {
 		return err
 	}
-	if err := paramfetch.GetParams(ctx, ps, uint64(ssize)); err != nil {
+	if err := paramfetch.GetParams(mctx, ps, uint64(ssize)); err != nil {
 		return xerrors.Errorf("fetching proof parameters: %w", err)
 	}
 	return nil

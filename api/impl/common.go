@@ -24,7 +24,7 @@ type CommonAPI struct {
 
 	APISecret     *dtypes.APIAlg
 	ShutdownChan  dtypes.ShutdownChan
-	NetworkParams config.NetParamsConfig
+	NetworkParams *config.NetParamsConfig
 }
 
 type jwtPayload struct {
