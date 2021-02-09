@@ -12,21 +12,22 @@ This project is a mining system supporting venus, is currently under active deve
 
 ## Run a local net
 
-init miner 
+### init miner 
 ```shell script
     ./sealer init --genesis-miner --actor=f01000 --sector-size=2KiB --pre-sealed-sectors=~/.genesis-sectors --pre-sealed-metadata=~/.genesis-sectors/pre-seal-t01000.json --network 2k --nosync # for 2k devnet genesis miner
-    ./sealer init --owner xx --worker xx --network calibration --nosync   #for calibration common miner
-    ./sealer init --owner xx --worker xx --network mainnet --nosync       #for mainnet common miner
-    ./sealer init --owner xx --worker xx  --nosync                        #for mainnet common miner, mainnet is default network type
+    ./sealer init --owner xx --worker xx --network calibration --nosync   # for calibration common miner
+    ./sealer init --owner xx --worker xx --network mainnet --nosync       # for mainnet common miner
+    ./sealer init --owner xx --worker xx  --nosync                        # for mainnet common miner, mainnet is default network type
 ```
-run miner
+### run miner
 
 ```shell script
-    ./sealer run --nosync
+    ./sealer run
 ```
 
+### Command
 
-show miner info
+The command line is the same as lotus, but note that the commands related to deal is removed, and this part will be implemented in another tool
 
 ```shell script
     ./sealer info               # show miner infomation
