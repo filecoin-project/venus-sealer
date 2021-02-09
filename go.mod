@@ -31,7 +31,7 @@ require (
 	github.com/filecoin-project/specs-actors v0.9.13
 	github.com/filecoin-project/specs-actors/v2 v2.3.4
 	github.com/filecoin-project/specs-storage v0.1.1-0.20201105051918-5188d9774506
-	github.com/filecoin-project/venus v0.9.1-0.20210205054738-f37bd33c730e
+	github.com/filecoin-project/venus v0.9.1-0.20210208074753-7e7c526c406d
 	github.com/gbrlsnchs/jwt/v3 v3.0.0
 	github.com/google/uuid v1.2.0
 	github.com/gorilla/mux v1.8.0
@@ -75,8 +75,6 @@ require (
 )
 
 replace github.com/filecoin-project/filecoin-ffi => ./extern/filecoin-ffi
-
-replace github.com/filecoin-project/venus => /Users/lijunlong/Desktop/workload/venus
 
 replace github.com/supranational/blst => ./extern/fil-blst/blst
 
