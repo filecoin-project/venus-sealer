@@ -215,7 +215,6 @@ func GetParams(mctx MetricsCtx, spt abi.RegisteredSealProof) error {
 		return err
 	}
 
-	return nil
 	ps, err := asset.Asset("fixtures/_assets/proof-params/parameters.json")
 	if err != nil {
 		return err

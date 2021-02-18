@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func genFsRepo(t *testing.T) (*FsRepo, func()) {
+func genFsRepo(t *testing.T) (*FsRepo, func()) { //nolint
 	path, err := ioutil.TempDir("", "venus-repo-")
 	if err != nil {
 		t.Fatal(err)
@@ -24,10 +24,4 @@ func genFsRepo(t *testing.T) (*FsRepo, func()) {
 	return repo, func() {
 		_ = os.RemoveAll(path)
 	}
-}
-
-func TestFsBasic(t *testing.T) {
-	repo, closer := genFsRepo(t)
-	defer closer()
-	basicTest(t, repo)
 }

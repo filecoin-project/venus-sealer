@@ -26,7 +26,7 @@ type WinningPoStProver interface {
 	ComputeProof(context.Context, []proof2.SectorInfo, abi.PoStRandomness) ([]proof2.PoStProof, error)
 }
 
-type wppProvider struct{}
+type wppProvider struct{} //nolint
 
 func (wpp *wppProvider) GenerateCandidates(ctx context.Context, _ abi.PoStRandomness, _ uint64) ([]uint64, error) {
 	return []uint64{0}, nil

@@ -10,7 +10,7 @@ require (
 	github.com/dgraph-io/badger/v2 v2.2007.2
 	github.com/docker/go-units v0.4.0
 	github.com/elastic/go-sysinfo v1.5.0
-	github.com/fatih/color v1.9.0
+	github.com/fatih/color v1.10.0
 	github.com/filecoin-project/filecoin-ffi v0.30.4-0.20200910194244-f640612a1a1f
 	github.com/filecoin-project/go-address v0.0.5
 	github.com/filecoin-project/go-bitfield v0.2.3
@@ -33,6 +33,7 @@ require (
 	github.com/filecoin-project/specs-storage v0.1.1-0.20201105051918-5188d9774506
 	github.com/filecoin-project/venus v0.9.1-0.20210208074753-7e7c526c406d
 	github.com/gbrlsnchs/jwt/v3 v3.0.0
+	github.com/golangci/golangci-lint v1.37.0 // indirect
 	github.com/google/uuid v1.2.0
 	github.com/gorilla/mux v1.8.0
 	github.com/hako/durafmt v0.0.0-20200710122514-c0fb7b4da026
@@ -69,7 +70,7 @@ require (
 	go.uber.org/fx v1.9.0
 	go.uber.org/multierr v1.6.0
 	go.uber.org/zap v1.16.0
-	golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f
+	golang.org/x/sys v0.0.0-20210119212857-b64e53b001e4
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 	gotest.tools v2.2.0+incompatible
 )

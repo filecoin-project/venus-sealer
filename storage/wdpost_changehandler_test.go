@@ -1139,9 +1139,9 @@ func makeTs(t *testing.T, h abi.ChainEpoch) *types.TipSet {
 			Height: h,
 			Miner:  a,
 
-			Parents: parents,
+			Parents: types.NewTipSetKey(parents...),
 
-			Ticket: &types.Ticket{VRFProof: []byte{byte(h % 2)}},
+			Ticket: types.Ticket{VRFProof: []byte{byte(h % 2)}},
 
 			ParentStateRoot:       dummyCid,
 			Messages:              msgcid,
@@ -1154,9 +1154,9 @@ func makeTs(t *testing.T, h abi.ChainEpoch) *types.TipSet {
 			Height: h,
 			Miner:  b,
 
-			Parents: parents,
+			Parents: types.NewTipSetKey(parents...),
 
-			Ticket: &types.Ticket{VRFProof: []byte{byte((h + 1) % 2)}},
+			Ticket: types.Ticket{VRFProof: []byte{byte((h + 1) % 2)}},
 
 			ParentStateRoot:       dummyCid,
 			Messages:              msgcid,
@@ -1165,7 +1165,7 @@ func makeTs(t *testing.T, h abi.ChainEpoch) *types.TipSet {
 			BlockSig:     &crypto.Signature{Type: crypto.SigTypeBLS},
 			BLSAggregate: &crypto.Signature{Type: crypto.SigTypeBLS},
 		},
-	})
+	}...)
 
 	require.NoError(t, err)
 

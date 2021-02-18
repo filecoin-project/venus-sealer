@@ -8,7 +8,7 @@ import (
 
 // special is a type used to give keys to modules which
 //  can't really be identified by the returned type
-type special struct{ id int }
+type special struct{ id int } //nolint
 
 // Option is a functional option which can be used with the New function to
 // change how the node is constructed

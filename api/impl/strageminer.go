@@ -3,10 +3,8 @@ package impl
 import (
 	"context"
 	"encoding/json"
-	datatransfer "github.com/filecoin-project/go-data-transfer"
 	"github.com/filecoin-project/go-fil-markets/piecestore"
 	"github.com/filecoin-project/go-fil-markets/retrievalmarket"
-	"github.com/filecoin-project/go-fil-markets/storagemarket"
 	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 	"github.com/filecoin-project/venus-sealer/config"
 	chain2 "github.com/filecoin-project/venus/app/submodule/chain"
@@ -16,7 +14,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ipfs/go-cid"
-	"github.com/libp2p/go-libp2p-core/peer"
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/go-address"
@@ -24,19 +21,21 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 
+	sto "github.com/filecoin-project/specs-storage/storage"
+	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus-sealer/dtypes"
 	sectorstorage "github.com/filecoin-project/venus-sealer/extern/sector-storage"
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/fsutil"
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/stores"
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/storiface"
 	sealing "github.com/filecoin-project/venus-sealer/extern/storage-sealing"
-
-	sto "github.com/filecoin-project/specs-storage/storage"
-	"github.com/filecoin-project/venus-sealer/api"
-	"github.com/filecoin-project/venus-sealer/dtypes"
 	"github.com/filecoin-project/venus-sealer/storage"
 	"github.com/filecoin-project/venus-sealer/storage/sectorblocks"
 	"github.com/filecoin-project/venus/pkg/types"
+	logging "github.com/ipfs/go-log/v2"
 )
+
+var log = logging.Logger("sealer")
 
 type StorageMinerAPI struct {
 	CommonAPI
@@ -316,15 +315,14 @@ func (sm *StorageMinerAPI) SectorMarkForUpgrade(ctx context.Context, id abi.Sect
 }
 
 func (sm *StorageMinerAPI) WorkerConnect(ctx context.Context, url string) error {
-	/*w, err := connectRemoteWorker(ctx, sm, url)
+	w, err := connectRemoteWorker(ctx, sm, url)
 	if err != nil {
 		return xerrors.Errorf("connecting remote storage failed: %w", err)
 	}
 
 	log.Infof("Connected to a remote worker at %s", url)
 
-	return sm.StorageMgr.AddWorker(ctx, w)*/
-	panic("not impl")
+	return sm.StorageMgr.AddWorker(ctx, w)
 }
 
 func (sm *StorageMinerAPI) SealingSchedDiag(ctx context.Context, doSched bool) (interface{}, error) {
@@ -366,123 +364,6 @@ func (sm *StorageMinerAPI) listDeals(ctx context.Context) ([]chain2.MarketDeal, 
 	}
 
 	return out, nil
-}
-
-func (sm *StorageMinerAPI) MarketListDeals(ctx context.Context) ([]chain2.MarketDeal, error) {
-	return sm.listDeals(ctx)
-}
-
-func (sm *StorageMinerAPI) MarketListRetrievalDeals(ctx context.Context) ([]retrievalmarket.ProviderDealState, error) {
-	/*var out []retrievalmarket.ProviderDealState
-	deals := sm.RetrievalProvider.ListDeals()
-
-	for _, deal := range deals {
-		out = append(out, deal)
-	}
-
-	return out, nil*/
-	panic("not impl")
-}
-
-func (sm *StorageMinerAPI) MarketGetDealUpdates(ctx context.Context) (<-chan storagemarket.MinerDeal, error) {
-	/*results := make(chan storagemarket.MinerDeal)
-	unsub := sm.StorageProvider.SubscribeToEvents(func(evt storagemarket.ProviderEvent, deal storagemarket.MinerDeal) {
-		select {
-		case results <- deal:
-		case <-ctx.Done():
-		}
-	})
-	go func() {
-		<-ctx.Done()
-		unsub()
-		close(results)
-	}()
-	return results, nil*/
-	panic("not impl")
-}
-
-func (sm *StorageMinerAPI) MarketListIncompleteDeals(ctx context.Context) ([]storagemarket.MinerDeal, error) {
-	//return sm.StorageProvider.ListLocalDeals()
-	panic("not impl")
-}
-
-func (sm *StorageMinerAPI) MarketSetAsk(ctx context.Context, price types.BigInt, verifiedPrice types.BigInt, duration abi.ChainEpoch, minPieceSize abi.PaddedPieceSize, maxPieceSize abi.PaddedPieceSize) error {
-	/*options := []storagemarket.StorageAskOption{
-		storagemarket.MinPieceSize(minPieceSize),
-		storagemarket.MaxPieceSize(maxPieceSize),
-	}
-
-	return sm.StorageProvider.SetAsk(price, verifiedPrice, duration, options...)*/
-	panic("not impl")
-}
-
-func (sm *StorageMinerAPI) MarketGetAsk(ctx context.Context) (*storagemarket.SignedStorageAsk, error) {
-	//return sm.StorageProvider.GetAsk(), nil
-	panic("not impl")
-}
-
-func (sm *StorageMinerAPI) MarketSetRetrievalAsk(ctx context.Context, rask *retrievalmarket.Ask) error {
-	//sm.RetrievalProvider.SetAsk(rask)
-	panic("not impl")
-	return nil
-}
-
-func (sm *StorageMinerAPI) MarketGetRetrievalAsk(ctx context.Context) (*retrievalmarket.Ask, error) {
-	//return sm.RetrievalProvider.GetAsk(), nil
-	panic("not impl")
-}
-
-func (sm *StorageMinerAPI) MarketListDataTransfers(ctx context.Context) ([]api.DataTransferChannel, error) {
-	/*inProgressChannels, err := sm.DataTransfer.InProgressChannels(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	apiChannels := make([]api.DataTransferChannel, 0, len(inProgressChannels))
-	for _, channelState := range inProgressChannels {
-		apiChannels = append(apiChannels, api.NewDataTransferChannel(sm.Host.ID(), channelState))
-	}
-
-	return apiChannels, nil*/
-	panic("not impl")
-}
-
-func (sm *StorageMinerAPI) MarketRestartDataTransfer(ctx context.Context, transferID datatransfer.TransferID, otherPeer peer.ID, isInitiator bool) error {
-	/*selfPeer := sm.Host.ID()
-	if isInitiator {
-		return sm.DataTransfer.RestartDataTransferChannel(ctx, datatransfer.ChannelID{Initiator: selfPeer, Responder: otherPeer, ID: transferID})
-	}
-	return sm.DataTransfer.RestartDataTransferChannel(ctx, datatransfer.ChannelID{Initiator: otherPeer, Responder: selfPeer, ID: transferID})*/
-	panic("not impl")
-}
-
-func (sm *StorageMinerAPI) MarketCancelDataTransfer(ctx context.Context, transferID datatransfer.TransferID, otherPeer peer.ID, isInitiator bool) error {
-	/*selfPeer := sm.Host.ID()
-	if isInitiator {
-		return sm.DataTransfer.CloseDataTransferChannel(ctx, datatransfer.ChannelID{Initiator: selfPeer, Responder: otherPeer, ID: transferID})
-	}
-	return sm.DataTransfer.CloseDataTransferChannel(ctx, datatransfer.ChannelID{Initiator: otherPeer, Responder: selfPeer, ID: transferID})*/
-	panic("not impl")
-}
-
-func (sm *StorageMinerAPI) MarketDataTransferUpdates(ctx context.Context) (<-chan api.DataTransferChannel, error) {
-	/*channels := make(chan api.DataTransferChannel)
-
-	unsub := sm.DataTransfer.SubscribeToEvents(func(evt datatransfer.Event, channelState datatransfer.ChannelState) {
-		channel := api.NewDataTransferChannel(sm.Host.ID(), channelState)
-		select {
-		case <-ctx.Done():
-		case channels <- channel:
-		}
-	})
-
-	go func() {
-		defer unsub()
-		<-ctx.Done()
-	}()
-
-	return channels, nil*/
-	panic("not impl")
 }
 
 func (sm *StorageMinerAPI) DealsList(ctx context.Context) ([]chain2.MarketDeal, error) {

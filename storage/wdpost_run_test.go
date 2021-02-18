@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"context"
 	"github.com/filecoin-project/venus-sealer/constants"
+	chain2 "github.com/filecoin-project/venus/app/submodule/chain"
+	"github.com/filecoin-project/venus/app/submodule/syncer"
+	"github.com/filecoin-project/venus/pkg/chain"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -91,8 +94,8 @@ func (m *mockStorageMinerAPI) MpoolPushMessage(ctx context.Context, message *typ
 	}, nil
 }
 
-func (m *mockStorageMinerAPI) StateWaitMsg(ctx context.Context, cid cid.Cid, confidence uint64) (*api.MsgLookup, error) {
-	return &api.MsgLookup{
+func (m *mockStorageMinerAPI) StateWaitMsg(ctx context.Context, cid cid.Cid, confidence uint64) (*chain.MsgLookup, error) {
+	return &chain.MsgLookup{
 		Receipt: types.MessageReceipt{
 			ExitCode: 0,
 		},
@@ -227,7 +230,7 @@ func mockTipSet(t *testing.T) *types.TipSet {
 			Messages:              c,
 		},
 	}
-	ts, err := types.NewTipSet(blks)
+	ts, err := types.NewTipSet(blks...)
 	require.NoError(t, err)
 	return ts
 }
@@ -236,7 +239,7 @@ func mockTipSet(t *testing.T) *types.TipSet {
 // All the mock methods below here are unused
 //
 
-func (m *mockStorageMinerAPI) StateCall(ctx context.Context, message *types.Message, key types.TipSetKey) (*api.InvocResult, error) {
+func (m *mockStorageMinerAPI) StateCall(ctx context.Context, message *types.Message, key types.TipSetKey) (*syncer.InvocResult, error) {
 	panic("implement me")
 }
 
@@ -281,7 +284,7 @@ func (m *mockStorageMinerAPI) StateMinerInitialPledgeCollateral(ctx context.Cont
 	panic("implement me")
 }
 
-func (m *mockStorageMinerAPI) StateSearchMsg(ctx context.Context, cid cid.Cid) (*api.MsgLookup, error) {
+func (m *mockStorageMinerAPI) StateSearchMsg(ctx context.Context, cid cid.Cid) (*chain.MsgLookup, error) {
 	panic("implement me")
 }
 
@@ -295,7 +298,7 @@ func (m *mockStorageMinerAPI) StateGetReceipt(ctx context.Context, cid cid.Cid, 
 	panic("implement me")
 }
 
-func (m *mockStorageMinerAPI) StateMarketStorageDeal(ctx context.Context, id abi.DealID, key types.TipSetKey) (*api.MarketDeal, error) {
+func (m *mockStorageMinerAPI) StateMarketStorageDeal(ctx context.Context, id abi.DealID, key types.TipSetKey) (*chain2.MarketDeal, error) {
 	panic("implement me")
 }
 
@@ -323,7 +326,7 @@ func (m *mockStorageMinerAPI) ChainHead(ctx context.Context) (*types.TipSet, err
 	panic("implement me")
 }
 
-func (m *mockStorageMinerAPI) ChainNotify(ctx context.Context) (<-chan []*api.HeadChange, error) {
+func (m *mockStorageMinerAPI) ChainNotify(ctx context.Context) (<-chan []*chain.HeadChange, error) {
 	panic("implement me")
 }
 
@@ -331,7 +334,7 @@ func (m *mockStorageMinerAPI) ChainGetTipSetByHeight(ctx context.Context, epoch 
 	panic("implement me")
 }
 
-func (m *mockStorageMinerAPI) ChainGetBlockMessages(ctx context.Context, cid cid.Cid) (*api.BlockMessages, error) {
+func (m *mockStorageMinerAPI) ChainGetBlockMessages(ctx context.Context, cid cid.Cid) (*chain2.BlockMessages, error) {
 	panic("implement me")
 }
 

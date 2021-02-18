@@ -217,7 +217,7 @@ var storageListCmd = &cli.Command{
 				fmt.Printf("\t%s: %s:\n", color.RedString("Error"), err)
 				continue
 			}
-			ping := time.Now().Sub(pingStart)
+			ping := time.Since(pingStart)
 
 			usedPercent := (st.Capacity - st.Available) * 100 / st.Capacity
 

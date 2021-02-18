@@ -62,7 +62,6 @@ func (a *apiBStore) AllKeysChan(ctx context.Context) (<-chan cid.Cid, error) {
 }
 
 func (a *apiBStore) HashOnRead(enabled bool) {
-	return
 }
 
 var _ blockstore.Blockstore = &apiBStore{}
