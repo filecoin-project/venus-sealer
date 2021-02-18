@@ -7,6 +7,7 @@ import (
 	"github.com/filecoin-project/go-fil-markets/piecestore"
 	"github.com/filecoin-project/go-fil-markets/retrievalmarket"
 	"github.com/filecoin-project/go-fil-markets/storagemarket"
+	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 	"github.com/filecoin-project/venus-sealer/config"
 	chain2 "github.com/filecoin-project/venus/app/submodule/chain"
 	"net/http"
@@ -39,7 +40,7 @@ import (
 
 type StorageMinerAPI struct {
 	CommonAPI
-
+	prover       storage.WinningPoStProver
 	SectorBlocks *sectorblocks.SectorBlocks
 	Miner        *storage.Miner
 	Full         api.FullNode
@@ -661,6 +662,10 @@ func (sm *StorageMinerAPI) ActorAddressConfig(ctx context.Context) (api.AddressC
 
 func (sm *StorageMinerAPI) NetParamsConfig(ctx context.Context) (*config.NetParamsConfig, error) {
 	return sm.NetParams, nil
+}
+
+func (sm *StorageMinerAPI) ComputeProof(ctx context.Context, sectorInfo []proof2.SectorInfo, randoness abi.PoStRandomness) ([]proof2.PoStProof, error) {
+	return sm.prover.ComputeProof(ctx, sectorInfo, randoness)
 }
 
 var _ api.StorageMiner = &StorageMinerAPI{}

@@ -3,27 +3,25 @@ package api
 import (
 	"context"
 	"github.com/filecoin-project/go-address"
-	datatransfer "github.com/filecoin-project/go-data-transfer"
 	"github.com/filecoin-project/go-fil-markets/piecestore"
-	"github.com/filecoin-project/go-fil-markets/retrievalmarket"
-	"github.com/filecoin-project/go-fil-markets/storagemarket"
 	"github.com/filecoin-project/go-state-types/abi"
+	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 	"github.com/filecoin-project/specs-storage/storage"
 	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/fsutil"
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/stores"
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/storiface"
 	chain2 "github.com/filecoin-project/venus/app/submodule/chain"
-	"github.com/filecoin-project/venus/pkg/types"
 	"github.com/google/uuid"
 	"github.com/ipfs/go-cid"
-	"github.com/libp2p/go-libp2p-core/peer"
 	"time"
 )
 
 // StorageMiner is a low-level interface to the Filecoin network storage miner node
 type StorageMiner interface {
 	Common
+
+	ComputeProof(context.Context, []proof2.SectorInfo, abi.PoStRandomness) ([]proof2.PoStProof, error)
 
 	NetParamsConfig(ctx context.Context) (*config.NetParamsConfig, error)
 
@@ -92,22 +90,6 @@ type StorageMiner interface {
 
 	stores.SectorIndex
 
-	MarketImportDealData(ctx context.Context, propcid cid.Cid, path string) error
-	MarketListDeals(ctx context.Context) ([]chain2.MarketDeal, error)
-	MarketListRetrievalDeals(ctx context.Context) ([]retrievalmarket.ProviderDealState, error)
-	MarketGetDealUpdates(ctx context.Context) (<-chan storagemarket.MinerDeal, error)
-	MarketListIncompleteDeals(ctx context.Context) ([]storagemarket.MinerDeal, error)
-	MarketSetAsk(ctx context.Context, price types.BigInt, verifiedPrice types.BigInt, duration abi.ChainEpoch, minPieceSize abi.PaddedPieceSize, maxPieceSize abi.PaddedPieceSize) error
-	MarketGetAsk(ctx context.Context) (*storagemarket.SignedStorageAsk, error)
-	MarketSetRetrievalAsk(ctx context.Context, rask *retrievalmarket.Ask) error
-	MarketGetRetrievalAsk(ctx context.Context) (*retrievalmarket.Ask, error)
-	MarketListDataTransfers(ctx context.Context) ([]DataTransferChannel, error)
-	MarketDataTransferUpdates(ctx context.Context) (<-chan DataTransferChannel, error)
-	// MinerRestartDataTransfer attempts to restart a data transfer with the given transfer ID and other peer
-	MarketRestartDataTransfer(ctx context.Context, transferID datatransfer.TransferID, otherPeer peer.ID, isInitiator bool) error
-	// ClientCancelDataTransfer cancels a data transfer with the given transfer ID and other peer
-	MarketCancelDataTransfer(ctx context.Context, transferID datatransfer.TransferID, otherPeer peer.ID, isInitiator bool) error
-
 	DealsImportData(ctx context.Context, dealPropCid cid.Cid, file string) error
 	DealsList(ctx context.Context) ([]chain2.MarketDeal, error)
 	DealsConsiderOnlineStorageDeals(context.Context) (bool, error)
@@ -145,24 +127,12 @@ type StorageMiner interface {
 type StorageMinerStruct struct {
 	CommonStruct
 	Internal struct {
+		ComputeProof func(context.Context, []proof2.SectorInfo, abi.PoStRandomness) ([]proof2.PoStProof, error) `perm:"read"`
+
 		ActorAddress       func(context.Context) (address.Address, error)                 `perm:"read"`
 		ActorSectorSize    func(context.Context, address.Address) (abi.SectorSize, error) `perm:"read"`
 		ActorAddressConfig func(ctx context.Context) (AddressConfig, error)               `perm:"read"`
 		NetParamsConfig    func(ctx context.Context) (*config.NetParamsConfig, error)     `perm:"read"`
-
-		MarketImportDealData      func(context.Context, cid.Cid, string) error                                                                                                                                 `perm:"write"`
-		MarketListDeals           func(ctx context.Context) ([]chain2.MarketDeal, error)                                                                                                                       `perm:"read"`
-		MarketListRetrievalDeals  func(ctx context.Context) ([]retrievalmarket.ProviderDealState, error)                                                                                                       `perm:"read"`
-		MarketGetDealUpdates      func(ctx context.Context) (<-chan storagemarket.MinerDeal, error)                                                                                                            `perm:"read"`
-		MarketListIncompleteDeals func(ctx context.Context) ([]storagemarket.MinerDeal, error)                                                                                                                 `perm:"read"`
-		MarketSetAsk              func(ctx context.Context, price types.BigInt, verifiedPrice types.BigInt, duration abi.ChainEpoch, minPieceSize abi.PaddedPieceSize, maxPieceSize abi.PaddedPieceSize) error `perm:"admin"`
-		MarketGetAsk              func(ctx context.Context) (*storagemarket.SignedStorageAsk, error)                                                                                                           `perm:"read"`
-		MarketSetRetrievalAsk     func(ctx context.Context, rask *retrievalmarket.Ask) error                                                                                                                   `perm:"admin"`
-		MarketGetRetrievalAsk     func(ctx context.Context) (*retrievalmarket.Ask, error)                                                                                                                      `perm:"read"`
-		MarketListDataTransfers   func(ctx context.Context) ([]DataTransferChannel, error)                                                                                                                     `perm:"write"`
-		MarketDataTransferUpdates func(ctx context.Context) (<-chan DataTransferChannel, error)                                                                                                                `perm:"write"`
-		MarketRestartDataTransfer func(ctx context.Context, transferID datatransfer.TransferID, otherPeer peer.ID, isInitiator bool) error                                                                     `perm:"read"`
-		MarketCancelDataTransfer  func(ctx context.Context, transferID datatransfer.TransferID, otherPeer peer.ID, isInitiator bool) error                                                                     `perm:"read"`
 
 		PledgeSector func(context.Context) error `perm:"write"`
 
@@ -443,58 +413,6 @@ func (c *StorageMinerStruct) StorageTryLock(ctx context.Context, sector abi.Sect
 	return c.Internal.StorageTryLock(ctx, sector, read, write)
 }
 
-func (c *StorageMinerStruct) MarketImportDealData(ctx context.Context, propcid cid.Cid, path string) error {
-	return c.Internal.MarketImportDealData(ctx, propcid, path)
-}
-
-func (c *StorageMinerStruct) MarketListDeals(ctx context.Context) ([]chain2.MarketDeal, error) {
-	return c.Internal.MarketListDeals(ctx)
-}
-
-func (c *StorageMinerStruct) MarketListRetrievalDeals(ctx context.Context) ([]retrievalmarket.ProviderDealState, error) {
-	return c.Internal.MarketListRetrievalDeals(ctx)
-}
-
-func (c *StorageMinerStruct) MarketGetDealUpdates(ctx context.Context) (<-chan storagemarket.MinerDeal, error) {
-	return c.Internal.MarketGetDealUpdates(ctx)
-}
-
-func (c *StorageMinerStruct) MarketListIncompleteDeals(ctx context.Context) ([]storagemarket.MinerDeal, error) {
-	return c.Internal.MarketListIncompleteDeals(ctx)
-}
-
-func (c *StorageMinerStruct) MarketSetAsk(ctx context.Context, price types.BigInt, verifiedPrice types.BigInt, duration abi.ChainEpoch, minPieceSize abi.PaddedPieceSize, maxPieceSize abi.PaddedPieceSize) error {
-	return c.Internal.MarketSetAsk(ctx, price, verifiedPrice, duration, minPieceSize, maxPieceSize)
-}
-
-func (c *StorageMinerStruct) MarketGetAsk(ctx context.Context) (*storagemarket.SignedStorageAsk, error) {
-	return c.Internal.MarketGetAsk(ctx)
-}
-
-func (c *StorageMinerStruct) MarketSetRetrievalAsk(ctx context.Context, rask *retrievalmarket.Ask) error {
-	return c.Internal.MarketSetRetrievalAsk(ctx, rask)
-}
-
-func (c *StorageMinerStruct) MarketGetRetrievalAsk(ctx context.Context) (*retrievalmarket.Ask, error) {
-	return c.Internal.MarketGetRetrievalAsk(ctx)
-}
-
-func (c *StorageMinerStruct) MarketListDataTransfers(ctx context.Context) ([]DataTransferChannel, error) {
-	return c.Internal.MarketListDataTransfers(ctx)
-}
-
-func (c *StorageMinerStruct) MarketDataTransferUpdates(ctx context.Context) (<-chan DataTransferChannel, error) {
-	return c.Internal.MarketDataTransferUpdates(ctx)
-}
-
-func (c *StorageMinerStruct) MarketRestartDataTransfer(ctx context.Context, transferID datatransfer.TransferID, otherPeer peer.ID, isInitiator bool) error {
-	return c.Internal.MarketRestartDataTransfer(ctx, transferID, otherPeer, isInitiator)
-}
-
-func (c *StorageMinerStruct) MarketCancelDataTransfer(ctx context.Context, transferID datatransfer.TransferID, otherPeer peer.ID, isInitiator bool) error {
-	return c.Internal.MarketCancelDataTransfer(ctx, transferID, otherPeer, isInitiator)
-}
-
 func (c *StorageMinerStruct) DealsImportData(ctx context.Context, dealPropCid cid.Cid, file string) error {
 	return c.Internal.DealsImportData(ctx, dealPropCid, file)
 }
@@ -585,4 +503,8 @@ func (c *StorageMinerStruct) CreateBackup(ctx context.Context, fpath string) err
 
 func (c *StorageMinerStruct) CheckProvable(ctx context.Context, pp abi.RegisteredPoStProof, sectors []storage.SectorRef, expensive bool) (map[abi.SectorNumber]string, error) {
 	return c.Internal.CheckProvable(ctx, pp, sectors, expensive)
+}
+
+func (c *StorageMinerStruct) ComputeProof(ctx context.Context, sectorInfos []proof2.SectorInfo, randomness abi.PoStRandomness) ([]proof2.PoStProof, error) {
+	return c.Internal.ComputeProof(ctx, sectorInfos, randomness)
 }
