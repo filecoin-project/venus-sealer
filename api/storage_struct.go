@@ -133,7 +133,7 @@ type StorageMiner interface {
 	PiecesGetCIDInfo(ctx context.Context, payloadCid cid.Cid) (*piecestore.CIDInfo, error)
 
 	// CreateBackup creates node backup onder the specified file name. The
-	// method requires that the lotus-miner is running with the
+	// method requires that the venus-sealer is running with the
 	// LOTUS_BACKUP_BASE_PATH environment variable set to some path, and that
 	// the path specified when calling CreateBackup is within the base path
 	CreateBackup(ctx context.Context, fpath string) error

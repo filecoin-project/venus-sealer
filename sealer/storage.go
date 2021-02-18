@@ -312,7 +312,7 @@ var storageFindCmd = &cli.Command{
 		}
 
 		if !cctx.Args().Present() {
-			return xerrors.New("Usage: lotus-miner storage find [sector number]")
+			return xerrors.New("Usage: venus-sealer storage find [sector number]")
 		}
 
 		snum, err := strconv.ParseUint(cctx.Args().First(), 10, 64)

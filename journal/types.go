@@ -13,10 +13,7 @@ var log = logging.Logger("journal")
 var (
 	// DefaultDisabledEvents lists the journal events disabled by
 	// default, usually because they are considered noisy.
-	DefaultDisabledEvents = DisabledEvents{
-		EventType{System: "mpool", Event: "add"},
-		EventType{System: "mpool", Event: "remove"},
-	}
+	DefaultDisabledEvents = DisabledEvents{}
 )
 
 // DisabledEvents is the set of event types whose journaling is suppressed.

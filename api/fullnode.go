@@ -149,9 +149,9 @@ type FullNode interface {
 
 	// MethodGroup: Sync
 	// The Sync method group contains methods for interacting with and
-	// observing the lotus sync service.
+	// observing the venus sync service.
 
-	// SyncState returns the current status of the lotus sync system.
+	// SyncState returns the current status of the venus sync system.
 	SyncState(context.Context) (*syncer.SyncState, error)
 
 	// SyncSubmitBlock can be used to submit a newly created block to the.
@@ -488,7 +488,7 @@ type FullNode interface {
 	PaychVoucherSubmit(context.Context, address.Address, *paych.SignedVoucher, []byte, []byte) (cid.Cid, error)
 
 	// CreateBackup creates node backup onder the specified file name. The
-	// method requires that the lotus daemon is running with the
+	// method requires that the venus daemon is running with the
 	// LOTUS_BACKUP_BASE_PATH environment variable set to some path, and that
 	// the path specified when calling CreateBackup is within the base path
 	CreateBackup(ctx context.Context, fpath string) error

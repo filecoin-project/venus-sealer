@@ -32,7 +32,7 @@ import (
 
 var runCmd = &cli.Command{
 	Name:  "run",
-	Usage: "Start a lotus miner process",
+	Usage: "Start a venus sealer process",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:  "miner-api",
@@ -85,7 +85,7 @@ var runCmd = &cli.Command{
 		}
 
 		if v.APIVersion != constants.FullAPIVersion {
-			return xerrors.Errorf("lotus-daemon API version doesn't match: expected: %s", api.Version{APIVersion: constants.FullAPIVersion})
+			return xerrors.Errorf("venus-daemon API version doesn't match: expected: %s", api.Version{APIVersion: constants.FullAPIVersion})
 		}
 
 		minerRepoPath := cctx.String(FlagMinerRepo)
@@ -99,7 +99,7 @@ var runCmd = &cli.Command{
 			return err
 		}
 		if !ok {
-			return xerrors.Errorf("repo at '%s' is not initialized, run 'lotus-miner init' to set it up", minerRepoPath)
+			return xerrors.Errorf("repo at '%s' is not initialized, run 'venus-sealer init' to set it up", minerRepoPath)
 		}
 
 		log.Info("Checking full node sync status")
@@ -169,7 +169,7 @@ var runCmd = &cli.Command{
 			Handler: ah,
 			BaseContext: func(listener net.Listener) context.Context {
 				key, _ := tag.NewKey("api")
-				ctx, _ := tag.New(context.Background(), tag.Upsert(key, "lotus-miner"))
+				ctx, _ := tag.New(context.Background(), tag.Upsert(key, "venus-sealer"))
 				return ctx
 			},
 		}

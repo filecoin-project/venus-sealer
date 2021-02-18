@@ -2,7 +2,7 @@ package sealiface
 
 import "time"
 
-// this has to be in a separate package to not make lotus API depend on filecoin-ffi
+// this has to be in a separate package to not make venus API depend on filecoin-ffi
 
 type Config struct {
 	// 0 = no limit

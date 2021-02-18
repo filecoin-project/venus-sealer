@@ -9,7 +9,7 @@ import (
 
 var stopCmd = &cli.Command{
 	Name:  "stop",
-	Usage: "Stop a running lotus miner",
+	Usage: "Stop a running venus sealer",
 	Flags: []cli.Flag{},
 	Action: func(cctx *cli.Context) error {
 		nodeAPI, closer, err := api.GetAPI(cctx)

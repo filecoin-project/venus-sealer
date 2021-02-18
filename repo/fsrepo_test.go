@@ -7,7 +7,7 @@ import (
 )
 
 func genFsRepo(t *testing.T) (*FsRepo, func()) {
-	path, err := ioutil.TempDir("", "lotus-repo-")
+	path, err := ioutil.TempDir("", "venus-repo-")
 	if err != nil {
 		t.Fatal(err)
 	}

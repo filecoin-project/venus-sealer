@@ -1,6 +1,6 @@
 package nullreader
 
-// TODO: extract this to someplace where it can be shared with lotus
+// TODO: extract this to someplace where it can be shared with venus
 type Reader struct{}
 
 func (Reader) Read(out []byte) (int, error) {

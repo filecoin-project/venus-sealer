@@ -26,7 +26,7 @@ func main() {
 	local := []*cli.Command{
 		initCmd, runCmd, sectorsCmd, actorCmd, infoCmd, sealingCmd, storageCmd, VersionCmd,
 	}
-	jaeger := tracing.SetupJaegerTracing("lotus")
+	jaeger := tracing.SetupJaegerTracing("venus-sealer")
 	defer func() {
 		if jaeger != nil {
 			jaeger.Flush()
@@ -48,7 +48,7 @@ func main() {
 	}
 
 	app := &cli.App{
-		Name:                 "lotus-miner",
+		Name:                 "venus-sealer",
 		Usage:                "Filecoin decentralized storage network miner",
 		Version:              constants.UserVersion(),
 		EnableBashCompletion: true,

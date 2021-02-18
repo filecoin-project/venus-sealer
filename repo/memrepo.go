@@ -101,7 +101,7 @@ func (lmem *lockedMemRepo) Path() string {
 		return lmem.tempDir
 	}
 
-	t, err := ioutil.TempDir(os.TempDir(), "lotus-memrepo-temp-")
+	t, err := ioutil.TempDir(os.TempDir(), "venus-memrepo-temp-")
 	if err != nil {
 		panic(err) // only used in tests, probably fine
 	}

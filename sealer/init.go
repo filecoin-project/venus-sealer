@@ -47,7 +47,7 @@ import (
 
 var initCmd = &cli.Command{
 	Name:  "init",
-	Usage: "Initialize a lotus miner repo",
+	Usage: "Initialize a venus miner repo",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:  "actor",
@@ -114,7 +114,7 @@ var initCmd = &cli.Command{
 		},
 	},
 	Action: func(cctx *cli.Context) error {
-		log.Info("Initializing lotus miner")
+		log.Info("Initializing venus miner")
 
 		sectorSizeInt, err := units.RAMInBytes(cctx.String("sector-size"))
 		if err != nil {
@@ -251,7 +251,7 @@ var initCmd = &cli.Command{
 		}
 
 		if err := storageMinerInit(ctx, cctx, fullNode, r, ssize, gasPrice); err != nil {
-			log.Errorf("Failed to initialize lotus-miner: %+v", err)
+			log.Errorf("Failed to initialize venus-miner: %+v", err)
 			path, err := homedir.Expand(repoPath)
 			if err != nil {
 				return err
@@ -264,7 +264,7 @@ var initCmd = &cli.Command{
 		}
 
 		// TODO: Point to setting storage price, maybe do it interactively or something
-		log.Info("Miner successfully created, you can now start it with 'lotus-miner run'")
+		log.Info("Miner successfully created, you can now start it with 'venus-sealer run'")
 
 		return nil
 	},

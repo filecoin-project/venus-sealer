@@ -1,4 +1,4 @@
-// blockstore contains all the basic blockstore constructors used by lotus. Any
+// blockstore contains all the basic blockstore constructors used by venus. Any
 // blockstores not ultimately constructed out of the building blocks in this
 // package may not work properly.
 //

@@ -27,7 +27,7 @@ This project is a mining system supporting venus, is currently under active deve
 
 ### Command
 
-The command line is the same as lotus, but note that the commands related to deal is removed, and this part will be implemented in another tool
+The command line is the same as lotus-miner, but note that the commands related to deal is removed, and this part will be implemented in another tool
 
 ```shell script
     ./sealer info               # show miner infomation
