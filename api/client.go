@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/filecoin-project/go-jsonrpc"
+	"github.com/filecoin-project/venus-sealer/lib/rpcenc"
 	"github.com/filecoin-project/venus-sealer/repo"
 	"github.com/mitchellh/go-homedir"
 	"github.com/urfave/cli/v2"
@@ -12,8 +13,10 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"path"
 	"strings"
 	"syscall"
+	"time"
 )
 
 const (
@@ -262,6 +265,44 @@ func NewStorageMinerRPC(ctx context.Context, addr string, requestHeader http.Hea
 	)
 
 	return &res, closer, err
+}
+
+func NewWorkerRPC(ctx context.Context, addr string, requestHeader http.Header) (WorkerAPI, jsonrpc.ClientCloser, error) {
+	u, err := url.Parse(addr)
+	if err != nil {
+		return nil, nil, err
+	}
+	switch u.Scheme {
+	case "ws":
+		u.Scheme = "http"
+	case "wss":
+		u.Scheme = "https"
+	}
+	///rpc/v0 -> /rpc/streams/v0/push
+
+	u.Path = path.Join(u.Path, "../streams/v0/push")
+
+	var res WorkerStruct
+	closer, err := jsonrpc.NewMergeClient(ctx, addr, "Filecoin",
+		[]interface{}{
+			&res.Internal,
+		},
+		requestHeader,
+		rpcenc.ReaderParamEncoder(u.String()),
+		jsonrpc.WithNoReconnect(),
+		jsonrpc.WithTimeout(30*time.Second),
+	)
+
+	return &res, closer, err
+}
+
+func GetWorkerAPI(ctx *cli.Context) (WorkerAPI, jsonrpc.ClientCloser, error) {
+	addr, headers, err := GetRawAPI(ctx, repo.Worker)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return NewWorkerRPC(ctx.Context, addr, headers)
 }
 
 func DaemonContext(cctx *cli.Context) context.Context {

@@ -14,8 +14,9 @@ const (
 )
 
 var (
-	FullAPIVersion  = newVer(1, 0, 0)
-	MinerAPIVersion = newVer(1, 0, 1)
+	FullAPIVersion   = newVer(1, 0, 0)
+	MinerAPIVersion  = newVer(1, 0, 1)
+	WorkerAPIVersion = newVer(1, 0, 0)
 
 	MinerVersion = newVer(0, 0, 1)
 )

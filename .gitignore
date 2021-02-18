@@ -1,6 +1,7 @@
 ./venus-sealer
-./sealer
-./sealer/sealer
+./venus-worker
+app/sealer
+app/sealer/sealer
 
 .task
 .idea
