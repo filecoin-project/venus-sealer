@@ -127,7 +127,7 @@ func Online() Option {
 		Override(new(sealing.SectorIDCounter), SectorIDCounter),
 		Override(new(*sectorstorage.Manager), SectorStorage),
 		Override(new(ffiwrapper.Verifier), ffiwrapper.ProofVerifier),
-
+		Override(new(storage.WinningPoStProver), storage.NewWinningPoStProver),
 		Override(new(sectorstorage.SectorManager), From(new(*sectorstorage.Manager))),
 		Override(new(storage2.Prover), From(new(sectorstorage.SectorManager))),
 		Override(new(storiface.WorkerReturn), From(new(sectorstorage.SectorManager))),
