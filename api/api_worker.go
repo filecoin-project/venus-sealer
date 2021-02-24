@@ -2,16 +2,16 @@ package api
 
 import (
 	"context"
-	"github.com/google/uuid"
-
 	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/sealtasks"
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/stores"
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/storiface"
+	"github.com/google/uuid"
 )
 
 type WorkerAPI interface {
-	Version(context.Context) (Version, error)
+	Version(context.Context) (constants.Version, error)
 	// TODO: Info() (name, ...) ?
 
 	TaskTypes(context.Context) (map[sealtasks.TaskType]struct{}, error) // TaskType -> Weight

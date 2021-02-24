@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/specs-storage/storage"
+	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/sealtasks"
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/stores"
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/storiface"
@@ -16,7 +17,7 @@ type WorkerStruct struct {
 	Internal struct {
 		// TODO: lower perms
 
-		Version func(context.Context) (Version, error) `perm:"admin"`
+		Version func(context.Context) (constants.Version, error) `perm:"admin"`
 
 		TaskTypes func(context.Context) (map[sealtasks.TaskType]struct{}, error) `perm:"admin"`
 		Paths     func(context.Context) ([]stores.StoragePath, error)            `perm:"admin"`
@@ -52,7 +53,7 @@ type WorkerStruct struct {
 
 // WorkerStruct
 
-func (w *WorkerStruct) Version(ctx context.Context) (Version, error) {
+func (w *WorkerStruct) Version(ctx context.Context) (constants.Version, error) {
 	return w.Internal.Version(ctx)
 }
 

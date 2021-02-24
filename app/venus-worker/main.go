@@ -178,6 +178,11 @@ var runCmd = &cli.Command{
 		var closer func()
 		var err error
 		for {
+			select {
+			case <-ctx.Done():
+				return nil
+			default:
+			}
 			nodeApi, closer, err = api.GetStorageMinerAPI(cctx, api.StorageMinerUseHttp)
 			if err == nil {
 				_, err = nodeApi.Version(ctx)
