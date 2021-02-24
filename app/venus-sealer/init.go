@@ -47,7 +47,7 @@ import (
 
 var initCmd = &cli.Command{
 	Name:  "init",
-	Usage: "Initialize a venus miner repo",
+	Usage: "Initialize a venus sealer repo",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:  "actor",
@@ -114,7 +114,7 @@ var initCmd = &cli.Command{
 		},
 	},
 	Action: func(cctx *cli.Context) error {
-		log.Info("Initializing venus miner")
+		log.Info("Initializing venus sealer")
 
 		sectorSizeInt, err := units.RAMInBytes(cctx.String("sector-size"))
 		if err != nil {
