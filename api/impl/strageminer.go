@@ -39,7 +39,7 @@ var log = logging.Logger("sealer")
 
 type StorageMinerAPI struct {
 	CommonAPI
-	prover       storage.WinningPoStProver
+	Prover       storage.WinningPoStProver
 	SectorBlocks *sectorblocks.SectorBlocks
 	Miner        *storage.Miner
 	Full         api.FullNode
@@ -546,7 +546,7 @@ func (sm *StorageMinerAPI) NetParamsConfig(ctx context.Context) (*config.NetPara
 }
 
 func (sm *StorageMinerAPI) ComputeProof(ctx context.Context, sectorInfo []proof2.SectorInfo, randoness abi.PoStRandomness) ([]proof2.PoStProof, error) {
-	return sm.prover.ComputeProof(ctx, sectorInfo, randoness)
+	return sm.Prover.ComputeProof(ctx, sectorInfo, randoness)
 }
 
 var _ api.StorageMiner = &StorageMinerAPI{}
