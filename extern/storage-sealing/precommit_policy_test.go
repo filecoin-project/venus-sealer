@@ -2,10 +2,11 @@ package sealing_test
 
 import (
 	"context"
-	"github.com/filecoin-project/venus-sealer/constants"
 	"testing"
 
 	"github.com/filecoin-project/go-state-types/network"
+	"github.com/filecoin-project/lotus/build"
+
 	"github.com/ipfs/go-cid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -21,7 +22,7 @@ type fakeChain struct {
 }
 
 func (f *fakeChain) StateNetworkVersion(ctx context.Context, tok sealing.TipSetToken) (network.Version, error) {
-	return constants.NewestNetworkVersion, nil
+	return build.NewestNetworkVersion, nil
 }
 
 func (f *fakeChain) ChainHead(ctx context.Context) (sealing.TipSetToken, abi.ChainEpoch, error) {

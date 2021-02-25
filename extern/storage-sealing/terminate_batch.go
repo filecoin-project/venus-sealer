@@ -3,6 +3,7 @@ package sealing
 import (
 	"bytes"
 	"context"
+	"github.com/filecoin-project/venus/app/submodule/chain"
 	"sort"
 	"sync"
 	"time"
@@ -34,7 +35,7 @@ type TerminateBatcherApi interface {
 	SendMsg(ctx context.Context, from, to address.Address, method abi.MethodNum, value, maxFee abi.TokenAmount, params []byte) (cid.Cid, error)
 	StateMinerInfo(context.Context, address.Address, TipSetToken) (miner.MinerInfo, error)
 	StateMinerProvingDeadline(context.Context, address.Address, TipSetToken) (*dline.Info, error)
-	StateMinerPartitions(ctx context.Context, m address.Address, dlIdx uint64, tok TipSetToken) ([]api.Partition, error)
+	StateMinerPartitions(ctx context.Context, m address.Address, dlIdx uint64, tok TipSetToken) ([]chain.Partition, error)
 }
 
 type TerminateBatcher struct {
@@ -84,6 +85,7 @@ func (b *TerminateBatcher) run() {
 			forceRes <- lastMsg
 			forceRes = nil
 		}
+		lastMsg = nil
 
 		var sendAboveMax, sendAboveMin bool
 		select {

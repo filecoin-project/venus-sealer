@@ -7,6 +7,7 @@ import (
 
 	"github.com/filecoin-project/go-state-types/exitcode"
 	"github.com/filecoin-project/go-statemachine"
+	"github.com/filecoin-project/lotus/build"
 	"github.com/filecoin-project/venus/pkg/specactors/policy"
 )
 
@@ -108,7 +109,7 @@ func (m *Sealing) handleTerminateFinality(ctx statemachine.Context, sector Secto
 			return ctx.Send(SectorRemove{})
 		}
 
-		toWait := time.Duration(epoch-sector.TerminatedAt+policy.GetWinningPoStSectorSetLookback(nv)) * time.Duration(m.networkParams.BlockDelaySecs) * time.Second
+		toWait := time.Duration(epoch-sector.TerminatedAt+policy.GetWinningPoStSectorSetLookback(nv)) * time.Duration(build.BlockDelaySecs) * time.Second
 		select {
 		case <-time.After(toWait):
 			continue

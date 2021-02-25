@@ -3,7 +3,7 @@ package sealing
 import (
 	"context"
 	"errors"
-	"github.com/filecoin-project/venus-sealer/config"
+	"github.com/filecoin-project/venus/app/submodule/chain"
 	"io"
 	"math"
 	"sync"
@@ -30,6 +30,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/ffiwrapper"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/market"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/types"
 )
 
 const SectorStorePrefix = "/sectors"
@@ -54,18 +55,21 @@ type SealingAPI interface {
 	StateSectorPreCommitInfo(ctx context.Context, maddr address.Address, sectorNumber abi.SectorNumber, tok TipSetToken) (*miner.SectorPreCommitOnChainInfo, error)
 	StateSectorGetInfo(ctx context.Context, maddr address.Address, sectorNumber abi.SectorNumber, tok TipSetToken) (*miner.SectorOnChainInfo, error)
 	StateSectorPartition(ctx context.Context, maddr address.Address, sectorNumber abi.SectorNumber, tok TipSetToken) (*SectorLocation, error)
+	StateLookupID(context.Context, address.Address, TipSetToken) (address.Address, error)
 	StateMinerSectorSize(context.Context, address.Address, TipSetToken) (abi.SectorSize, error)
 	StateMinerWorkerAddress(ctx context.Context, maddr address.Address, tok TipSetToken) (address.Address, error)
 	StateMinerPreCommitDepositForPower(context.Context, address.Address, miner.SectorPreCommitInfo, TipSetToken) (big.Int, error)
 	StateMinerInitialPledgeCollateral(context.Context, address.Address, miner.SectorPreCommitInfo, TipSetToken) (big.Int, error)
 	StateMinerInfo(context.Context, address.Address, TipSetToken) (miner.MinerInfo, error)
 	StateMinerSectorAllocated(context.Context, address.Address, abi.SectorNumber, TipSetToken) (bool, error)
-	StateMarketStorageDeal(context.Context, abi.DealID, TipSetToken) (market.DealProposal, error)
+	StateMarketStorageDeal(context.Context, abi.DealID, TipSetToken) (*chain.MarketDeal, error)
+	StateMarketStorageDealProposal(context.Context, abi.DealID, TipSetToken) (market.DealProposal, error)
 	StateNetworkVersion(ctx context.Context, tok TipSetToken) (network.Version, error)
 	StateMinerProvingDeadline(context.Context, address.Address, TipSetToken) (*dline.Info, error)
-	StateMinerPartitions(ctx context.Context, m address.Address, dlIdx uint64, tok TipSetToken) ([]api.Partition, error)
+	StateMinerPartitions(ctx context.Context, m address.Address, dlIdx uint64, tok TipSetToken) ([]chain.Partition, error)
 	SendMsg(ctx context.Context, from, to address.Address, method abi.MethodNum, value, maxFee abi.TokenAmount, params []byte) (cid.Cid, error)
 	ChainHead(ctx context.Context) (TipSetToken, abi.ChainEpoch, error)
+	ChainGetMessage(ctx context.Context, mc cid.Cid) (*types.Message, error)
 	ChainGetRandomnessFromBeacon(ctx context.Context, tok TipSetToken, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte) (abi.Randomness, error)
 	ChainGetRandomnessFromTickets(ctx context.Context, tok TipSetToken, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte) (abi.Randomness, error)
 	ChainReadObj(context.Context, cid.Cid) ([]byte, error)
@@ -76,10 +80,9 @@ type SectorStateNotifee func(before, after SectorInfo)
 type AddrSel func(ctx context.Context, mi miner.MinerInfo, use api.AddrUse, goodFunds, minFunds abi.TokenAmount) (address.Address, abi.TokenAmount, error)
 
 type Sealing struct {
-	api           SealingAPI
-	feeCfg        FeeConfig
-	networkParams *config.NetParamsConfig
-	events        Events
+	api    SealingAPI
+	feeCfg FeeConfig
+	events Events
 
 	maddr address.Address
 
@@ -102,6 +105,7 @@ type Sealing struct {
 	terminator *TerminateBatcher
 
 	getConfig GetSealingConfigFunc
+	dealInfo  *CurrentDealInfoManager
 }
 
 type FeeConfig struct {
@@ -123,12 +127,11 @@ type UnsealedSectorInfo struct {
 	ssize      abi.SectorSize
 }
 
-func New(api SealingAPI, fc FeeConfig, networkParams *config.NetParamsConfig, events Events, maddr address.Address, ds datastore.Batching, sealer sectorstorage.SectorManager, sc SectorIDCounter, verif ffiwrapper.Verifier, pcp PreCommitPolicy, gc GetSealingConfigFunc, notifee SectorStateNotifee, as AddrSel) *Sealing {
+func New(api SealingAPI, fc FeeConfig, events Events, maddr address.Address, ds datastore.Batching, sealer sectorstorage.SectorManager, sc SectorIDCounter, verif ffiwrapper.Verifier, pcp PreCommitPolicy, gc GetSealingConfigFunc, notifee SectorStateNotifee, as AddrSel) *Sealing {
 	s := &Sealing{
-		api:           api,
-		feeCfg:        fc,
-		networkParams: networkParams,
-		events:        events,
+		api:    api,
+		feeCfg: fc,
+		events: events,
 
 		maddr:  maddr,
 		sealer: sealer,
@@ -148,6 +151,7 @@ func New(api SealingAPI, fc FeeConfig, networkParams *config.NetParamsConfig, ev
 		terminator: NewTerminationBatcher(context.TODO(), maddr, api, as, fc),
 
 		getConfig: gc,
+		dealInfo:  &CurrentDealInfoManager{api},
 
 		stats: SectorStats{
 			bySector: map[abi.SectorID]statSectorState{},

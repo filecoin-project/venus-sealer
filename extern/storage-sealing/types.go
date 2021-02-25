@@ -11,6 +11,7 @@ import (
 	"github.com/filecoin-project/go-state-types/exitcode"
 	"github.com/filecoin-project/specs-storage/storage"
 
+	"github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
 	sectorstorage "github.com/filecoin-project/venus-sealer/extern/sector-storage"
 	"github.com/filecoin-project/venus-sealer/extern/storage-sealing/sealiface"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
@@ -32,6 +33,7 @@ type Piece struct {
 type DealInfo struct {
 	PublishCid   *cid.Cid
 	DealID       abi.DealID
+	DealProposal *market.DealProposal
 	DealSchedule DealSchedule
 	KeepUnsealed bool
 }
@@ -163,7 +165,7 @@ func (t *SectorInfo) sealingCtx(ctx context.Context) context.Context {
 
 // Returns list of offset/length tuples of sector data ranges which clients
 // requested to keep unsealed
-func (t *SectorInfo) keepUnsealedRanges(invert bool) []storage.Range {
+func (t *SectorInfo) keepUnsealedRanges(invert, alwaysKeep bool) []storage.Range {
 	var out []storage.Range
 
 	var at abi.UnpaddedPieceSize
@@ -174,7 +176,10 @@ func (t *SectorInfo) keepUnsealedRanges(invert bool) []storage.Range {
 		if piece.DealInfo == nil {
 			continue
 		}
-		if piece.DealInfo.KeepUnsealed == invert {
+
+		keep := piece.DealInfo.KeepUnsealed || alwaysKeep
+
+		if keep == invert {
 			continue
 		}
 
