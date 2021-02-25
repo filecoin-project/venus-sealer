@@ -19,7 +19,6 @@ import (
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
 	logging "github.com/ipfs/go-log/v2"
-	"github.com/libp2p/go-libp2p-core/host"
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/go-address"
@@ -46,7 +45,6 @@ var log = logging.Logger("storageminer")
 type Miner struct {
 	api     storageMinerApi
 	feeCfg  config.MinerFeeConfig
-	h       host.Host
 	sealer  sectorstorage.SectorManager
 	ds      datastore.Batching
 	sc      sealing.SectorIDCounter

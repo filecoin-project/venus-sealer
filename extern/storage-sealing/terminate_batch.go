@@ -85,7 +85,6 @@ func (b *TerminateBatcher) run() {
 			forceRes <- lastMsg
 			forceRes = nil
 		}
-		lastMsg = nil
 
 		var sendAboveMax, sendAboveMin bool
 		select {

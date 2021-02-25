@@ -18,7 +18,6 @@ import (
 	"github.com/filecoin-project/go-state-types/exitcode"
 	market2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
 	tutils "github.com/filecoin-project/specs-actors/v2/support/testing"
-	"github.com/filecoin-project/venus-sealer/api"
 	evtmock "github.com/filecoin-project/venus/pkg/events/state/mock"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/market"
 	"github.com/filecoin-project/venus/pkg/types"
