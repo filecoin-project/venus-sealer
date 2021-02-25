@@ -8,8 +8,8 @@ import (
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
-	"github.com/filecoin-project/lotus/chain/types"
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/sealtasks"
+	"github.com/filecoin-project/venus/pkg/types"
 )
 
 var infoCmd = &cli.Command{

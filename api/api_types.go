@@ -188,10 +188,6 @@ type ObjStat struct {
 	Links uint64
 }
 
-type MessageSendSpec struct {
-	MaxFee abi.TokenAmount
-}
-
 type DataTransferChannel struct {
 	TransferID  datatransfer.TransferID
 	Status      datatransfer.Status

@@ -3,10 +3,14 @@ package storage
 import (
 	"context"
 	"errors"
-	"github.com/filecoin-project/go-state-types/network"
+	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
+	"github.com/filecoin-project/venus-sealer/constants"
 	chain2 "github.com/filecoin-project/venus/app/submodule/chain"
 	"github.com/filecoin-project/venus/app/submodule/syncer"
 	"github.com/filecoin-project/venus/pkg/chain"
+	"time"
+
+	"github.com/filecoin-project/go-state-types/network"
 
 	"github.com/filecoin-project/go-state-types/dline"
 
@@ -15,11 +19,13 @@ import (
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
 	logging "github.com/ipfs/go-log/v2"
+	"github.com/libp2p/go-libp2p-core/host"
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/crypto"
+	"github.com/filecoin-project/specs-storage/storage"
 	sectorstorage "github.com/filecoin-project/venus-sealer/extern/sector-storage"
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/ffiwrapper"
 
@@ -29,6 +35,7 @@ import (
 	sealing "github.com/filecoin-project/venus-sealer/extern/storage-sealing"
 	"github.com/filecoin-project/venus-sealer/journal"
 	"github.com/filecoin-project/venus/pkg/events"
+	"github.com/filecoin-project/venus/pkg/specactors/builtin"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
 	"github.com/filecoin-project/venus/pkg/specactors/policy"
 	"github.com/filecoin-project/venus/pkg/types"
@@ -39,14 +46,14 @@ var log = logging.Logger("storageminer")
 type Miner struct {
 	api     storageMinerApi
 	feeCfg  config.MinerFeeConfig
+	h       host.Host
 	sealer  sectorstorage.SectorManager
 	ds      datastore.Batching
 	sc      sealing.SectorIDCounter
 	verif   ffiwrapper.Verifier
 	addrSel *AddressSelector
 
-	maddr address.Address
-
+	maddr         address.Address
 	networkParams *config.NetParamsConfig
 	getSealConfig dtypes.GetSealingConfigFunc
 	sealing       *sealing.Sealing
@@ -73,14 +80,14 @@ type storageMinerApi interface {
 	StateSectorGetInfo(context.Context, address.Address, abi.SectorNumber, types.TipSetKey) (*miner.SectorOnChainInfo, error)
 	StateSectorPartition(ctx context.Context, maddr address.Address, sectorNumber abi.SectorNumber, tok types.TipSetKey) (*miner.SectorLocation, error)
 	StateMinerInfo(context.Context, address.Address, types.TipSetKey) (miner.MinerInfo, error)
-	StateMinerDeadlines(context.Context, address.Address, types.TipSetKey) ([]api.Deadline, error)
-	StateMinerPartitions(context.Context, address.Address, uint64, types.TipSetKey) ([]api.Partition, error)
+	StateMinerDeadlines(context.Context, address.Address, types.TipSetKey) ([]chain2.Deadline, error)
+	StateMinerPartitions(context.Context, address.Address, uint64, types.TipSetKey) ([]chain2.Partition, error)
 	StateMinerProvingDeadline(context.Context, address.Address, types.TipSetKey) (*dline.Info, error)
 	StateMinerPreCommitDepositForPower(context.Context, address.Address, miner.SectorPreCommitInfo, types.TipSetKey) (types.BigInt, error)
 	StateMinerInitialPledgeCollateral(context.Context, address.Address, miner.SectorPreCommitInfo, types.TipSetKey) (types.BigInt, error)
 	StateMinerSectorAllocated(context.Context, address.Address, abi.SectorNumber, types.TipSetKey) (bool, error)
-	StateSearchMsg(context.Context, cid.Cid) (*chain.MsgLookup, error)
-	StateWaitMsg(ctx context.Context, cid cid.Cid, confidence uint64) (*chain.MsgLookup, error) // TODO: removeme eventually
+	StateSearchMsg(context.Context, cid.Cid) (*chain2.MsgLookup, error)
+	StateWaitMsg(ctx context.Context, cid cid.Cid, confidence uint64) (*chain2.MsgLookup, error) // TODO: removeme eventually
 	StateGetActor(ctx context.Context, actor address.Address, ts types.TipSetKey) (*types.Actor, error)
 	StateGetReceipt(context.Context, cid.Cid, types.TipSetKey) (*types.MessageReceipt, error)
 	StateMarketStorageDeal(context.Context, abi.DealID, types.TipSetKey) (*chain2.MarketDeal, error)
@@ -90,9 +97,9 @@ type storageMinerApi interface {
 	StateNetworkVersion(context.Context, types.TipSetKey) (network.Version, error)
 	StateLookupID(context.Context, address.Address, types.TipSetKey) (address.Address, error)
 
-	MpoolPushMessage(context.Context, *types.Message, *api.MessageSendSpec) (*types.SignedMessage, error)
+	MpoolPushMessage(context.Context, *types.Message, *types.MessageSendSpec) (*types.SignedMessage, error)
 
-	GasEstimateMessageGas(context.Context, *types.Message, *api.MessageSendSpec, types.TipSetKey) (*types.Message, error)
+	GasEstimateMessageGas(context.Context, *types.Message, *types.MessageSendSpec, types.TipSetKey) (*types.Message, error)
 	GasEstimateFeeCap(context.Context, *types.Message, int64, types.TipSetKey) (types.BigInt, error)
 	GasEstimateGasPremium(_ context.Context, nblocksincl uint64, sender address.Address, gaslimit int64, tsk types.TipSetKey) (types.BigInt, error)
 
@@ -102,6 +109,7 @@ type storageMinerApi interface {
 	ChainGetRandomnessFromBeacon(ctx context.Context, tsk types.TipSetKey, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte) (abi.Randomness, error)
 	ChainGetTipSetByHeight(context.Context, abi.ChainEpoch, types.TipSetKey) (*types.TipSet, error)
 	ChainGetBlockMessages(context.Context, cid.Cid) (*chain2.BlockMessages, error)
+	ChainGetMessage(ctx context.Context, mc cid.Cid) (*types.Message, error)
 	ChainReadObj(context.Context, cid.Cid) ([]byte, error)
 	ChainHasObj(context.Context, cid.Cid) (bool, error)
 	ChainGetTipSet(ctx context.Context, key types.TipSetKey) (*types.TipSet, error)
@@ -111,17 +119,16 @@ type storageMinerApi interface {
 	WalletHas(context.Context, address.Address) (bool, error)
 }
 
-func NewMiner(api storageMinerApi, maddr address.Address, ds datastore.Batching, sealer sectorstorage.SectorManager, sc sealing.SectorIDCounter, verif ffiwrapper.Verifier, gsd dtypes.GetSealingConfigFunc, feeCfg config.MinerFeeConfig, networkParams *config.NetParamsConfig, journal journal.Journal, as *AddressSelector) (*Miner, error) {
+func NewMiner(api storageMinerApi, maddr address.Address, ds datastore.Batching, sealer sectorstorage.SectorManager, sc sealing.SectorIDCounter, verif ffiwrapper.Verifier, gsd dtypes.GetSealingConfigFunc, feeCfg config.MinerFeeConfig, journal journal.Journal, as *AddressSelector, networkParams *config.NetParamsConfig) (*Miner, error) {
 	m := &Miner{
-		api:           api,
-		feeCfg:        feeCfg,
-		networkParams: networkParams,
-		sealer:        sealer,
-		ds:            ds,
-		sc:            sc,
-		verif:         verif,
-		addrSel:       as,
-
+		api:            api,
+		feeCfg:         feeCfg,
+		sealer:         sealer,
+		ds:             ds,
+		sc:             sc,
+		verif:          verif,
+		addrSel:        as,
+		networkParams:  networkParams,
 		maddr:          maddr,
 		getSealConfig:  gsd,
 		journal:        journal,
@@ -156,7 +163,7 @@ func (m *Miner) Run(ctx context.Context) error {
 		return m.addrSel.AddressFor(ctx, m.api, mi, use, goodFunds, minFunds)
 	}
 
-	m.sealing = sealing.New(adaptedAPI, fc, m.networkParams, NewEventsAdapter(evts), m.maddr, m.ds, m.sealer, m.sc, m.verif, &pcp, sealing.GetSealingConfigFunc(m.getSealConfig), m.handleSealingNotifications, as)
+	m.sealing = sealing.New(adaptedAPI, fc, NewEventsAdapter(evts), m.maddr, m.ds, m.sealer, m.sc, m.verif, &pcp, sealing.GetSealingConfigFunc(m.getSealConfig), m.handleSealingNotifications, as, m.networkParams)
 
 	go m.sealing.Run(ctx) //nolint:errcheck // logged intside the function
 
@@ -201,4 +208,55 @@ func (m *Miner) runPreflightChecks(ctx context.Context) error {
 
 	log.Infof("starting up miner %s, worker addr %s", m.maddr, workerKey)
 	return nil
+}
+
+type StorageWpp struct {
+	prover   storage.Prover
+	verifier ffiwrapper.Verifier
+	miner    abi.ActorID
+	winnRpt  abi.RegisteredPoStProof
+}
+
+func NewWinningPoStProver(api api.FullNode, prover storage.Prover, verifier ffiwrapper.Verifier, miner dtypes.MinerID) (*StorageWpp, error) {
+	ma, err := address.NewIDAddress(uint64(miner))
+	if err != nil {
+		return nil, err
+	}
+
+	mi, err := api.StateMinerInfo(context.TODO(), ma, types.EmptyTSK)
+	if err != nil {
+		return nil, xerrors.Errorf("getting sector size: %w", err)
+	}
+
+	return &StorageWpp{prover, verifier, abi.ActorID(miner), mi.WindowPoStProofType}, nil
+}
+
+type WinningPoStProver interface {
+	GenerateCandidates(context.Context, abi.PoStRandomness, uint64) ([]uint64, error)
+	ComputeProof(context.Context, []proof2.SectorInfo, abi.PoStRandomness) ([]proof2.PoStProof, error)
+}
+
+var _ WinningPoStProver = (*StorageWpp)(nil)
+
+func (wpp *StorageWpp) GenerateCandidates(ctx context.Context, randomness abi.PoStRandomness, eligibleSectorCount uint64) ([]uint64, error) {
+	start := constants.Clock.Now()
+
+	cds, err := wpp.verifier.GenerateWinningPoStSectorChallenge(ctx, wpp.winnRpt, wpp.miner, randomness, eligibleSectorCount)
+	if err != nil {
+		return nil, xerrors.Errorf("failed to generate candidates: %w", err)
+	}
+	log.Infof("Generate candidates took %s (C: %+v)", time.Since(start), cds)
+	return cds, nil
+}
+
+func (wpp *StorageWpp) ComputeProof(ctx context.Context, ssi []builtin.SectorInfo, rand abi.PoStRandomness) ([]builtin.PoStProof, error) {
+	log.Infof("Computing WinningPoSt ;%+v; %v", ssi, rand)
+
+	start := constants.Clock.Now()
+	proof, err := wpp.prover.GenerateWinningPoSt(ctx, wpp.miner, ssi, rand)
+	if err != nil {
+		return nil, err
+	}
+	log.Infof("GenerateWinningPoSt took %s", time.Since(start))
+	return proof, nil
 }

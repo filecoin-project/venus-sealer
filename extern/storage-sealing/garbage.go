@@ -2,6 +2,7 @@ package sealing
 
 import (
 	"context"
+	"github.com/filecoin-project/venus-sealer/lib/reader"
 
 	"golang.org/x/xerrors"
 
@@ -18,7 +19,7 @@ func (m *Sealing) pledgeSector(ctx context.Context, sectorID storage.SectorRef, 
 
 	out := make([]abi.PieceInfo, len(sizes))
 	for i, size := range sizes {
-		ppi, err := m.sealer.AddPiece(ctx, sectorID, existingPieceSizes, size, NewNullReader(size))
+		ppi, err := m.sealer.AddPiece(ctx, sectorID, existingPieceSizes, size, reader.NewNullReader(size))
 		if err != nil {
 			return nil, xerrors.Errorf("add piece: %w", err)
 		}

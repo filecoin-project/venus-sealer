@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"github.com/filecoin-project/venus-sealer/constants"
+	"github.com/filecoin-project/venus/app/submodule/chain"
 	"time"
 
 	"github.com/filecoin-project/go-bitfield"
@@ -21,6 +22,7 @@ import (
 	"golang.org/x/xerrors"
 
 	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
+	"github.com/filecoin-project/specs-actors/v3/actors/runtime/proof"
 
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus/pkg/messagepool"
@@ -44,7 +46,7 @@ func (s *WindowPoStScheduler) failPost(err error, ts *types.TipSet, deadline *dl
 		}
 	})
 
-	log.Errorf("Got err %w - TODO handle errors", err)
+	log.Errorf("Got err %+v - TODO handle errors", err)
 	/*s.failLk.Lock()
 	if eps > s.failed {
 		s.failed = eps
@@ -232,7 +234,7 @@ func (s *WindowPoStScheduler) checkSectors(ctx context.Context, check bitfield.B
 	return sbf, nil
 }
 
-func (s *WindowPoStScheduler) checkNextRecoveries(ctx context.Context, dlIdx uint64, partitions []api.Partition, tsk types.TipSetKey) ([]miner.RecoveryDeclaration, *types.SignedMessage, error) {
+func (s *WindowPoStScheduler) checkNextRecoveries(ctx context.Context, dlIdx uint64, partitions []chain.Partition, tsk types.TipSetKey) ([]miner.RecoveryDeclaration, *types.SignedMessage, error) {
 	ctx, span := trace.StartSpan(ctx, "storage.checkNextRecoveries")
 	defer span.End()
 
@@ -300,12 +302,12 @@ func (s *WindowPoStScheduler) checkNextRecoveries(ctx context.Context, dlIdx uin
 		Params: enc,
 		Value:  types.NewInt(0),
 	}
-	spec := &api.MessageSendSpec{MaxFee: abi.TokenAmount(s.feeCfg.MaxWindowPoStGasFee)}
+	spec := &types.MessageSendSpec{MaxFee: abi.TokenAmount(s.feeCfg.MaxWindowPoStGasFee)}
 	if err := s.setSender(ctx, msg, spec); err != nil {
 		return recoveries, nil, err
 	}
 
-	sm, err := s.api.MpoolPushMessage(ctx, msg, &api.MessageSendSpec{MaxFee: abi.TokenAmount(s.feeCfg.MaxWindowPoStGasFee)})
+	sm, err := s.api.MpoolPushMessage(ctx, msg, &types.MessageSendSpec{MaxFee: abi.TokenAmount(s.feeCfg.MaxWindowPoStGasFee)})
 	if err != nil {
 		return recoveries, sm, xerrors.Errorf("pushing message to mpool: %w", err)
 	}
@@ -324,7 +326,7 @@ func (s *WindowPoStScheduler) checkNextRecoveries(ctx context.Context, dlIdx uin
 	return recoveries, sm, nil
 }
 
-func (s *WindowPoStScheduler) checkNextFaults(ctx context.Context, dlIdx uint64, partitions []api.Partition, tsk types.TipSetKey) ([]miner.FaultDeclaration, *types.SignedMessage, error) {
+func (s *WindowPoStScheduler) checkNextFaults(ctx context.Context, dlIdx uint64, partitions []chain.Partition, tsk types.TipSetKey) ([]miner.FaultDeclaration, *types.SignedMessage, error) {
 	ctx, span := trace.StartSpan(ctx, "storage.checkNextFaults")
 	defer span.End()
 
@@ -385,7 +387,7 @@ func (s *WindowPoStScheduler) checkNextFaults(ctx context.Context, dlIdx uint64,
 		Params: enc,
 		Value:  types.NewInt(0), // TODO: Is there a fee?
 	}
-	spec := &api.MessageSendSpec{MaxFee: abi.TokenAmount(s.feeCfg.MaxWindowPoStGasFee)}
+	spec := &types.MessageSendSpec{MaxFee: abi.TokenAmount(s.feeCfg.MaxWindowPoStGasFee)}
 	if err := s.setSender(ctx, msg, spec); err != nil {
 		return faults, nil, err
 	}
@@ -594,8 +596,24 @@ func (s *WindowPoStScheduler) runPost(ctx context.Context, di dline.Info, ts *ty
 			log.Infow("computing window post", "batch", batchIdx, "elapsed", elapsed)
 
 			if err == nil {
+				// If we proved nothing, something is very wrong.
 				if len(postOut) == 0 {
 					return nil, xerrors.Errorf("received no proofs back from generate window post")
+				}
+
+				// If we generated an incorrect proof, try again.
+				if correct, err := s.verifier.VerifyWindowPoSt(ctx, proof.WindowPoStVerifyInfo{
+					Randomness:        abi.PoStRandomness(rand),
+					Proofs:            postOut,
+					ChallengedSectors: sinfos,
+					Prover:            abi.ActorID(mid),
+				}); err != nil {
+					log.Errorw("window post verification failed", "post", postOut, "error", err)
+					time.Sleep(5 * time.Second)
+					continue
+				} else if !correct {
+					log.Errorw("generated incorrect window post proof", "post", postOut, "error", err)
+					continue
 				}
 
 				// Proof generation successful, stop retrying
@@ -642,7 +660,7 @@ func (s *WindowPoStScheduler) runPost(ctx context.Context, di dline.Info, ts *ty
 	return posts, nil
 }
 
-func (s *WindowPoStScheduler) batchPartitions(partitions []api.Partition) ([][]api.Partition, error) {
+func (s *WindowPoStScheduler) batchPartitions(partitions []chain.Partition) ([][]chain.Partition, error) {
 	// We don't want to exceed the number of sectors allowed in a message.
 	// So given the number of sectors in a partition, work out the number of
 	// partitions that can be in a message without exceeding sectors per
@@ -666,7 +684,7 @@ func (s *WindowPoStScheduler) batchPartitions(partitions []api.Partition) ([][]a
 	}
 
 	// Split the partitions into batches
-	batches := make([][]api.Partition, 0, batchCount)
+	batches := make([][]chain.Partition, 0, batchCount)
 	for i := 0; i < len(partitions); i += partitionsPerMsg {
 		end := i + partitionsPerMsg
 		if end > len(partitions) {
@@ -735,7 +753,7 @@ func (s *WindowPoStScheduler) submitPost(ctx context.Context, proof *miner.Submi
 		Params: enc,
 		Value:  types.NewInt(0),
 	}
-	spec := &api.MessageSendSpec{MaxFee: abi.TokenAmount(s.feeCfg.MaxWindowPoStGasFee)}
+	spec := &types.MessageSendSpec{MaxFee: abi.TokenAmount(s.feeCfg.MaxWindowPoStGasFee)}
 	if err := s.setSender(ctx, msg, spec); err != nil {
 		return nil, err
 	}
@@ -766,7 +784,7 @@ func (s *WindowPoStScheduler) submitPost(ctx context.Context, proof *miner.Submi
 	return sm, nil
 }
 
-func (s *WindowPoStScheduler) setSender(ctx context.Context, msg *types.Message, spec *api.MessageSendSpec) error {
+func (s *WindowPoStScheduler) setSender(ctx context.Context, msg *types.Message, spec *types.MessageSendSpec) error {
 	mi, err := s.api.StateMinerInfo(ctx, s.actor, types.EmptyTSK)
 	if err != nil {
 		return xerrors.Errorf("error getting miner info: %w", err)
@@ -812,7 +830,7 @@ func (s *WindowPoStScheduler) setSender(ctx context.Context, msg *types.Message,
 			return msg.RequiredFunds(), nil
 		}
 
-		messagepool.CapGasFee(mff, msg, big.Min(big.Sub(avail, msg.Value), msg.RequiredFunds()))
+		messagepool.CapGasFee(mff, msg, &types.MessageSendSpec{MaxFee: big.Min(big.Sub(avail, msg.Value), msg.RequiredFunds())})
 	}
 	return nil
 }

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/xerrors"
 
 	"github.com/ipfs/go-cid"
 
@@ -27,7 +28,6 @@ import (
 	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 	tutils "github.com/filecoin-project/specs-actors/v2/support/testing"
 
-	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/extern/sector-storage/storiface"
 	"github.com/filecoin-project/venus-sealer/journal"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
@@ -35,7 +35,7 @@ import (
 )
 
 type mockStorageMinerAPI struct {
-	partitions     []api.Partition
+	partitions     []chain2.Partition
 	pushedMessages chan *types.Message
 	storageMinerApi
 }
@@ -65,11 +65,11 @@ func (m *mockStorageMinerAPI) ChainGetRandomnessFromBeacon(ctx context.Context, 
 	return abi.Randomness("beacon rand"), nil
 }
 
-func (m *mockStorageMinerAPI) setPartitions(ps []api.Partition) {
+func (m *mockStorageMinerAPI) setPartitions(ps []chain2.Partition) {
 	m.partitions = append(m.partitions, ps...)
 }
 
-func (m *mockStorageMinerAPI) StateMinerPartitions(ctx context.Context, a address.Address, dlIdx uint64, tsk types.TipSetKey) ([]api.Partition, error) {
+func (m *mockStorageMinerAPI) StateMinerPartitions(ctx context.Context, a address.Address, dlIdx uint64, tsk types.TipSetKey) ([]chain2.Partition, error) {
 	return m.partitions, nil
 }
 
@@ -87,15 +87,15 @@ func (m *mockStorageMinerAPI) StateMinerSectors(ctx context.Context, address add
 	return sis, nil
 }
 
-func (m *mockStorageMinerAPI) MpoolPushMessage(ctx context.Context, message *types.Message, spec *api.MessageSendSpec) (*types.SignedMessage, error) {
+func (m *mockStorageMinerAPI) MpoolPushMessage(ctx context.Context, message *types.Message, spec *types.MessageSendSpec) (*types.SignedMessage, error) {
 	m.pushedMessages <- message
 	return &types.SignedMessage{
 		Message: *message,
 	}, nil
 }
 
-func (m *mockStorageMinerAPI) StateWaitMsg(ctx context.Context, cid cid.Cid, confidence uint64) (*chain.MsgLookup, error) {
-	return &chain.MsgLookup{
+func (m *mockStorageMinerAPI) StateWaitMsg(ctx context.Context, cid cid.Cid, confidence uint64) (*chain2.MsgLookup, error) {
+	return &chain2.MsgLookup{
 		Receipt: types.MessageReceipt{
 			ExitCode: 0,
 		},
@@ -124,6 +124,34 @@ func (m *mockProver) GenerateWindowPoSt(ctx context.Context, aid abi.ActorID, si
 			ProofBytes: []byte("post-proof"),
 		},
 	}, nil, nil
+}
+
+type mockVerif struct {
+}
+
+func (m mockVerif) VerifyWinningPoSt(ctx context.Context, info proof2.WinningPoStVerifyInfo) (bool, error) {
+	panic("implement me")
+}
+
+func (m mockVerif) VerifyWindowPoSt(ctx context.Context, info proof2.WindowPoStVerifyInfo) (bool, error) {
+	if len(info.Proofs) != 1 {
+		return false, xerrors.Errorf("expected 1 proof entry")
+	}
+
+	proof := info.Proofs[0]
+
+	if !bytes.Equal(proof.ProofBytes, []byte("post-proof")) {
+		return false, xerrors.Errorf("bad proof")
+	}
+	return true, nil
+}
+
+func (m mockVerif) VerifySeal(proof2.SealVerifyInfo) (bool, error) {
+	panic("implement me")
+}
+
+func (m mockVerif) GenerateWinningPoStSectorChallenge(context.Context, abi.RegisteredPoStProof, abi.ActorID, abi.PoStRandomness, uint64) ([]uint64, error) {
+	panic("implement me")
 }
 
 type mockFaultTracker struct {
@@ -159,13 +187,13 @@ func TestWDPostDoPost(t *testing.T) {
 	// Add an extra partition that should be included in the last message
 	partitionCount++
 
-	var partitions []api.Partition
+	var partitions []chain2.Partition
 	for p := 0; p < partitionCount; p++ {
 		sectors := bitfield.New()
 		for s := uint64(0); s < sectorsPerPartition; s++ {
 			sectors.Set(s)
 		}
-		partitions = append(partitions, api.Partition{
+		partitions = append(partitions, chain2.Partition{
 			AllSectors:        sectors,
 			FaultySectors:     bitfield.New(),
 			RecoveringSectors: bitfield.New(),
@@ -179,6 +207,7 @@ func TestWDPostDoPost(t *testing.T) {
 	scheduler := &WindowPoStScheduler{
 		api:          mockStgMinerAPI,
 		prover:       &mockProver{},
+		verifier:     &mockVerif{},
 		faultTracker: &mockFaultTracker{},
 		proofType:    proofType,
 		actor:        postAct,
@@ -243,7 +272,7 @@ func (m *mockStorageMinerAPI) StateCall(ctx context.Context, message *types.Mess
 	panic("implement me")
 }
 
-func (m *mockStorageMinerAPI) StateMinerDeadlines(ctx context.Context, maddr address.Address, tok types.TipSetKey) ([]api.Deadline, error) {
+func (m *mockStorageMinerAPI) StateMinerDeadlines(ctx context.Context, maddr address.Address, tok types.TipSetKey) ([]chain2.Deadline, error) {
 	panic("implement me")
 }
 
@@ -284,7 +313,7 @@ func (m *mockStorageMinerAPI) StateMinerInitialPledgeCollateral(ctx context.Cont
 	panic("implement me")
 }
 
-func (m *mockStorageMinerAPI) StateSearchMsg(ctx context.Context, cid cid.Cid) (*chain.MsgLookup, error) {
+func (m *mockStorageMinerAPI) StateSearchMsg(ctx context.Context, cid cid.Cid) (*chain2.MsgLookup, error) {
 	panic("implement me")
 }
 
@@ -314,7 +343,7 @@ func (m *mockStorageMinerAPI) StateAccountKey(ctx context.Context, address addre
 	return address, nil
 }
 
-func (m *mockStorageMinerAPI) GasEstimateMessageGas(ctx context.Context, message *types.Message, spec *api.MessageSendSpec, key types.TipSetKey) (*types.Message, error) {
+func (m *mockStorageMinerAPI) GasEstimateMessageGas(ctx context.Context, message *types.Message, spec *types.MessageSendSpec, key types.TipSetKey) (*types.Message, error) {
 	msg := *message
 	msg.GasFeeCap = big.NewInt(1)
 	msg.GasPremium = big.NewInt(1)

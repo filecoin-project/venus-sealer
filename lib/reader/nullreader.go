@@ -1,4 +1,4 @@
-package sealing
+package reader
 
 import (
 	"io"

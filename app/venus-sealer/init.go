@@ -444,7 +444,7 @@ func createStorageMiner(ctx context.Context, nodeAPI api.FullNode, peerid peer.I
 		GasPremium: gasPrice,
 	}
 
-	signed, err := nodeAPI.MpoolPushMessage(ctx, createStorageMinerMsg, &api.MessageSendSpec{MaxFee: types.FromFil(1)})
+	signed, err := nodeAPI.MpoolPushMessage(ctx, createStorageMinerMsg, &types.MessageSendSpec{MaxFee: types.FromFil(1)})
 	if err != nil {
 		return address.Undef, xerrors.Errorf("pushing createMiner message: %w", err)
 	}

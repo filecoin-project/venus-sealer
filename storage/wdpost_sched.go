@@ -15,6 +15,7 @@ import (
 
 	"github.com/filecoin-project/venus-sealer/config"
 	sectorstorage "github.com/filecoin-project/venus-sealer/extern/sector-storage"
+	"github.com/filecoin-project/venus-sealer/extern/sector-storage/ffiwrapper"
 	"github.com/filecoin-project/venus-sealer/journal"
 	"github.com/filecoin-project/venus/pkg/types"
 
@@ -24,15 +25,15 @@ import (
 type WindowPoStScheduler struct {
 	api              storageMinerApi
 	feeCfg           config.MinerFeeConfig
-	networkParams    *config.NetParamsConfig
 	addrSel          *AddressSelector
 	prover           storage.Prover
+	verifier         ffiwrapper.Verifier
 	faultTracker     sectorstorage.FaultTracker
 	proofType        abi.RegisteredPoStProof
 	partitionSectors uint64
 	ch               *changeHandler
-
-	actor address.Address
+	networkParams    *config.NetParamsConfig
+	actor            address.Address
 
 	evtTypes [4]journal.EventType
 	journal  journal.Journal
@@ -41,7 +42,7 @@ type WindowPoStScheduler struct {
 	// failLk sync.Mutex
 }
 
-func NewWindowedPoStScheduler(api storageMinerApi, fc config.MinerFeeConfig, networkParams *config.NetParamsConfig, as *AddressSelector, sb storage.Prover, ft sectorstorage.FaultTracker, j journal.Journal, actor address.Address) (*WindowPoStScheduler, error) {
+func NewWindowedPoStScheduler(api storageMinerApi, fc config.MinerFeeConfig, as *AddressSelector, sb storage.Prover, verif ffiwrapper.Verifier, ft sectorstorage.FaultTracker, j journal.Journal, actor address.Address, networkParams *config.NetParamsConfig) (*WindowPoStScheduler, error) {
 	mi, err := api.StateMinerInfo(context.TODO(), actor, types.EmptyTSK)
 	if err != nil {
 		return nil, xerrors.Errorf("getting sector size: %w", err)
@@ -50,14 +51,14 @@ func NewWindowedPoStScheduler(api storageMinerApi, fc config.MinerFeeConfig, net
 	return &WindowPoStScheduler{
 		api:              api,
 		feeCfg:           fc,
-		networkParams:    networkParams,
 		addrSel:          as,
 		prover:           sb,
+		verifier:         verif,
 		faultTracker:     ft,
 		proofType:        mi.WindowPoStProofType,
 		partitionSectors: mi.WindowPoStPartitionSectors,
-
-		actor: actor,
+		networkParams:    networkParams,
+		actor:            actor,
 		evtTypes: [...]journal.EventType{
 			evtTypeWdPoStScheduler:  j.RegisterEventType("wdpost", "scheduler"),
 			evtTypeWdPoStProofs:     j.RegisterEventType("wdpost", "proofs_processed"),

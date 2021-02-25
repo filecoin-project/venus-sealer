@@ -145,7 +145,7 @@ type FullNode interface {
 		sender address.Address, gaslimit int64, tsk types.TipSetKey) (types.BigInt, error)
 
 	// GasEstimateMessageGas estimates gas values for unset message gas fields
-	GasEstimateMessageGas(context.Context, *types.Message, *MessageSendSpec, types.TipSetKey) (*types.Message, error)
+	GasEstimateMessageGas(context.Context, *types.Message, *types.MessageSendSpec, types.TipSetKey) (*types.Message, error)
 
 	// MethodGroup: Sync
 	// The Sync method group contains methods for interacting with and
@@ -204,7 +204,7 @@ type FullNode interface {
 	//
 	// When maxFee is set to 0, MpoolPushMessage will guess appropriate fee
 	// based on current chain conditions
-	MpoolPushMessage(ctx context.Context, msg *types.Message, spec *MessageSendSpec) (*types.SignedMessage, error)
+	MpoolPushMessage(ctx context.Context, msg *types.Message, spec *types.MessageSendSpec) (*types.SignedMessage, error)
 
 	// MpoolBatchPush batch pushes a signed message to mempool.
 	MpoolBatchPush(context.Context, []*types.SignedMessage) ([]cid.Cid, error)
@@ -213,7 +213,7 @@ type FullNode interface {
 	MpoolBatchPushUntrusted(context.Context, []*types.SignedMessage) ([]cid.Cid, error)
 
 	// MpoolBatchPushMessage batch pushes a unsigned message to mempool.
-	MpoolBatchPushMessage(context.Context, []*types.Message, *MessageSendSpec) ([]*types.SignedMessage, error)
+	MpoolBatchPushMessage(context.Context, []*types.Message, *types.MessageSendSpec) ([]*types.SignedMessage, error)
 
 	// MpoolGetNonce gets next nonce for the specified sender.
 	// Note that this method may not be atomic. Use MpoolPushMessage instead.
@@ -301,9 +301,9 @@ type FullNode interface {
 	// StateMinerInfo returns info about the indicated miner
 	StateMinerInfo(context.Context, address.Address, types.TipSetKey) (miner.MinerInfo, error)
 	// StateMinerDeadlines returns all the proving deadlines for the given miner
-	StateMinerDeadlines(context.Context, address.Address, types.TipSetKey) ([]Deadline, error)
+	StateMinerDeadlines(context.Context, address.Address, types.TipSetKey) ([]chain2.Deadline, error)
 	// StateMinerPartitions returns all partitions in the specified deadline
-	StateMinerPartitions(ctx context.Context, m address.Address, dlIdx uint64, tsk types.TipSetKey) ([]Partition, error)
+	StateMinerPartitions(ctx context.Context, m address.Address, dlIdx uint64, tsk types.TipSetKey) ([]chain2.Partition, error)
 	// StateMinerFaults returns a bitfield indicating the faulty sectors of the given miner
 	StateMinerFaults(context.Context, address.Address, types.TipSetKey) (bitfield.BitField, error)
 	// StateAllMinerFaults returns all non-expired Faults that occur within lookback epochs of the given tipset
@@ -556,10 +556,10 @@ type FullNodeStruct struct {
 
 		BeaconGetEntry func(ctx context.Context, epoch abi.ChainEpoch) (*types.BeaconEntry, error) `perm:"read"`
 
-		GasEstimateGasPremium func(context.Context, uint64, address.Address, int64, types.TipSetKey) (types.BigInt, error)     `perm:"read"`
-		GasEstimateGasLimit   func(context.Context, *types.Message, types.TipSetKey) (int64, error)                            `perm:"read"`
-		GasEstimateFeeCap     func(context.Context, *types.Message, int64, types.TipSetKey) (types.BigInt, error)              `perm:"read"`
-		GasEstimateMessageGas func(context.Context, *types.Message, *MessageSendSpec, types.TipSetKey) (*types.Message, error) `perm:"read"`
+		GasEstimateGasPremium func(context.Context, uint64, address.Address, int64, types.TipSetKey) (types.BigInt, error)           `perm:"read"`
+		GasEstimateGasLimit   func(context.Context, *types.Message, types.TipSetKey) (int64, error)                                  `perm:"read"`
+		GasEstimateFeeCap     func(context.Context, *types.Message, int64, types.TipSetKey) (types.BigInt, error)                    `perm:"read"`
+		GasEstimateMessageGas func(context.Context, *types.Message, *types.MessageSendSpec, types.TipSetKey) (*types.Message, error) `perm:"read"`
 
 		SyncState          func(context.Context) (*syncer.SyncState, error)             `perm:"read"`
 		SyncSubmitBlock    func(ctx context.Context, blk *types.BlockMsg) error         `perm:"write"`
@@ -582,13 +582,13 @@ type FullNodeStruct struct {
 		MpoolPush          func(context.Context, *types.SignedMessage) (cid.Cid, error) `perm:"write"`
 		MpoolPushUntrusted func(context.Context, *types.SignedMessage) (cid.Cid, error) `perm:"write"`
 
-		MpoolPushMessage func(context.Context, *types.Message, *MessageSendSpec) (*types.SignedMessage, error) `perm:"sign"`
-		MpoolGetNonce    func(context.Context, address.Address) (uint64, error)                                `perm:"read"`
-		MpoolSub         func(context.Context) (<-chan messagepool.MpoolUpdate, error)                         `perm:"read"`
+		MpoolPushMessage func(context.Context, *types.Message, *types.MessageSendSpec) (*types.SignedMessage, error) `perm:"sign"`
+		MpoolGetNonce    func(context.Context, address.Address) (uint64, error)                                      `perm:"read"`
+		MpoolSub         func(context.Context) (<-chan messagepool.MpoolUpdate, error)                               `perm:"read"`
 
-		MpoolBatchPush          func(ctx context.Context, smsgs []*types.SignedMessage) ([]cid.Cid, error)                              `perm:"write"`
-		MpoolBatchPushUntrusted func(ctx context.Context, smsgs []*types.SignedMessage) ([]cid.Cid, error)                              `perm:"write"`
-		MpoolBatchPushMessage   func(ctx context.Context, msgs []*types.Message, spec *MessageSendSpec) ([]*types.SignedMessage, error) `perm:"sign"`
+		MpoolBatchPush          func(ctx context.Context, smsgs []*types.SignedMessage) ([]cid.Cid, error)                                    `perm:"write"`
+		MpoolBatchPushUntrusted func(ctx context.Context, smsgs []*types.SignedMessage) ([]cid.Cid, error)                                    `perm:"write"`
+		MpoolBatchPushMessage   func(ctx context.Context, msgs []*types.Message, spec *types.MessageSendSpec) ([]*types.SignedMessage, error) `perm:"sign"`
 
 		MinerGetBaseInfo func(context.Context, address.Address, abi.ChainEpoch, types.TipSetKey) (*mining.MiningBaseInfo, error) `perm:"read"`
 		MinerCreateBlock func(context.Context, *mining.BlockTemplate) (*types.BlockMsg, error)                                   `perm:"write"`
@@ -613,8 +613,8 @@ type FullNodeStruct struct {
 		StateMinerProvingDeadline          func(context.Context, address.Address, types.TipSetKey) (*dline.Info, error)                                        `perm:"read"`
 		StateMinerPower                    func(context.Context, address.Address, types.TipSetKey) (*power.MinerPower, error)                                  `perm:"read"`
 		StateMinerInfo                     func(context.Context, address.Address, types.TipSetKey) (miner.MinerInfo, error)                                    `perm:"read"`
-		StateMinerDeadlines                func(context.Context, address.Address, types.TipSetKey) ([]Deadline, error)                                         `perm:"read"`
-		StateMinerPartitions               func(ctx context.Context, m address.Address, dlIdx uint64, tsk types.TipSetKey) ([]Partition, error)                `perm:"read"`
+		StateMinerDeadlines                func(context.Context, address.Address, types.TipSetKey) ([]chain2.Deadline, error)                                  `perm:"read"`
+		StateMinerPartitions               func(ctx context.Context, m address.Address, dlIdx uint64, tsk types.TipSetKey) ([]chain2.Partition, error)         `perm:"read"`
 		StateMinerFaults                   func(context.Context, address.Address, types.TipSetKey) (bitfield.BitField, error)                                  `perm:"read"`
 		StateAllMinerFaults                func(context.Context, abi.ChainEpoch, types.TipSetKey) ([]*Fault, error)                                            `perm:"read"`
 		StateMinerRecoveries               func(context.Context, address.Address, types.TipSetKey) (bitfield.BitField, error)                                  `perm:"read"`
@@ -813,7 +813,7 @@ func (c *FullNodeStruct) GasEstimateFeeCap(ctx context.Context, msg *types.Messa
 	return c.Internal.GasEstimateFeeCap(ctx, msg, maxqueueblks, tsk)
 }
 
-func (c *FullNodeStruct) GasEstimateMessageGas(ctx context.Context, msg *types.Message, spec *MessageSendSpec, tsk types.TipSetKey) (*types.Message, error) {
+func (c *FullNodeStruct) GasEstimateMessageGas(ctx context.Context, msg *types.Message, spec *types.MessageSendSpec, tsk types.TipSetKey) (*types.Message, error) {
 	return c.Internal.GasEstimateMessageGas(ctx, msg, spec, tsk)
 }
 
@@ -849,7 +849,7 @@ func (c *FullNodeStruct) MpoolPushUntrusted(ctx context.Context, smsg *types.Sig
 	return c.Internal.MpoolPushUntrusted(ctx, smsg)
 }
 
-func (c *FullNodeStruct) MpoolPushMessage(ctx context.Context, msg *types.Message, spec *MessageSendSpec) (*types.SignedMessage, error) {
+func (c *FullNodeStruct) MpoolPushMessage(ctx context.Context, msg *types.Message, spec *types.MessageSendSpec) (*types.SignedMessage, error) {
 	return c.Internal.MpoolPushMessage(ctx, msg, spec)
 }
 
@@ -861,7 +861,7 @@ func (c *FullNodeStruct) MpoolBatchPushUntrusted(ctx context.Context, smsgs []*t
 	return c.Internal.MpoolBatchPushUntrusted(ctx, smsgs)
 }
 
-func (c *FullNodeStruct) MpoolBatchPushMessage(ctx context.Context, msgs []*types.Message, spec *MessageSendSpec) ([]*types.SignedMessage, error) {
+func (c *FullNodeStruct) MpoolBatchPushMessage(ctx context.Context, msgs []*types.Message, spec *types.MessageSendSpec) ([]*types.SignedMessage, error) {
 	return c.Internal.MpoolBatchPushMessage(ctx, msgs, spec)
 }
 
@@ -1081,11 +1081,11 @@ func (c *FullNodeStruct) StateMinerInfo(ctx context.Context, actor address.Addre
 	return c.Internal.StateMinerInfo(ctx, actor, tsk)
 }
 
-func (c *FullNodeStruct) StateMinerDeadlines(ctx context.Context, actor address.Address, tsk types.TipSetKey) ([]Deadline, error) {
+func (c *FullNodeStruct) StateMinerDeadlines(ctx context.Context, actor address.Address, tsk types.TipSetKey) ([]chain2.Deadline, error) {
 	return c.Internal.StateMinerDeadlines(ctx, actor, tsk)
 }
 
-func (c *FullNodeStruct) StateMinerPartitions(ctx context.Context, m address.Address, dlIdx uint64, tsk types.TipSetKey) ([]Partition, error) {
+func (c *FullNodeStruct) StateMinerPartitions(ctx context.Context, m address.Address, dlIdx uint64, tsk types.TipSetKey) ([]chain2.Partition, error) {
 	return c.Internal.StateMinerPartitions(ctx, m, dlIdx, tsk)
 }
 

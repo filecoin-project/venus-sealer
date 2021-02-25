@@ -2,6 +2,7 @@ package rpcenc
 
 import (
 	"context"
+	"github.com/filecoin-project/venus-sealer/lib/reader"
 	"io"
 	"io/ioutil"
 	"net/http/httptest"
@@ -12,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/filecoin-project/go-jsonrpc"
-	sealing "github.com/filecoin-project/lotus/extern/storage-sealing"
 )
 
 type ReaderHandler struct {
@@ -23,7 +23,7 @@ func (h *ReaderHandler) ReadAll(ctx context.Context, r io.Reader) ([]byte, error
 }
 
 func (h *ReaderHandler) ReadNullLen(ctx context.Context, r io.Reader) (int64, error) {
-	return r.(*sealing.NullReader).N, nil
+	return r.(*reader.NullReader).N, nil
 }
 
 func (h *ReaderHandler) ReadUrl(ctx context.Context, u string) (string, error) {
@@ -84,7 +84,7 @@ func TestNullReaderProxy(t *testing.T) {
 
 	defer closer()
 
-	n, err := client.ReadNullLen(context.TODO(), sealing.NewNullReader(1016))
+	n, err := client.ReadNullLen(context.TODO(), reader.NewNullReader(1016))
 	require.NoError(t, err)
 	require.Equal(t, int64(1016), n)
 }

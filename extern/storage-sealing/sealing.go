@@ -3,6 +3,8 @@ package sealing
 import (
 	"context"
 	"errors"
+	"github.com/filecoin-project/venus-sealer/config"
+	"github.com/filecoin-project/venus-sealer/lib/reader"
 	"github.com/filecoin-project/venus/app/submodule/chain"
 	"io"
 	"math"
@@ -94,11 +96,11 @@ type Sealing struct {
 	pcp             PreCommitPolicy
 	unsealedInfoMap UnsealedSectorMap
 
-	upgradeLk sync.Mutex
-	toUpgrade map[abi.SectorNumber]struct{}
-
-	notifee SectorStateNotifee
-	addrSel AddrSel
+	upgradeLk     sync.Mutex
+	toUpgrade     map[abi.SectorNumber]struct{}
+	networkParams *config.NetParamsConfig
+	notifee       SectorStateNotifee
+	addrSel       AddrSel
 
 	stats SectorStats
 
@@ -127,17 +129,17 @@ type UnsealedSectorInfo struct {
 	ssize      abi.SectorSize
 }
 
-func New(api SealingAPI, fc FeeConfig, events Events, maddr address.Address, ds datastore.Batching, sealer sectorstorage.SectorManager, sc SectorIDCounter, verif ffiwrapper.Verifier, pcp PreCommitPolicy, gc GetSealingConfigFunc, notifee SectorStateNotifee, as AddrSel) *Sealing {
+func New(api SealingAPI, fc FeeConfig, events Events, maddr address.Address, ds datastore.Batching, sealer sectorstorage.SectorManager, sc SectorIDCounter, verif ffiwrapper.Verifier, pcp PreCommitPolicy, gc GetSealingConfigFunc, notifee SectorStateNotifee, as AddrSel, networkParams *config.NetParamsConfig) *Sealing {
 	s := &Sealing{
-		api:    api,
-		feeCfg: fc,
-		events: events,
-
-		maddr:  maddr,
-		sealer: sealer,
-		sc:     sc,
-		verif:  verif,
-		pcp:    pcp,
+		api:           api,
+		feeCfg:        fc,
+		events:        events,
+		networkParams: networkParams,
+		maddr:         maddr,
+		sealer:        sealer,
+		sc:            sc,
+		verif:         verif,
+		pcp:           pcp,
 		unsealedInfoMap: UnsealedSectorMap{
 			infos: make(map[abi.SectorNumber]UnsealedSectorInfo),
 			lk:    sync.Mutex{},
@@ -214,7 +216,7 @@ func (m *Sealing) AddPieceToAnySector(ctx context.Context, size abi.UnpaddedPiec
 	}
 
 	for _, p := range pads {
-		err = m.addPiece(ctx, sid, p.Unpadded(), NewNullReader(p.Unpadded()), nil)
+		err = m.addPiece(ctx, sid, p.Unpadded(), reader.NewNullReader(p.Unpadded()), nil)
 		if err != nil {
 			m.unsealedInfoMap.lk.Unlock()
 			return 0, 0, xerrors.Errorf("writing pads: %w", err)

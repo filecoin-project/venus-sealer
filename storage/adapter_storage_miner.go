@@ -3,9 +3,10 @@ package storage
 import (
 	"bytes"
 	"context"
-	"fmt"
+	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/constants"
-	"github.com/filecoin-project/venus/pkg/chain"
+	"github.com/filecoin-project/venus/app/submodule/chain"
+	chain2 "github.com/filecoin-project/venus/pkg/chain"
 
 	"github.com/ipfs/go-cid"
 	cbg "github.com/whyrusleeping/cbor-gen"
@@ -20,7 +21,6 @@ import (
 
 	market2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
 
-	"github.com/filecoin-project/venus-sealer/api"
 	sealing "github.com/filecoin-project/venus-sealer/extern/storage-sealing"
 	actors "github.com/filecoin-project/venus/pkg/specactors"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/market"
@@ -84,7 +84,7 @@ func (s SealingAPIAdapter) StateMinerWorkerAddress(ctx context.Context, maddr ad
 	return mi.Worker, nil
 }
 
-func (s SealingAPIAdapter) StateMinerDeadlines(ctx context.Context, maddr address.Address, tok sealing.TipSetToken) ([]api.Deadline, error) {
+func (s SealingAPIAdapter) StateMinerDeadlines(ctx context.Context, maddr address.Address, tok sealing.TipSetToken) ([]chain.Deadline, error) {
 	tsk, err := types.TipSetKeyFromBytes(tok)
 	if err != nil {
 		return nil, xerrors.Errorf("failed to unmarshal TipSetToken to TipSetKey: %w", err)
@@ -154,7 +154,6 @@ func (s SealingAPIAdapter) StateComputeDataCommitment(ctx context.Context, maddr
 		return cid.Undef, xerrors.Errorf("computing params for ComputeDataCommitment: %w", err)
 	}
 
-	fmt.Println(maddr)
 	ccmt := &types.Message{
 		To:     market.Address,
 		From:   maddr,
@@ -189,7 +188,7 @@ func (s SealingAPIAdapter) StateSectorPreCommitInfo(ctx context.Context, maddr a
 		return nil, xerrors.Errorf("handleSealFailed(%d): temp error: %+v", sectorNumber, err)
 	}
 
-	stor := chain.ActorStore(ctx, api.NewAPIBlockstore(s.delegate))
+	stor := chain2.ActorStore(ctx, api.NewAPIBlockstore(s.delegate))
 
 	state, err := miner.Load(stor, act)
 	if err != nil {
@@ -244,7 +243,7 @@ func (s SealingAPIAdapter) StateSectorPartition(ctx context.Context, maddr addre
 	return nil, nil // not found
 }
 
-func (s SealingAPIAdapter) StateMinerPartitions(ctx context.Context, maddr address.Address, dlIdx uint64, tok sealing.TipSetToken) ([]api.Partition, error) {
+func (s SealingAPIAdapter) StateMinerPartitions(ctx context.Context, maddr address.Address, dlIdx uint64, tok sealing.TipSetToken) ([]chain.Partition, error) {
 	tsk, err := types.TipSetKeyFromBytes(tok)
 	if err != nil {
 		return nil, xerrors.Errorf("failed to unmarshal TipSetToken to TipSetKey: %w", err)
@@ -253,7 +252,25 @@ func (s SealingAPIAdapter) StateMinerPartitions(ctx context.Context, maddr addre
 	return s.delegate.StateMinerPartitions(ctx, maddr, dlIdx, tsk)
 }
 
-func (s SealingAPIAdapter) StateMarketStorageDeal(ctx context.Context, dealID abi.DealID, tok sealing.TipSetToken) (market.DealProposal, error) {
+func (s SealingAPIAdapter) StateLookupID(ctx context.Context, addr address.Address, tok sealing.TipSetToken) (address.Address, error) {
+	tsk, err := types.TipSetKeyFromBytes(tok)
+	if err != nil {
+		return address.Undef, err
+	}
+
+	return s.delegate.StateLookupID(ctx, addr, tsk)
+}
+
+func (s SealingAPIAdapter) StateMarketStorageDeal(ctx context.Context, dealID abi.DealID, tok sealing.TipSetToken) (*chain.MarketDeal, error) {
+	tsk, err := types.TipSetKeyFromBytes(tok)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.delegate.StateMarketStorageDeal(ctx, dealID, tsk)
+}
+
+func (s SealingAPIAdapter) StateMarketStorageDealProposal(ctx context.Context, dealID abi.DealID, tok sealing.TipSetToken) (market.DealProposal, error) {
 	tsk, err := types.TipSetKeyFromBytes(tok)
 	if err != nil {
 		return market.DealProposal{}, err
@@ -294,7 +311,7 @@ func (s SealingAPIAdapter) SendMsg(ctx context.Context, from, to address.Address
 		Params: params,
 	}
 
-	smsg, err := s.delegate.MpoolPushMessage(ctx, &msg, &api.MessageSendSpec{MaxFee: maxFee})
+	smsg, err := s.delegate.MpoolPushMessage(ctx, &msg, &types.MessageSendSpec{MaxFee: maxFee})
 	if err != nil {
 		return cid.Undef, err
 	}
@@ -309,6 +326,10 @@ func (s SealingAPIAdapter) ChainHead(ctx context.Context) (sealing.TipSetToken, 
 	}
 
 	return head.Key().Bytes(), head.Height(), nil
+}
+
+func (s SealingAPIAdapter) ChainGetMessage(ctx context.Context, mc cid.Cid) (*types.Message, error) {
+	return s.delegate.ChainGetMessage(ctx, mc)
 }
 
 func (s SealingAPIAdapter) ChainGetRandomnessFromBeacon(ctx context.Context, tok sealing.TipSetToken, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte) (abi.Randomness, error) {
