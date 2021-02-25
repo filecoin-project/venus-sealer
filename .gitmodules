@@ -1,9 +1,3 @@
-[submodule "sealer/extern/filecoin-ffi"]
-	path = sealer/extern/filecoin-ffi
-	url = https://github.com/filecoin-project/filecoin-ffi.git
 [submodule "extern/filecoin-ffi"]
 	path = extern/filecoin-ffi
 	url = https://github.com/filecoin-project/filecoin-ffi.git
-[submodule "extern/fil-blst"]
-	path = extern/fil-blst
-	url = https://github.com/filecoin-project/fil-blst.git
