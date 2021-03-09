@@ -5,11 +5,13 @@ import (
 	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus-sealer/types"
+	"github.com/zbiljic/go-filelock"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"path"
 	"syscall"
 
 	mux "github.com/gorilla/mux"
@@ -87,11 +89,27 @@ var runCmd = &cli.Command{
 			return xerrors.Errorf("venus-daemon API version doesn't match: expected: %s", api.Version{APIVersion: constants.FullAPIVersion})
 		}
 
+		//read config
 		cfgPath := cctx.String("config")
 		cfg, err := config.FromFile(cfgPath)
 		if err != nil {
 			return err
 		}
+		cfg.ConfigPath = cfgPath
+		if cctx.IsSet("data") {
+			cfg.DataDir = cctx.String("data")
+		}
+
+		//lock repo
+		fl, err := filelock.New(path.Join(cfg.DataDir, "repo.lock"))
+		if err != nil {
+			return err
+		}
+		err = fl.Lock()
+		if err != nil {
+			return err
+		}
+		defer fl.Unlock()
 
 		log.Info("Checking full node sync status")
 		if !cctx.Bool("nosync") {

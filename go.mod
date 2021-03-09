@@ -69,6 +69,7 @@ require (
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/whyrusleeping/cbor-gen v0.0.0-20210219115102-f37d292932f2
 	github.com/xorcare/golden v0.6.1-0.20191112154924-b87f686d7542 // indirect
+	github.com/zbiljic/go-filelock v0.0.0-20170914061330-1dbf7103ab7d
 	go.opencensus.io v0.22.6
 	go.uber.org/dig v1.10.0 // indirect
 	go.uber.org/fx v1.9.0
