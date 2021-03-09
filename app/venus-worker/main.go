@@ -4,8 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/constants"
+	"github.com/filecoin-project/venus-sealer/models"
+	"github.com/filecoin-project/venus-sealer/service"
+	"github.com/filecoin-project/venus-sealer/types"
 	"github.com/filecoin-project/venus/fixtures/asset"
+	"github.com/mitchellh/go-homedir"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -16,7 +21,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	"github.com/ipfs/go-datastore/namespace"
 	logging "github.com/ipfs/go-log/v2"
 	manet "github.com/multiformats/go-multiaddr/net"
 	"github.com/urfave/cli/v2"
@@ -27,15 +31,13 @@ import (
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/go-jsonrpc/auth"
 	paramfetch "github.com/filecoin-project/go-paramfetch"
-	"github.com/filecoin-project/go-statestore"
 
 	sealer "github.com/filecoin-project/venus-sealer"
 	"github.com/filecoin-project/venus-sealer/api"
-	sectorstorage "github.com/filecoin-project/venus-sealer/extern/sector-storage"
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/sealtasks"
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/stores"
+	"github.com/filecoin-project/venus-sealer/api/repo"
 	"github.com/filecoin-project/venus-sealer/lib/rpcenc"
-	"github.com/filecoin-project/venus-sealer/repo"
+	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
+	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
 )
 
 var log = logging.Logger("main")
@@ -63,18 +65,17 @@ func main() {
 		Version: constants.UserVersion(),
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:    FlagWorkerRepo,
-				Aliases: []string{FlagWorkerRepoDeprecation},
-				EnvVars: []string{"LOTUS_WORKER_PATH", "WORKER_PATH"},
-				Value:   "~/.lotusworker", // TODO: Consider XDG_DATA_HOME
-				Usage:   fmt.Sprintf("Specify worker repo path. flag %s and env WORKER_PATH are DEPRECATION, will REMOVE SOON", FlagWorkerRepoDeprecation),
+				Name:    "data",
+				EnvVars: []string{"VENUS_WORKER_PATH"},
+				Hidden:  true,
+				Value:   "~/.venussealer", // TODO: Consider XDG_DATA_HOME
 			},
 			&cli.StringFlag{
-				Name:    "miner-repo",
-				Aliases: []string{"storagerepo"},
-				EnvVars: []string{"LOTUS_MINER_PATH", "LOTUS_STORAGE_PATH"},
-				Value:   "~/.lotusminer", // TODO: Consider XDG_DATA_HOME
-				Usage:   "Specify miner repo path. flag storagerepo and env LOTUS_STORAGE_PATH are DEPRECATION, will REMOVE SOON",
+				Name:    "config",
+				Aliases: []string{"c"},
+				EnvVars: []string{"VENUS_WORKER_CONFIG"},
+				Hidden:  true,
+				Value:   "~/.venussealer/config.toml", // TODO: Consider XDG_DATA_HOME
 			},
 			&cli.BoolFlag{
 				Name:  "enable-gpu-proving",
@@ -86,7 +87,6 @@ func main() {
 		Commands: local,
 	}
 	app.Setup()
-	app.Metadata["repoType"] = repo.Worker
 
 	if err := app.Run(os.Args); err != nil {
 		log.Warnf("%+v", err)
@@ -145,6 +145,16 @@ var runCmd = &cli.Command{
 			Name:  "parallel-fetch-limit",
 			Usage: "maximum fetch operations to run in parallel",
 			Value: 5,
+		},
+		&cli.StringFlag{
+			Name:  "miner_addr",
+			Usage: "miner address to connect",
+			Value: "0.0.0.0:3456",
+		},
+		&cli.StringFlag{
+			Name:  "miner_token",
+			Usage: "miner token to connect",
+			Value: "",
 		},
 		&cli.StringFlag{
 			Name:  "timeout",
@@ -234,24 +244,24 @@ var runCmd = &cli.Command{
 			}
 		}
 
-		var taskTypes []sealtasks.TaskType
+		var taskTypes []types.TaskType
 
-		taskTypes = append(taskTypes, sealtasks.TTFetch, sealtasks.TTCommit1, sealtasks.TTFinalize)
+		taskTypes = append(taskTypes, types.TTFetch, types.TTCommit1, types.TTFinalize)
 
 		if cctx.Bool("addpiece") {
-			taskTypes = append(taskTypes, sealtasks.TTAddPiece)
+			taskTypes = append(taskTypes, types.TTAddPiece)
 		}
 		if cctx.Bool("precommit1") {
-			taskTypes = append(taskTypes, sealtasks.TTPreCommit1)
+			taskTypes = append(taskTypes, types.TTPreCommit1)
 		}
 		if cctx.Bool("unseal") {
-			taskTypes = append(taskTypes, sealtasks.TTUnseal)
+			taskTypes = append(taskTypes, types.TTUnseal)
 		}
 		if cctx.Bool("precommit2") {
-			taskTypes = append(taskTypes, sealtasks.TTPreCommit2)
+			taskTypes = append(taskTypes, types.TTPreCommit2)
 		}
 		if cctx.Bool("commit") {
-			taskTypes = append(taskTypes, sealtasks.TTCommit2)
+			taskTypes = append(taskTypes, types.TTCommit2)
 		}
 
 		if len(taskTypes) == 0 {
@@ -259,23 +269,43 @@ var runCmd = &cli.Command{
 		}
 
 		// Open repo
+		defaultCfg := config.GetDefaultWorkerConfig()
 
-		repoPath := cctx.String(FlagWorkerRepo)
-		r, err := repo.NewFS(repoPath)
+		if cctx.IsSet("miner_addr") {
+			defaultCfg.Url = cctx.String("miner_addr")
+		}
+
+		if cctx.IsSet("miner_token") {
+			defaultCfg.Token = cctx.String("miner_token")
+		}
+
+		cfgPath := cctx.String("config")
+		defaultCfg.ConfigPath = cfgPath
+		if cctx.IsSet("data") {
+			defaultCfg.DataDir = cctx.String("data")
+		}
+
+		ok, err := config.ConfigExist(cfgPath)
 		if err != nil {
 			return err
 		}
 
-		ok, err := r.Exists()
-		if err != nil {
-			return err
-		}
 		if !ok {
-			if err := r.Init(repo.Worker); err != nil {
-				return err
-			}
+			return xerrors.Errorf("config not exit")
+		}
+		dataDir, err := homedir.Expand(defaultCfg.DataDir)
+		if err != nil {
+			return err
+		}
 
-			lr, err := r.Lock(repo.Worker)
+		ok, err = config.ConfigExist(defaultCfg.DataDir)
+		if err != nil {
+			return err
+		}
+
+		localStorage := defaultCfg.LocalStorage()
+		if !ok {
+			err = config.SaveConfig(cfgPath, defaultCfg)
 			if err != nil {
 				return err
 			}
@@ -293,46 +323,23 @@ var runCmd = &cli.Command{
 					return xerrors.Errorf("marshaling storage config: %w", err)
 				}
 
-				if err := ioutil.WriteFile(filepath.Join(lr.Path(), "sectorstore.json"), b, 0644); err != nil {
-					return xerrors.Errorf("persisting storage metadata (%s): %w", filepath.Join(lr.Path(), "sectorstore.json"), err)
+				if err := ioutil.WriteFile(filepath.Join(dataDir, "sectorstore.json"), b, 0644); err != nil {
+					return xerrors.Errorf("persisting storage metadata (%s): %w", filepath.Join(defaultCfg.DataDir, "sectorstore.json"), err)
 				}
 
 				localPaths = append(localPaths, stores.LocalPath{
-					Path: lr.Path(),
+					Path: dataDir,
 				})
 			}
 
-			if err := lr.SetStorage(func(sc *stores.StorageConfig) {
+			if err := localStorage.SetStorage(func(sc *stores.StorageConfig) {
 				sc.StoragePaths = append(sc.StoragePaths, localPaths...)
 			}); err != nil {
 				return xerrors.Errorf("set storage config: %w", err)
 			}
-
-			{
-				// init datastore for r.Exists
-				_, err := lr.Datastore("/metadata")
-				if err != nil {
-					return err
-				}
-			}
-			if err := lr.Close(); err != nil {
-				return xerrors.Errorf("close repo: %w", err)
-			}
 		}
 
-		lr, err := r.Lock(repo.Worker)
-		if err != nil {
-			return err
-		}
-		defer func() {
-			if err := lr.Close(); err != nil {
-				log.Error("closing repo", err)
-			}
-		}()
-		ds, err := lr.Datastore("/metadata")
-		if err != nil {
-			return err
-		}
+		dbRepo, err := models.SetDataBase(config.HomeDir(dataDir), &defaultCfg.DB)
 
 		log.Info("Opening local storage; connecting to master")
 		const unspecifiedAddress = "0.0.0.0"
@@ -352,7 +359,7 @@ var runCmd = &cli.Command{
 			}
 		}
 
-		localStore, err := stores.NewLocal(ctx, lr, nodeApi, []string{"http://" + address + "/remote"})
+		localStore, err := stores.NewLocal(ctx, localStorage, nodeApi, []string{"http://" + address + "/remote"})
 		if err != nil {
 			return err
 		}
@@ -377,8 +384,8 @@ var runCmd = &cli.Command{
 		}
 
 		// Create / expose the worker
-
-		wsts := statestore.New(namespace.Wrap(ds, sealer.WorkerCallsPrefix))
+		wsts := service.NewWorkCallService(dbRepo, "worker")
+		//wsts := statestore.New(namespace.Wrap(ds, sealer.WorkerCallsPrefix))
 
 		workerApi := &worker{
 			LocalWorker: sectorstorage.NewLocalWorker(sectorstorage.WorkerConfig{
@@ -386,7 +393,7 @@ var runCmd = &cli.Command{
 				NoSwap:    cctx.Bool("no-swap"),
 			}, remote, localStore, nodeApi, nodeApi, wsts),
 			localStore: localStore,
-			ls:         lr,
+			ls:         localStorage,
 		}
 
 		mux := mux.NewRouter()
@@ -441,7 +448,7 @@ var runCmd = &cli.Command{
 				return xerrors.Errorf("creating api multiaddress: %w", err)
 			}
 
-			if err := lr.SetAPIEndpoint(ma); err != nil {
+			if err := defaultCfg.LocalStorage().SetAPIEndpoint(ma); err != nil {
 				return xerrors.Errorf("setting api endpoint: %w", err)
 			}
 
@@ -451,7 +458,7 @@ var runCmd = &cli.Command{
 			}
 
 			// TODO: ideally this would be a token with some permissions dropped
-			if err := lr.SetAPIToken(ainfo.Token); err != nil {
+			if err := defaultCfg.LocalStorage().SetAPIToken(ainfo.Token); err != nil {
 				return xerrors.Errorf("setting api token: %w", err)
 			}
 		}

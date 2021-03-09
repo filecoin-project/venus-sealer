@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/stores"
+	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
 	"github.com/google/uuid"
 	"github.com/mitchellh/go-homedir"
 	"github.com/urfave/cli/v2"

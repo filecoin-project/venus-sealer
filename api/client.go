@@ -4,19 +4,16 @@ import (
 	"context"
 	"fmt"
 	"github.com/filecoin-project/go-jsonrpc"
-	"github.com/filecoin-project/venus-sealer/lib/rpcenc"
-	"github.com/filecoin-project/venus-sealer/repo"
+	"github.com/filecoin-project/venus-sealer/api/repo"
+	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/mitchellh/go-homedir"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 	"net/http"
-	"net/url"
 	"os"
 	"os/signal"
-	"path"
 	"strings"
 	"syscall"
-	"time"
 )
 
 const (
@@ -110,17 +107,14 @@ func GetAPIInfo(ctx *cli.Context, t repo.RepoType) (APIInfo, error) {
 		return APIInfo{}, xerrors.Errorf("could not expand home dir (%s): %w", repoFlag, err)
 	}
 
-	r, err := repo.NewFS(p)
-	if err != nil {
-		return APIInfo{}, xerrors.Errorf("could not open repo at path: %s; %w", p, err)
-	}
+	cfg := config.NewLocalStorage(p, "")
 
-	ma, err := r.APIEndpoint()
+	ma, err := cfg.APIEndpoint()
 	if err != nil {
 		return APIInfo{}, xerrors.Errorf("could not get api endpoint: %w", err)
 	}
 
-	token, err := r.APIToken()
+	token, err := cfg.APIToken()
 	if err != nil {
 		log.Warnf("Couldn't load CLI token, capabilities may be limited: %v", err)
 	}
@@ -197,49 +191,6 @@ func GetFullNodeAPI(ctx *cli.Context) (FullNode, jsonrpc.ClientCloser, error) {
 	return NewFullNodeRPC(ctx.Context, addr, headers)
 }
 
-type GetStorageMinerOptions struct {
-	PreferHttp bool
-}
-type GetStorageMinerOption func(*GetStorageMinerOptions)
-
-func StorageMinerUseHttp(opts *GetStorageMinerOptions) {
-	opts.PreferHttp = true
-}
-
-func GetStorageMinerAPI(ctx *cli.Context, opts ...GetStorageMinerOption) (StorageMiner, jsonrpc.ClientCloser, error) {
-	var options GetStorageMinerOptions
-	for _, opt := range opts {
-		opt(&options)
-	}
-
-	if tn, ok := ctx.App.Metadata["testnode-storage"]; ok {
-		return tn.(StorageMiner), func() {}, nil
-	}
-
-	addr, headers, err := GetRawAPI(ctx, repo.StorageMiner)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if options.PreferHttp {
-		u, err := url.Parse(addr)
-		if err != nil {
-			return nil, nil, xerrors.Errorf("parsing miner api URL: %w", err)
-		}
-
-		switch u.Scheme {
-		case "ws":
-			u.Scheme = "http"
-		case "wss":
-			u.Scheme = "https"
-		}
-
-		addr = u.String()
-	}
-
-	return NewStorageMinerRPC(ctx.Context, addr, headers)
-}
-
 // NewFullNodeRPC creates a new http jsonrpc client.
 func NewFullNodeRPC(ctx context.Context, addr string, requestHeader http.Header) (FullNode, jsonrpc.ClientCloser, error) {
 	var res FullNodeStruct
@@ -250,59 +201,6 @@ func NewFullNodeRPC(ctx context.Context, addr string, requestHeader http.Header)
 		}, requestHeader)
 
 	return &res, closer, err
-}
-
-// NewStorageMinerRPC creates a new http jsonrpc client for miner
-func NewStorageMinerRPC(ctx context.Context, addr string, requestHeader http.Header, opts ...jsonrpc.Option) (StorageMiner, jsonrpc.ClientCloser, error) {
-	var res StorageMinerStruct
-	closer, err := jsonrpc.NewMergeClient(ctx, addr, "Filecoin",
-		[]interface{}{
-			&res.CommonStruct.Internal,
-			&res.Internal,
-		},
-		requestHeader,
-		opts...,
-	)
-
-	return &res, closer, err
-}
-
-func NewWorkerRPC(ctx context.Context, addr string, requestHeader http.Header) (WorkerAPI, jsonrpc.ClientCloser, error) {
-	u, err := url.Parse(addr)
-	if err != nil {
-		return nil, nil, err
-	}
-	switch u.Scheme {
-	case "ws":
-		u.Scheme = "http"
-	case "wss":
-		u.Scheme = "https"
-	}
-	///rpc/v0 -> /rpc/streams/v0/push
-
-	u.Path = path.Join(u.Path, "../streams/v0/push")
-
-	var res WorkerStruct
-	closer, err := jsonrpc.NewMergeClient(ctx, addr, "Filecoin",
-		[]interface{}{
-			&res.Internal,
-		},
-		requestHeader,
-		rpcenc.ReaderParamEncoder(u.String()),
-		jsonrpc.WithNoReconnect(),
-		jsonrpc.WithTimeout(30*time.Second),
-	)
-
-	return &res, closer, err
-}
-
-func GetWorkerAPI(ctx *cli.Context) (WorkerAPI, jsonrpc.ClientCloser, error) {
-	addr, headers, err := GetRawAPI(ctx, repo.Worker)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return NewWorkerRPC(ctx.Context, addr, headers)
 }
 
 func DaemonContext(cctx *cli.Context) context.Context {

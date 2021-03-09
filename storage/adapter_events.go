@@ -5,7 +5,7 @@ import (
 
 	"github.com/filecoin-project/go-state-types/abi"
 
-	sealing "github.com/filecoin-project/venus-sealer/extern/storage-sealing"
+	sealing "github.com/filecoin-project/venus-sealer/storage-sealing"
 	"github.com/filecoin-project/venus/pkg/events"
 	"github.com/filecoin-project/venus/pkg/types"
 )

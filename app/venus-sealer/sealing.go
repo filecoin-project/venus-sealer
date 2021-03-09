@@ -16,7 +16,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/storiface"
+	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
 
 	"github.com/filecoin-project/venus/pkg/types"
 )

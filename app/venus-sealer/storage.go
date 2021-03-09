@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	types2 "github.com/filecoin-project/venus-sealer/types"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -22,11 +23,10 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 
 	"github.com/filecoin-project/venus-sealer/api"
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/fsutil"
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/stores"
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/storiface"
-	sealing "github.com/filecoin-project/venus-sealer/extern/storage-sealing"
 	"github.com/filecoin-project/venus-sealer/lib/tablewriter"
+	"github.com/filecoin-project/venus-sealer/sector-storage/fsutil"
+	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
+	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
 	"github.com/filecoin-project/venus/pkg/types"
 )
 
@@ -556,7 +556,7 @@ var storageListSectorsCmd = &cli.Command{
 				"Storage":  color.New(sc1).Sprint(e.storage),
 				"Sector":   e.id,
 				"Type":     e.ft.String(),
-				"State":    color.New(stateOrder[sealing.SectorState(e.state)].col).Sprint(e.state),
+				"State":    color.New(stateOrder[types2.SectorState(e.state)].col).Sprint(e.state),
 				"Primary":  maybeStr(e.seal, color.FgGreen, "primary"),
 				"Path use": maybeStr(e.seal, color.FgMagenta, "seal ") + maybeStr(e.store, color.FgCyan, "store"),
 				"URLs":     e.urls,
@@ -649,7 +649,7 @@ func cleanupRemovedSectorData(ctx context.Context, api api.StorageMiner, napi ap
 			return xerrors.Errorf("getting sector status for sector %d: %w", sector, err)
 		}
 
-		if sealing.SectorState(st.State) != sealing.Removed {
+		if types2.SectorState(st.State) != types2.Removed {
 			continue
 		}
 

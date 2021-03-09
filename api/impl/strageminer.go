@@ -7,6 +7,8 @@ import (
 	"github.com/filecoin-project/go-fil-markets/retrievalmarket"
 	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 	"github.com/filecoin-project/venus-sealer/config"
+	"github.com/filecoin-project/venus-sealer/service"
+	types2 "github.com/filecoin-project/venus-sealer/types"
 	chain2 "github.com/filecoin-project/venus/app/submodule/chain"
 	"net/http"
 	"strconv"
@@ -23,12 +25,10 @@ import (
 
 	sto "github.com/filecoin-project/specs-storage/storage"
 	"github.com/filecoin-project/venus-sealer/api"
-	"github.com/filecoin-project/venus-sealer/dtypes"
-	sectorstorage "github.com/filecoin-project/venus-sealer/extern/sector-storage"
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/fsutil"
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/stores"
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/storiface"
-	sealing "github.com/filecoin-project/venus-sealer/extern/storage-sealing"
+	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
+	"github.com/filecoin-project/venus-sealer/sector-storage/fsutil"
+	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
+	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
 	"github.com/filecoin-project/venus-sealer/storage"
 	"github.com/filecoin-project/venus-sealer/storage/sectorblocks"
 	"github.com/filecoin-project/venus/pkg/types"
@@ -50,11 +50,10 @@ type StorageMinerAPI struct {
 
 	AddrSel *storage.AddressSelector
 
-	DS dtypes.MetadataDS
-
+	LogService           *service.LogService
 	NetParams            *config.NetParamsConfig
-	SetSealingConfigFunc dtypes.SetSealingConfigFunc
-	GetSealingConfigFunc dtypes.GetSealingConfigFunc
+	SetSealingConfigFunc types2.SetSealingConfigFunc
+	GetSealingConfigFunc types2.GetSealingConfigFunc
 }
 
 func (sm *StorageMinerAPI) ServeRemote(w http.ResponseWriter, r *http.Request) {
@@ -105,8 +104,12 @@ func (sm *StorageMinerAPI) SectorsStatus(ctx context.Context, sid abi.SectorNumb
 		deals[i] = piece.DealInfo.DealID
 	}
 
-	log := make([]api.SectorLog, len(info.Log))
-	for i, l := range info.Log {
+	logs, err := sm.LogService.List(sid)
+	if err != nil {
+		return api.SectorInfo{}, err
+	}
+	log := make([]api.SectorLog, len(logs))
+	for i, l := range logs {
 		log[i] = api.SectorLog{
 			Kind:      l.Kind,
 			Timestamp: l.Timestamp,
@@ -191,10 +194,10 @@ func (sm *StorageMinerAPI) SectorsList(context.Context) ([]abi.SectorNumber, err
 }
 
 func (sm *StorageMinerAPI) SectorsListInStates(ctx context.Context, states []api.SectorState) ([]abi.SectorNumber, error) {
-	filterStates := make(map[sealing.SectorState]struct{})
+	filterStates := make(map[types2.SectorState]struct{})
 	for _, state := range states {
-		st := sealing.SectorState(state)
-		if _, ok := sealing.ExistSectorStateList[st]; !ok {
+		st := types2.SectorState(state)
+		if _, ok := types2.ExistSectorStateList[st]; !ok {
 			continue
 		}
 		filterStates[st] = struct{}{}
@@ -237,9 +240,9 @@ func (sm *StorageMinerAPI) StorageLocal(ctx context.Context) (map[stores.ID]stri
 	return sm.StorageMgr.StorageLocal(ctx)
 }
 
-func (sm *StorageMinerAPI) SectorsRefs(context.Context) (map[string][]api.SealedRef, error) {
+func (sm *StorageMinerAPI) SectorsRefs(context.Context) (map[string][]types2.SealedRef, error) {
 	// json can't handle cids as map keys
-	out := map[string][]api.SealedRef{}
+	out := map[string][]types2.SealedRef{}
 
 	refs, err := sm.SectorBlocks.List()
 	if err != nil {
@@ -291,7 +294,7 @@ func (sm *StorageMinerAPI) SectorGetExpectedSealDuration(ctx context.Context) (t
 }
 
 func (sm *StorageMinerAPI) SectorsUpdate(ctx context.Context, id abi.SectorNumber, state api.SectorState) error {
-	return sm.Miner.ForceSectorState(ctx, id, sealing.SectorState(state))
+	return sm.Miner.ForceSectorState(ctx, id, types2.SectorState(state))
 }
 
 func (sm *StorageMinerAPI) SectorRemove(ctx context.Context, id abi.SectorNumber) error {
@@ -329,7 +332,7 @@ func (sm *StorageMinerAPI) SealingSchedDiag(ctx context.Context, doSched bool) (
 	return sm.StorageMgr.SchedDiag(ctx, doSched)
 }
 
-func (sm *StorageMinerAPI) SealingAbort(ctx context.Context, call storiface.CallID) error {
+func (sm *StorageMinerAPI) SealingAbort(ctx context.Context, call types2.CallID) error {
 	return sm.StorageMgr.Abort(ctx, call)
 }
 

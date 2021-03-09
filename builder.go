@@ -3,21 +3,21 @@ package venus_sealer
 import (
 	"context"
 	"github.com/filecoin-project/go-state-types/abi"
-	types2 "github.com/filecoin-project/lotus/chain/types"
 	storage2 "github.com/filecoin-project/specs-storage/storage"
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/api/impl"
 	"github.com/filecoin-project/venus-sealer/config"
-	"github.com/filecoin-project/venus-sealer/dtypes"
-	sectorstorage "github.com/filecoin-project/venus-sealer/extern/sector-storage"
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/ffiwrapper"
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/stores"
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/storiface"
-	sealing "github.com/filecoin-project/venus-sealer/extern/storage-sealing"
 	"github.com/filecoin-project/venus-sealer/journal"
-	"github.com/filecoin-project/venus-sealer/repo"
+	"github.com/filecoin-project/venus-sealer/models"
+	"github.com/filecoin-project/venus-sealer/models/repo"
+	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
+	"github.com/filecoin-project/venus-sealer/sector-storage/ffiwrapper"
+	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
+	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
+	"github.com/filecoin-project/venus-sealer/service"
 	"github.com/filecoin-project/venus-sealer/storage"
 	"github.com/filecoin-project/venus-sealer/storage/sectorblocks"
+	"github.com/filecoin-project/venus-sealer/types"
 	logging "github.com/ipfs/go-log/v2"
 	metricsi "github.com/ipfs/go-metrics-interface"
 	"github.com/multiformats/go-multiaddr"
@@ -37,6 +37,7 @@ const (
 	InitJournalKey = invoke(iota)
 
 	// miner
+	AutoMigrateKey
 	GetParamsKey
 	ExtractApiKey
 	// daemon
@@ -104,7 +105,7 @@ func New(ctx context.Context, opts ...Option) (StopFunc, error) {
 }
 
 // Online sets up basic libp2p node
-func Online() Option {
+func Online(cfg *config.StorageMiner) Option {
 	return Options(
 		Override(new(MetricsCtx), func() context.Context {
 			return metricsi.CtxScope(context.Background(), "venus-sealer,")
@@ -112,19 +113,19 @@ func Online() Option {
 		Override(new(journal.DisabledEvents), journal.EnvDisabledEvents),
 		Override(new(journal.Journal), OpenFilesystemJournal),
 
-		Override(new(dtypes.SetSealingConfigFunc), NewSetSealConfigFunc),
-		Override(new(dtypes.GetSealingConfigFunc), NewGetSealConfigFunc),
+		Override(new(types.SetSealingConfigFunc), NewSetSealConfigFunc),
+		Override(new(types.GetSealingConfigFunc), NewGetSealConfigFunc),
 
 		Override(new(api.Common), From(new(impl.CommonAPI))),
 		Override(new(sectorstorage.StorageAuth), StorageAuth),
 
 		Override(new(*stores.Index), stores.NewIndex),
 		Override(new(stores.SectorIndex), From(new(*stores.Index))),
-		Override(new(dtypes.MinerID), MinerID),
-		Override(new(dtypes.MinerAddress), MinerAddress),
+		Override(new(types.MinerID), MinerID),
+		Override(new(types.MinerAddress), MinerAddress),
 		Override(new(abi.RegisteredSealProof), SealProofType),
-		Override(new(stores.LocalStorage), From(new(repo.LockedRepo))),
-		Override(new(sealing.SectorIDCounter), SectorIDCounter),
+		Override(new(stores.LocalStorage), cfg.LocalStorage()), //todo
+		Override(new(types.SectorIDCounter), SectorIDCounter),
 		Override(new(*sectorstorage.Manager), SectorStorage),
 		Override(new(ffiwrapper.Verifier), ffiwrapper.ProofVerifier),
 		Override(new(storage.WinningPoStProver), storage.NewWinningPoStProver),
@@ -135,34 +136,34 @@ func Online() Option {
 		Override(new(*sectorblocks.SectorBlocks), sectorblocks.NewSectorBlocks),
 		Override(new(*storage.Miner), StorageMiner(config.DefaultMainnetStorageMiner().Fees)),
 		Override(new(*storage.AddressSelector), AddressSelector(nil)),
-		Override(new(dtypes.NetworkName), StorageNetworkName),
+		Override(new(types.NetworkName), StorageNetworkName),
 		Override(GetParamsKey, GetParams),
+		Override(AutoMigrateKey, models.AutoMigrate),
 	)
 }
 
-func Repo(lr repo.LockedRepo) Option {
+func Repo(cfg *config.StorageMiner) Option {
 	return func(settings *Settings) error {
-		c, err := lr.Config()
-		if err != nil {
-			return err
-		}
-
-		cfg, ok := c.(*config.StorageMiner)
-		if !ok {
-			return xerrors.Errorf("invalid config from repo, got: %T", c)
-		}
-
 		return Options(
-			Override(new(repo.LockedRepo), LockedRepo(lr)), // module handles closing
-			Override(new(dtypes.MetadataDS), Datastore),
-			Override(new(types2.KeyStore), KeyStore),
-			Override(new(*dtypes.APIAlg), APISecret),
+			Override(new(*types.APIAlg), APISecret),
 
+			Override(new(config.HomeDir), HomeDir(cfg.DataDir)),
 			Override(new(*config.NetParamsConfig), &cfg.NetParams),
 			Override(new(sectorstorage.SealerConfig), cfg.Storage),
 			Override(new(*storage.AddressSelector), AddressSelector(&cfg.Addresses)),
-
+			Override(new(*config.DbConfig), &cfg.DB),
+			Override(new(*config.StorageMiner), cfg),
 			ConfigAPI(cfg),
+
+			Override(new(repo.Repo), models.SetDataBase),
+			Providers(
+				service.NewDealRefServiceService,
+				service.NewLogService,
+				service.NewMetadataService,
+				service.NewSectorInfoService,
+			//	service.NewWorkCallService,
+			//	service.NewWorkStateService,
+			),
 		)(settings)
 	}
 }
@@ -170,13 +171,13 @@ func Repo(lr repo.LockedRepo) Option {
 // Config sets up constructors based on the provided Config
 func ConfigAPI(cfg *config.StorageMiner) Option {
 	return Options(
-		Override(new(dtypes.APIEndpoint), func() (dtypes.APIEndpoint, error) {
+		Override(new(types.APIEndpoint), func() (types.APIEndpoint, error) {
 			return multiaddr.NewMultiaddr(cfg.API.ListenAddress)
 		}),
-		Override(SetApiEndpointKey, func(lr repo.LockedRepo, e dtypes.APIEndpoint) error {
-			return lr.SetAPIEndpoint(e)
+		Override(SetApiEndpointKey, func(e types.APIEndpoint) error {
+			return cfg.LocalStorage().SetAPIEndpoint(e)
 		}),
-		Override(new(sectorstorage.URLs), func(e dtypes.APIEndpoint) (sectorstorage.URLs, error) {
+		Override(new(sectorstorage.URLs), func(e types.APIEndpoint) (sectorstorage.URLs, error) {
 			ip := cfg.API.RemoteListenAddress
 
 			var urls sectorstorage.URLs

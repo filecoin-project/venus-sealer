@@ -1,6 +1,7 @@
 package venus_sealer
 
 import (
+	"golang.org/x/xerrors"
 	"reflect"
 
 	"go.uber.org/fx"
@@ -66,6 +67,20 @@ func Override(typ, constructor interface{}) Option {
 		rt := reflect.TypeOf(typ).Elem()
 
 		s.modules[rt] = fx.Provide(ctor)
+		return nil
+	}
+}
+
+func Providers(constructors ...interface{}) Option {
+	return func(s *Settings) error {
+		for _, constructor := range constructors {
+			t := reflect.TypeOf(constructor)
+			if t.Kind() != reflect.Func {
+				return xerrors.Errorf("expect func but got %v ", t.Kind())
+			}
+			out := t.Out(0)
+			s.modules[out] = fx.Provide(constructor)
+		}
 		return nil
 	}
 }

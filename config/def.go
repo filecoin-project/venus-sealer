@@ -3,22 +3,87 @@ package config
 import (
 	"encoding"
 	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/multiformats/go-multiaddr"
+	"strings"
 	"time"
 
-	sectorstorage "github.com/filecoin-project/venus-sealer/extern/sector-storage"
+	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
 	"github.com/filecoin-project/venus/pkg/types"
 )
 
+type HomeDir string
+
+type StorageWorker struct {
+	ConfigPath string `toml:-`
+	DataDir    string
+	Url        string
+	Token      string
+	DB         DbConfig
+}
+
+func (cfg StorageWorker) LocalStorage() *LocalStorage {
+	return NewLocalStorage(cfg.DataDir, cfg.DataDir)
+}
+
 // StorageMiner is a miner config
 type StorageMiner struct {
+	DataDir   string
 	API       API
 	Sealing   SealingConfig
 	Storage   sectorstorage.SealerConfig
 	Fees      MinerFeeConfig
 	Addresses MinerAddressConfig
 	NetParams NetParamsConfig
+	DB        DbConfig
+	Node      NodeConfig
+	JWT       JWTConfig
+
+	ConfigPath string `toml:-`
 }
 
+func (cfg StorageMiner) LocalStorage() *LocalStorage {
+	return NewLocalStorage(cfg.DataDir, cfg.DataDir)
+}
+
+type JWTConfig struct {
+	Secret string
+}
+
+type NodeConfig struct {
+	Url   string
+	Token string
+}
+
+func (node *NodeConfig) APIEndpoint() (multiaddr.Multiaddr, error) {
+	strma := string(node.Url)
+	strma = strings.TrimSpace(strma)
+
+	apima, err := multiaddr.NewMultiaddr(strma)
+	if err != nil {
+		return nil, err
+	}
+	return apima, nil
+}
+
+type DbConfig struct {
+	Type   string
+	MySql  MySqlConfig
+	Sqlite SqliteConfig
+}
+
+type SqliteConfig struct {
+	Path string
+}
+
+type MySqlConfig struct {
+	Addr            string        `toml:"addr"`
+	User            string        `toml:"user"`
+	Pass            string        `toml:"pass"`
+	Name            string        `toml:"name"`
+	MaxOpenConn     int           `toml:"maxOpenConn"`
+	MaxIdleConn     int           `toml:"maxIdleConn"`
+	ConnMaxLifeTime time.Duration `toml:"connMaxLifeTime"`
+}
 type SealingConfig struct {
 	// 0 = no limit
 	MaxWaitDealsSectors uint64
@@ -51,6 +116,17 @@ type API struct {
 	ListenAddress       string
 	RemoteListenAddress string
 	Timeout             Duration
+}
+
+func (api *API) APIEndpoint() (multiaddr.Multiaddr, error) {
+	strma := api.ListenAddress
+	strma = strings.TrimSpace(strma)
+
+	apima, err := multiaddr.NewMultiaddr(strma)
+	if err != nil {
+		return nil, err
+	}
+	return apima, nil
 }
 
 type FeeConfig struct {

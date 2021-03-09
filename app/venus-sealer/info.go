@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/filecoin-project/venus-sealer/constants"
+	types2 "github.com/filecoin-project/venus-sealer/types"
 	"sort"
 	"time"
 
@@ -15,8 +16,6 @@ import (
 
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
-	sealing "github.com/filecoin-project/venus-sealer/extern/storage-sealing"
-
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/lib/blockstore"
 	"github.com/filecoin-project/venus-sealer/lib/bufbstore"
@@ -247,10 +246,10 @@ func sectorsInfo(ctx context.Context, napi api.StorageMiner) error {
 		return err
 	}
 
-	buckets := make(map[sealing.SectorState]int)
+	buckets := make(map[types2.SectorState]int)
 	var total int
 	for s, c := range summary {
-		buckets[sealing.SectorState(s)] = c
+		buckets[types2.SectorState(s)] = c
 		total += c
 	}
 	buckets["Total"] = total

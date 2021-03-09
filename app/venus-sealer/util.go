@@ -7,7 +7,7 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/venus-sealer/api"
-	sealing "github.com/filecoin-project/venus-sealer/extern/storage-sealing"
+	"github.com/filecoin-project/venus-sealer/types"
 	"github.com/hako/durafmt"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
@@ -51,51 +51,51 @@ func EpochTime(curr, e abi.ChainEpoch, blockDelay uint64) string {
 type stateMeta struct {
 	i     int
 	col   color.Attribute
-	state sealing.SectorState
+	state types.SectorState
 }
 
-var stateOrder = map[sealing.SectorState]stateMeta{}
+var stateOrder = map[types.SectorState]stateMeta{}
 var stateList = []stateMeta{
 	{col: 39, state: "Total"},
-	{col: color.FgGreen, state: sealing.Proving},
+	{col: color.FgGreen, state: types.Proving},
 
-	{col: color.FgBlue, state: sealing.Empty},
-	{col: color.FgBlue, state: sealing.WaitDeals},
+	{col: color.FgBlue, state: types.Empty},
+	{col: color.FgBlue, state: types.WaitDeals},
 
-	{col: color.FgRed, state: sealing.UndefinedSectorState},
-	{col: color.FgYellow, state: sealing.Packing},
-	{col: color.FgYellow, state: sealing.GetTicket},
-	{col: color.FgYellow, state: sealing.PreCommit1},
-	{col: color.FgYellow, state: sealing.PreCommit2},
-	{col: color.FgYellow, state: sealing.PreCommitting},
-	{col: color.FgYellow, state: sealing.PreCommitWait},
-	{col: color.FgYellow, state: sealing.WaitSeed},
-	{col: color.FgYellow, state: sealing.Committing},
-	{col: color.FgYellow, state: sealing.SubmitCommit},
-	{col: color.FgYellow, state: sealing.CommitWait},
-	{col: color.FgYellow, state: sealing.FinalizeSector},
+	{col: color.FgRed, state: types.UndefinedSectorState},
+	{col: color.FgYellow, state: types.Packing},
+	{col: color.FgYellow, state: types.GetTicket},
+	{col: color.FgYellow, state: types.PreCommit1},
+	{col: color.FgYellow, state: types.PreCommit2},
+	{col: color.FgYellow, state: types.PreCommitting},
+	{col: color.FgYellow, state: types.PreCommitWait},
+	{col: color.FgYellow, state: types.WaitSeed},
+	{col: color.FgYellow, state: types.Committing},
+	{col: color.FgYellow, state: types.SubmitCommit},
+	{col: color.FgYellow, state: types.CommitWait},
+	{col: color.FgYellow, state: types.FinalizeSector},
 
-	{col: color.FgCyan, state: sealing.Terminating},
-	{col: color.FgCyan, state: sealing.TerminateWait},
-	{col: color.FgCyan, state: sealing.TerminateFinality},
-	{col: color.FgCyan, state: sealing.TerminateFailed},
-	{col: color.FgCyan, state: sealing.Removing},
-	{col: color.FgCyan, state: sealing.Removed},
+	{col: color.FgCyan, state: types.Terminating},
+	{col: color.FgCyan, state: types.TerminateWait},
+	{col: color.FgCyan, state: types.TerminateFinality},
+	{col: color.FgCyan, state: types.TerminateFailed},
+	{col: color.FgCyan, state: types.Removing},
+	{col: color.FgCyan, state: types.Removed},
 
-	{col: color.FgRed, state: sealing.FailedUnrecoverable},
-	{col: color.FgRed, state: sealing.SealPreCommit1Failed},
-	{col: color.FgRed, state: sealing.SealPreCommit2Failed},
-	{col: color.FgRed, state: sealing.PreCommitFailed},
-	{col: color.FgRed, state: sealing.ComputeProofFailed},
-	{col: color.FgRed, state: sealing.CommitFailed},
-	{col: color.FgRed, state: sealing.PackingFailed},
-	{col: color.FgRed, state: sealing.FinalizeFailed},
-	{col: color.FgRed, state: sealing.Faulty},
-	{col: color.FgRed, state: sealing.FaultReported},
-	{col: color.FgRed, state: sealing.FaultedFinal},
-	{col: color.FgRed, state: sealing.RemoveFailed},
-	{col: color.FgRed, state: sealing.DealsExpired},
-	{col: color.FgRed, state: sealing.RecoverDealIDs},
+	{col: color.FgRed, state: types.FailedUnrecoverable},
+	{col: color.FgRed, state: types.SealPreCommit1Failed},
+	{col: color.FgRed, state: types.SealPreCommit2Failed},
+	{col: color.FgRed, state: types.PreCommitFailed},
+	{col: color.FgRed, state: types.ComputeProofFailed},
+	{col: color.FgRed, state: types.CommitFailed},
+	{col: color.FgRed, state: types.PackingFailed},
+	{col: color.FgRed, state: types.FinalizeFailed},
+	{col: color.FgRed, state: types.Faulty},
+	{col: color.FgRed, state: types.FaultReported},
+	{col: color.FgRed, state: types.FaultedFinal},
+	{col: color.FgRed, state: types.RemoveFailed},
+	{col: color.FgRed, state: types.DealsExpired},
+	{col: color.FgRed, state: types.RecoverDealIDs},
 }
 
 func init() {

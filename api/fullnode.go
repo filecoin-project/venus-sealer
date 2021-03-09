@@ -10,8 +10,7 @@ import (
 	"github.com/filecoin-project/go-state-types/crypto"
 	"github.com/filecoin-project/go-state-types/dline"
 	stnetwork "github.com/filecoin-project/go-state-types/network"
-	types2 "github.com/filecoin-project/lotus/chain/types"
-	"github.com/filecoin-project/venus-sealer/dtypes"
+	types2 "github.com/filecoin-project/venus-sealer/types"
 	chain2 "github.com/filecoin-project/venus/app/submodule/chain"
 	"github.com/filecoin-project/venus/app/submodule/mining"
 	paych2 "github.com/filecoin-project/venus/app/submodule/paych"
@@ -258,10 +257,6 @@ type FullNode interface {
 	WalletDefaultAddress(context.Context) (address.Address, error)
 	// WalletSetDefault marks the given address as as the default one.
 	WalletSetDefault(context.Context, address.Address) error
-	// WalletExport returns the private key of an address in the wallet.
-	WalletExport(context.Context, address.Address) (*types2.KeyInfo, error)
-	// WalletImport receives a KeyInfo, which includes a private key, and imports it into the wallet.
-	WalletImport(context.Context, *types2.KeyInfo) (address.Address, error)
 	// WalletDelete deletes an address from the wallet.
 	WalletDelete(context.Context, address.Address) error
 	// WalletValidateAddress validates whether a given string can be decoded as a well-formed address
@@ -288,7 +283,7 @@ type FullNode interface {
 	StateDecodeParams(ctx context.Context, toAddr address.Address, method abi.MethodNum, params []byte, tsk types.TipSetKey) (interface{}, error)
 
 	// StateNetworkName returns the name of the network the node is synced to
-	StateNetworkName(context.Context) (dtypes.NetworkName, error)
+	StateNetworkName(context.Context) (types2.NetworkName, error)
 	// StateMinerSectors returns info about the given miner's sectors. If the filter bitfield is nil, all sectors are included.
 	StateMinerSectors(context.Context, address.Address, *bitfield.BitField, types.TipSetKey) ([]*miner.SectorOnChainInfo, error)
 	// StateMinerActiveSectors returns info about sectors that a given miner is actively proving.
@@ -602,12 +597,10 @@ type FullNodeStruct struct {
 		WalletVerify          func(context.Context, address.Address, []byte, *crypto.Signature) (bool, error)      `perm:"read"`
 		WalletDefaultAddress  func(context.Context) (address.Address, error)                                       `perm:"write"`
 		WalletSetDefault      func(context.Context, address.Address) error                                         `perm:"admin"`
-		WalletExport          func(context.Context, address.Address) (*types2.KeyInfo, error)                      `perm:"admin"`
-		WalletImport          func(context.Context, *types2.KeyInfo) (address.Address, error)                      `perm:"admin"`
 		WalletDelete          func(context.Context, address.Address) error                                         `perm:"write"`
 		WalletValidateAddress func(context.Context, string) (address.Address, error)                               `perm:"read"`
 
-		StateNetworkName                   func(context.Context) (dtypes.NetworkName, error)                                                                   `perm:"read"`
+		StateNetworkName                   func(context.Context) (types2.NetworkName, error)                                                                   `perm:"read"`
 		StateMinerSectors                  func(context.Context, address.Address, *bitfield.BitField, types.TipSetKey) ([]*miner.SectorOnChainInfo, error)     `perm:"read"`
 		StateMinerActiveSectors            func(context.Context, address.Address, types.TipSetKey) ([]*miner.SectorOnChainInfo, error)                         `perm:"read"`
 		StateMinerProvingDeadline          func(context.Context, address.Address, types.TipSetKey) (*dline.Info, error)                                        `perm:"read"`
@@ -929,14 +922,6 @@ func (c *FullNodeStruct) WalletSetDefault(ctx context.Context, a address.Address
 	return c.Internal.WalletSetDefault(ctx, a)
 }
 
-func (c *FullNodeStruct) WalletExport(ctx context.Context, a address.Address) (*types2.KeyInfo, error) {
-	return c.Internal.WalletExport(ctx, a)
-}
-
-func (c *FullNodeStruct) WalletImport(ctx context.Context, ki *types2.KeyInfo) (address.Address, error) {
-	return c.Internal.WalletImport(ctx, ki)
-}
-
 func (c *FullNodeStruct) WalletDelete(ctx context.Context, addr address.Address) error {
 	return c.Internal.WalletDelete(ctx, addr)
 }
@@ -1057,7 +1042,7 @@ func (c *FullNodeStruct) SyncValidateTipset(ctx context.Context, tsk types.TipSe
 	return c.Internal.SyncValidateTipset(ctx, tsk)
 }
 
-func (c *FullNodeStruct) StateNetworkName(ctx context.Context) (dtypes.NetworkName, error) {
+func (c *FullNodeStruct) StateNetworkName(ctx context.Context) (types2.NetworkName, error) {
 	return c.Internal.StateNetworkName(ctx)
 }
 
