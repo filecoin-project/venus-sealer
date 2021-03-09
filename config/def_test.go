@@ -24,7 +24,7 @@ func TestDefaultMinerRoundtrip(t *testing.T) {
 		s = buf.String()
 	}
 
-	c2, err := FromReader(strings.NewReader(s), DefaultMainnetStorageMiner())
+	c2, err := FromReader(strings.NewReader(s))
 	require.NoError(t, err)
 
 	fmt.Println(s)

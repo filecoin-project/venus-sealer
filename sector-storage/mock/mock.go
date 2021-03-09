@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"github.com/filecoin-project/venus-sealer/types"
 	"io"
 	"math/rand"
 	"sync"
@@ -424,47 +425,47 @@ func (mgr *SectorMgr) CheckProvable(ctx context.Context, pp abi.RegisteredPoStPr
 	return bad, nil
 }
 
-func (mgr *SectorMgr) ReturnAddPiece(ctx context.Context, callID storiface.CallID, pi abi.PieceInfo, err *storiface.CallError) error {
+func (mgr *SectorMgr) ReturnAddPiece(ctx context.Context, callID types.CallID, pi abi.PieceInfo, err *storiface.CallError) error {
 	panic("not supported")
 }
 
-func (mgr *SectorMgr) ReturnSealPreCommit1(ctx context.Context, callID storiface.CallID, p1o storage.PreCommit1Out, err *storiface.CallError) error {
+func (mgr *SectorMgr) ReturnSealPreCommit1(ctx context.Context, callID types.CallID, p1o storage.PreCommit1Out, err *storiface.CallError) error {
 	panic("not supported")
 }
 
-func (mgr *SectorMgr) ReturnSealPreCommit2(ctx context.Context, callID storiface.CallID, sealed storage.SectorCids, err *storiface.CallError) error {
+func (mgr *SectorMgr) ReturnSealPreCommit2(ctx context.Context, callID types.CallID, sealed storage.SectorCids, err *storiface.CallError) error {
 	panic("not supported")
 }
 
-func (mgr *SectorMgr) ReturnSealCommit1(ctx context.Context, callID storiface.CallID, out storage.Commit1Out, err *storiface.CallError) error {
+func (mgr *SectorMgr) ReturnSealCommit1(ctx context.Context, callID types.CallID, out storage.Commit1Out, err *storiface.CallError) error {
 	panic("not supported")
 }
 
-func (mgr *SectorMgr) ReturnSealCommit2(ctx context.Context, callID storiface.CallID, proof storage.Proof, err *storiface.CallError) error {
+func (mgr *SectorMgr) ReturnSealCommit2(ctx context.Context, callID types.CallID, proof storage.Proof, err *storiface.CallError) error {
 	panic("not supported")
 }
 
-func (mgr *SectorMgr) ReturnFinalizeSector(ctx context.Context, callID storiface.CallID, err *storiface.CallError) error {
+func (mgr *SectorMgr) ReturnFinalizeSector(ctx context.Context, callID types.CallID, err *storiface.CallError) error {
 	panic("not supported")
 }
 
-func (mgr *SectorMgr) ReturnReleaseUnsealed(ctx context.Context, callID storiface.CallID, err *storiface.CallError) error {
+func (mgr *SectorMgr) ReturnReleaseUnsealed(ctx context.Context, callID types.CallID, err *storiface.CallError) error {
 	panic("not supported")
 }
 
-func (mgr *SectorMgr) ReturnMoveStorage(ctx context.Context, callID storiface.CallID, err *storiface.CallError) error {
+func (mgr *SectorMgr) ReturnMoveStorage(ctx context.Context, callID types.CallID, err *storiface.CallError) error {
 	panic("not supported")
 }
 
-func (mgr *SectorMgr) ReturnUnsealPiece(ctx context.Context, callID storiface.CallID, err *storiface.CallError) error {
+func (mgr *SectorMgr) ReturnUnsealPiece(ctx context.Context, callID types.CallID, err *storiface.CallError) error {
 	panic("not supported")
 }
 
-func (mgr *SectorMgr) ReturnReadPiece(ctx context.Context, callID storiface.CallID, ok bool, err *storiface.CallError) error {
+func (mgr *SectorMgr) ReturnReadPiece(ctx context.Context, callID types.CallID, ok bool, err *storiface.CallError) error {
 	panic("not supported")
 }
 
-func (mgr *SectorMgr) ReturnFetch(ctx context.Context, callID storiface.CallID, err *storiface.CallError) error {
+func (mgr *SectorMgr) ReturnFetch(ctx context.Context, callID types.CallID, err *storiface.CallError) error {
 	panic("not supported")
 }
 

@@ -14,52 +14,52 @@ import (
 )
 
 type sectorInfo struct {
-	Id           string `gorm:"column:id;type:varchar(36);primary_key;"json:"id"` // 主键
-	SectorNumber uint64 `gorm:"uniqueIndex;column:sector_number;type:unsigned bigint;"json:"sector_number"`
-	State        string `gorm:"column:state;type:varchar(256);"json:"state"`
-	SectorType   int64  `gorm:"column:sector_type;type:bigint;"json:"sector_type"`
+	Id           string `gorm:"column:id;type:varchar(36);primary_key;" json:"id"` // 主键
+	SectorNumber uint64 `gorm:"uniqueIndex;column:sector_number;type:unsigned bigint;" json:"sector_number"`
+	State        string `gorm:"column:state;type:varchar(256);" json:"state"`
+	SectorType   int64  `gorm:"column:sector_type;type:bigint;" json:"sector_type"`
 
 	// Packing  []Piece
-	Pieces []byte `gorm:"column:pieces;type:blob;"json:"pieces"`
+	Pieces []byte `gorm:"column:pieces;type:blob;" json:"pieces"`
 
 	// PreCommit1
-	TicketValue   []byte `gorm:"column:ticket_value;type:blob;"json:"ticket_value"`
-	TicketEpoch   int64  `gorm:"column:ticket_epoch;type:bigint;"json:"ticket_epoch"`
-	PreCommit1Out []byte `gorm:"column:pre_commit1_out;type:blob;"json:"pre_commit1_out"`
+	TicketValue   []byte `gorm:"column:ticket_value;type:blob;" json:"ticket_value"`
+	TicketEpoch   int64  `gorm:"column:ticket_epoch;type:bigint;" json:"ticket_epoch"`
+	PreCommit1Out []byte `gorm:"column:pre_commit1_out;type:blob;" json:"pre_commit1_out"`
 
 	// PreCommit2
-	CommD string `gorm:"column:commd;type:varchar(256);"json:"commd"`
-	CommR string `gorm:"column:commr;type:varchar(256);"json:"commr"`
-	Proof []byte `gorm:"column:proof;type:blob;"json:"proof"`
+	CommD string `gorm:"column:commd;type:varchar(256);" json:"commd"`
+	CommR string `gorm:"column:commr;type:varchar(256);" json:"commr"`
+	Proof []byte `gorm:"column:proof;type:blob;" json:"proof"`
 
 	//*miner.SectorPreCommitInfo
 	PreCommitInfo    SectorPreCommitInfo `gorm:"embedded;embeddedPrefix:precommit_"`
-	PreCommitDeposit string              `gorm:"column:pre_commit_deposit;type:varchar(256);"json:"pre_commit_deposit"`
-	PreCommitMessage string              `gorm:"column:pre_commit_message;type:varchar(256);"json:"pre_commit_message"`
-	PreCommitTipSet  []byte              `gorm:"column:pre_commit_tipset;type:blob;"json:"pre_commit_tipset"`
+	PreCommitDeposit string              `gorm:"column:pre_commit_deposit;type:varchar(256);" json:"pre_commit_deposit"`
+	PreCommitMessage string              `gorm:"column:pre_commit_message;type:varchar(256);" json:"pre_commit_message"`
+	PreCommitTipSet  []byte              `gorm:"column:pre_commit_tipset;type:blob;" json:"pre_commit_tipset"`
 
-	PreCommit2Fails uint64 `gorm:"column:pre_commit2_fails;type:unsigned bigint;"json:"pre_commit2_fails"`
+	PreCommit2Fails uint64 `gorm:"column:pre_commit2_fails;type:unsigned bigint;" json:"pre_commit2_fails"`
 
 	// WaitSeed
-	SeedValue []byte `gorm:"column:seed_value;type:blob;"json:"seed_value"`
-	SeedEpoch int64  `gorm:"column:seed_epoch;type:bigint;"json:"seed_epoch"`
+	SeedValue []byte `gorm:"column:seed_value;type:blob;" json:"seed_value"`
+	SeedEpoch int64  `gorm:"column:seed_epoch;type:bigint;" json:"seed_epoch"`
 
 	// Committing
-	CommitMessage string `gorm:"column:commit_message;type:text;"json:"commit_message"`
-	InvalidProofs uint64 `gorm:"column:invalid_proofs;type:unsigned bigint;"json:"invalid_proofs"`
+	CommitMessage string `gorm:"column:commit_message;type:text;" json:"commit_message"`
+	InvalidProofs uint64 `gorm:"column:invalid_proofs;type:unsigned bigint;" json:"invalid_proofs"`
 
 	// Faults
-	FaultReportMsg string `gorm:"column:commit_message;type:text;"json:"commit_message"`
+	FaultReportMsg string `gorm:"column:fault_report_msg;type:text;" json:"fault_report_msg"`
 
 	// Recovery
-	Return string `gorm:"column:commit_message;type:text;"json:"commit_message"`
+	Return string `gorm:"column:return;type:text;" json:"return"`
 
 	// Termination
-	TerminateMessage string `gorm:"column:commit_message;type:text;"json:"commit_message"`
-	TerminatedAt     int64  `gorm:"column:terminated_at;type:bigint;"json:"terminated_at"`
+	TerminateMessage string `gorm:"column:terminate_message;type:text;" json:"terminate_message"`
+	TerminatedAt     int64  `gorm:"column:terminated_at;type:bigint;" json:"terminated_at"`
 
 	// Debug
-	LastErr string `gorm:"column:last_err;type:text;"json:"last_err"`
+	LastErr string `gorm:"column:last_err;type:text;" json:"last_err"`
 }
 
 func (sectorInfo *sectorInfo) TableName() string {
@@ -281,17 +281,17 @@ func FromSectorInfo(sector *types.SectorInfo) (*sectorInfo, error) {
 }
 
 type SectorPreCommitInfo struct {
-	SealProof     int64  `gorm:"column:seal_proof;type:bigint;"json:"seal_proof"`
-	SealedCID     string `gorm:"column:sealed_cid;type:varchar(256);"json:"sealed_cid"`
-	SealRandEpoch int64  `gorm:"column:seal_rand_epoch;type:bigint;"json:"seal_rand_epoch"`
+	SealProof     int64  `gorm:"column:seal_proof;type:bigint;" json:"seal_proof"`
+	SealedCID     string `gorm:"column:sealed_cid;type:varchar(256);" json:"sealed_cid"`
+	SealRandEpoch int64  `gorm:"column:seal_rand_epoch;type:bigint;" json:"seal_rand_epoch"`
 	// []uint64
-	DealIDs    string `gorm:"column:deal_ids;type:text;"json:"deal_ids"`
-	Expiration int64  `gorm:"column:expiration;type:bigint;"json:"expiration"`
+	DealIDs    string `gorm:"column:deal_ids;type:text;" json:"deal_ids"`
+	Expiration int64  `gorm:"column:expiration;type:bigint;" json:"expiration"`
 	//-1 false 1 true
-	ReplaceCapacity        int    `gorm:"column:replace_capacity;type:int;"json:"replace_capacity"`
-	ReplaceSectorDeadline  uint64 `gorm:"column:replace_sector_deadline;type:unsigned bigint;"json:"replace_sector_deadline"`
-	ReplaceSectorPartition uint64 `gorm:"column:replace_sector_partition;type:unsigned bigint;"json:"replace_sector_partition"`
-	ReplaceSectorNumber    uint64 `gorm:"column:replace_sector_number;type:unsigned bigint;"json:"replace_sector_number"`
+	ReplaceCapacity        int    `gorm:"column:replace_capacity;type:int;" json:"replace_capacity"`
+	ReplaceSectorDeadline  uint64 `gorm:"column:replace_sector_deadline;type:unsigned bigint;" json:"replace_sector_deadline"`
+	ReplaceSectorPartition uint64 `gorm:"column:replace_sector_partition;type:unsigned bigint;" json:"replace_sector_partition"`
+	ReplaceSectorNumber    uint64 `gorm:"column:replace_sector_number;type:unsigned bigint;" json:"replace_sector_number"`
 }
 
 var _ repo.SectorInfoRepo = (*sectorInfoRepo)(nil)
@@ -305,7 +305,7 @@ func newSectorInfoRepo(db *gorm.DB) *sectorInfoRepo {
 	return &sectorInfoRepo{DB: db, lk: sync.Mutex{}}
 }
 
-func (s sectorInfoRepo) GetSectorInfoByID(sectorNumber uint64) (*types.SectorInfo, error) {
+func (s *sectorInfoRepo) GetSectorInfoByID(sectorNumber uint64) (*types.SectorInfo, error) {
 	var sectorInfo sectorInfo
 	err := s.DB.Table("sectors_infos").
 		First(&sectorInfo, "sector_number=?", sectorNumber).Error
@@ -320,7 +320,7 @@ func (s sectorInfoRepo) GetSectorInfoByID(sectorNumber uint64) (*types.SectorInf
 	return sinfo, nil
 }
 
-func (s sectorInfoRepo) HasSectorInfo(sectorNumber uint64) (bool, error) {
+func (s *sectorInfoRepo) HasSectorInfo(sectorNumber uint64) (bool, error) {
 	var count int64
 	err := s.DB.Table("sectors_infos").
 		Where("sector_number=?", sectorNumber).
@@ -331,7 +331,7 @@ func (s sectorInfoRepo) HasSectorInfo(sectorNumber uint64) (bool, error) {
 	return count > 0, nil
 }
 
-func (s sectorInfoRepo) Save(sector *types.SectorInfo) error {
+func (s *sectorInfoRepo) Save(sector *types.SectorInfo) error {
 	sSector, err := FromSectorInfo(sector)
 	if err != nil {
 		return err
@@ -340,7 +340,7 @@ func (s sectorInfoRepo) Save(sector *types.SectorInfo) error {
 	return s.DB.Create(&sSector).Error
 }
 
-func (s sectorInfoRepo) GetAllSectorInfos() ([]*types.SectorInfo, error) {
+func (s *sectorInfoRepo) GetAllSectorInfos() ([]*types.SectorInfo, error) {
 	var sectorInfos []*sectorInfo
 	err := s.DB.Table("sectors_infos").Find(&sectorInfos).Error
 	if err != nil {
@@ -357,12 +357,12 @@ func (s sectorInfoRepo) GetAllSectorInfos() ([]*types.SectorInfo, error) {
 	return result, nil
 }
 
-func (s sectorInfoRepo) DeleteBySectorId(sectorNumber uint64) error {
+func (s *sectorInfoRepo) DeleteBySectorId(sectorNumber uint64) error {
 	return s.DB.Delete(&sectorInfo{},
 		"sector_number=?", sectorNumber).Error
 }
 
-func (s sectorInfoRepo) UpdateSectorInfoBySectorId(inSectorInfo *types.SectorInfo, sectorNumber uint64) error {
+func (s *sectorInfoRepo) UpdateSectorInfoBySectorId(inSectorInfo *types.SectorInfo, sectorNumber uint64) error {
 	var sInfo sectorInfo
 	err := s.DB.Table("sectors_infos").Find(&sInfo, "sector_number=?", sectorNumber).Error
 	if err != nil {

@@ -34,7 +34,7 @@ func TestHappyPath(t *testing.T) {
 		s: &Sealing{
 			maddr: ma,
 			stats: types.SectorStats{
-				bySector: map[abi.SectorID]types.statSectorState{},
+				BySector: map[abi.SectorID]types.StatSectorState{},
 			},
 			notifee: func(before, after types.SectorInfo) {
 				notif = append(notif, struct{ before, after types.SectorInfo }{before, after})
@@ -94,7 +94,7 @@ func TestSeedRevert(t *testing.T) {
 		s: &Sealing{
 			maddr: ma,
 			stats: types.SectorStats{
-				bySector: map[abi.SectorID]types.statSectorState{},
+				BySector: map[abi.SectorID]types.StatSectorState{},
 			},
 		},
 		t:     t,
@@ -147,7 +147,7 @@ func TestPlanCommittingHandlesSectorCommitFailed(t *testing.T) {
 		s: &Sealing{
 			maddr: ma,
 			stats: types.SectorStats{
-				bySector: map[abi.SectorID]types.statSectorState{},
+				BySector: map[abi.SectorID]types.StatSectorState{},
 			},
 		},
 		t:     t,

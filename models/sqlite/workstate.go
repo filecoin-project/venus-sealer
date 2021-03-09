@@ -9,19 +9,19 @@ import (
 )
 
 type workerState struct {
-	Id     string `gorm:"column:id;type:varchar(36);primary_key;"json:"id"` // 主键
-	Method string `gorm:"uniqueIndex:method_params;column:method;type:varchar(256);"json:"method"`
-	Params string `gorm:"uniqueIndex:method_params;column:params;type:text;"json:"params"`
+	Id     string `gorm:"column:id;type:varchar(36);primary_key;" json:"id"` // 主键
+	Method string `gorm:"uniqueIndex:method_params;column:method;type:varchar(256);" json:"method"`
+	Params string `gorm:"uniqueIndex:method_params;column:params;type:text;" json:"params"`
 
-	Status   string `gorm:"column:status;type:varchar(256);"json:"status"`
-	WorkId   string `gorm:"column:work_id;type:varchar(36);"json:"work_id"`
-	MinerID  uint64 `gorm:"column:miner_id;type:unsigned bigint;"json:"miner_id"`
-	SectorId uint64 `gorm:"column:sector_id;type:unsigned bigint;"json:"sector_id"`
+	Status   string `gorm:"column:status;type:varchar(256);" json:"status"`
+	WorkId   string `gorm:"column:work_id;type:varchar(36);" json:"work_id"`
+	MinerID  uint64 `gorm:"column:miner_id;type:unsigned bigint;" json:"miner_id"`
+	SectorId uint64 `gorm:"column:sector_id;type:unsigned bigint;" json:"sector_id"`
 
-	WorkError string `gorm:"column:work_error;type:varchar(256);"json:"work_error"`
+	WorkError string `gorm:"column:work_error;type:varchar(256);" json:"work_error"`
 
-	WorkerHostname string `gorm:"column:worker_host_name;type:varchar(256);"json:"worker_host_name"`
-	StartTime      int64  `gorm:"column:start_time;type:bigint;"json:"start_time"`
+	WorkerHostname string `gorm:"column:worker_host_name;type:varchar(256);" json:"worker_host_name"`
+	StartTime      int64  `gorm:"column:start_time;type:bigint;" json:"start_time"`
 }
 
 func (workerState *workerState) State() (*types.WorkState, error) {
@@ -62,7 +62,7 @@ func newWorkerStateRepo(db *gorm.DB) *workerStateRepo {
 	return &workerStateRepo{DB: db}
 }
 
-func (w workerStateRepo) GetWorkerStateByWorkID(workId types.WorkID) (*types.WorkState, error) {
+func (w *workerStateRepo) GetWorkerStateByWorkID(workId types.WorkID) (*types.WorkState, error) {
 	var workState workerState
 	err := w.DB.Table("worker_states").
 		First(&workState, "method=? AND params=?", workId.Method, workId.Params).Error
@@ -72,7 +72,7 @@ func (w workerStateRepo) GetWorkerStateByWorkID(workId types.WorkID) (*types.Wor
 	return workState.State()
 }
 
-func (w workerStateRepo) HasState(workId types.WorkID) (bool, error) {
+func (w *workerStateRepo) HasState(workId types.WorkID) (bool, error) {
 	var count int64
 	err := w.DB.Table("worker_states").
 		Where("method=? AND params=?", workId.Method, workId.Params).Count(&count).Error
@@ -82,7 +82,7 @@ func (w workerStateRepo) HasState(workId types.WorkID) (bool, error) {
 	return count > 0, nil
 }
 
-func (w workerStateRepo) Save(workId types.WorkID, state *types.WorkState) error {
+func (w *workerStateRepo) Save(workId types.WorkID, state *types.WorkState) error {
 	workerState := workerState{
 		Id:             uuid.New().String(),
 		Method:         string(workId.Method),
@@ -99,7 +99,7 @@ func (w workerStateRepo) Save(workId types.WorkID, state *types.WorkState) error
 	return w.DB.Create(&workerState).Error
 }
 
-func (w workerStateRepo) GetAllWorkState() ([]*types.WorkState, error) {
+func (w *workerStateRepo) GetAllWorkState() ([]*types.WorkState, error) {
 	var workerStates []*workerState
 	err := w.DB.Table("worker_states").Find(&workerStates).Error
 	if err != nil {
@@ -116,11 +116,11 @@ func (w workerStateRepo) GetAllWorkState() ([]*types.WorkState, error) {
 	return result, nil
 }
 
-func (w workerStateRepo) DeleteByWorkID(workId types.WorkID) error {
+func (w *workerStateRepo) DeleteByWorkID(workId types.WorkID) error {
 	return w.DB.Delete(&workerState{}, "method=? AND params=?", workId.Method, workId.Params).Error
 }
 
-func (w workerStateRepo) UpdateStateByWorkID(state *types.WorkState, workId types.WorkID) error {
+func (w *workerStateRepo) UpdateStateByWorkID(state *types.WorkState, workId types.WorkID) error {
 	updateClause := map[string]interface{}{
 		"start_time":       state.StartTime,
 		"worker_host_name": state.WorkerHostname,

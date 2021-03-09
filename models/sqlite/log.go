@@ -10,14 +10,14 @@ import (
 )
 
 type Log struct {
-	Id           int64  `gorm:"column:id;types:integer;primary_key;autoIncrement;"json:"id"` // 主键、
-	SectorNumber uint64 `gorm:"column:sector_number;type:unsigned bigint;"json:"sector_number"`
-	Timestamp    uint64 `gorm:"column:timestamp;type:unsigned bigint;"json:"timestamp"`
+	Id           int64  `gorm:"column:id;types:integer;primary_key;autoIncrement;" json:"id"` // 主键、
+	SectorNumber uint64 `gorm:"column:sector_number;type:unsigned bigint;" json:"sector_number"`
+	Timestamp    uint64 `gorm:"column:timestamp;type:unsigned bigint;" json:"timestamp"`
 	// for errors
-	Trace   string `gorm:"column:trace;type:text;"json:"trace"`
-	Message string `gorm:"column:message;type:text;"json:"message"`
+	Trace   string `gorm:"column:trace;type:text;" json:"trace"`
+	Message string `gorm:"column:message;type:text;" json:"message"`
 	// additional data (Event info)
-	Kind string `gorm:"column:kind;type:varchar(256);"json:"kind"`
+	Kind string `gorm:"column:kind;type:varchar(256);" json:"kind"`
 }
 
 func (log *Log) TableName() string {

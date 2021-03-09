@@ -42,11 +42,6 @@ import (
 
 var log = logging.Logger("main")
 
-const FlagWorkerRepo = "worker-repo"
-
-// TODO remove after deprecation period
-const FlagWorkerRepoDeprecation = "workerrepo"
-
 func main() {
 	sealer.SetupLogLevels()
 
@@ -340,7 +335,9 @@ var runCmd = &cli.Command{
 		}
 
 		dbRepo, err := models.SetDataBase(config.HomeDir(dataDir), &defaultCfg.DB)
-
+		if err != nil {
+			return err
+		}
 		log.Info("Opening local storage; connecting to master")
 		const unspecifiedAddress = "0.0.0.0"
 		address := cctx.String("listen")

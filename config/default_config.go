@@ -94,7 +94,7 @@ func DefaultMainnetStorageMiner() *StorageMiner {
 		},
 	}
 	var secret [32]byte
-	rand.Read(secret[:])
+	_, _ = rand.Read(secret[:])
 	cfg.JWT.Secret = hex.EncodeToString(secret[:])
 	cfg.API.ListenAddress = "/ip4/127.0.0.1/tcp/2345/http"
 	cfg.API.RemoteListenAddress = "127.0.0.1:2345"
@@ -166,7 +166,7 @@ func DefaultCalibrationStorageMiner() *StorageMiner {
 		},
 	}
 	var secret [32]byte
-	rand.Read(secret[:])
+	_, _ = rand.Read(secret[:])
 	cfg.JWT.Secret = hex.EncodeToString(secret[:])
 	cfg.API.ListenAddress = "/ip4/127.0.0.1/tcp/2345/http"
 	cfg.API.RemoteListenAddress = "127.0.0.1:2345"
@@ -241,7 +241,7 @@ func Default2kStorageMiner() *StorageMiner {
 		},
 	}
 	var secret [32]byte
-	rand.Read(secret[:])
+	_, _ = rand.Read(secret[:])
 	cfg.JWT.Secret = hex.EncodeToString(secret[:])
 	cfg.API.ListenAddress = "/ip4/127.0.0.1/tcp/2345/http"
 	cfg.API.RemoteListenAddress = "127.0.0.1:2345"

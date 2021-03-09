@@ -9,19 +9,19 @@ import (
 )
 
 type workerCall struct {
-	Id string `gorm:"column:id;type:varchar(36);primary_key;"json:"id"` // 主键
+	Id string `gorm:"column:id;type:varchar(36);primary_key;" json:"id"` // 主键
 	//storiface.CallID
-	WorkId   string `gorm:"uniqueIndex:call_id;column:work_id;type:varchar(36);"json:"work_id"`
-	MinerID  uint64 `gorm:"uniqueIndex:call_id;column:miner_id;type:unsigned bigint;"json:"miner_id"`
-	SectorId uint64 `gorm:"uniqueIndex:call_id;column:sector_id;type:unsigned bigint;"json:"sector_id"`
-	Role     string `gorm:"uniqueIndex:call_id;column:role;type:unsigned bigint;"json:"role"`
+	WorkId   string `gorm:"uniqueIndex:call_id;column:work_id;type:varchar(36);" json:"work_id"`
+	MinerID  uint64 `gorm:"uniqueIndex:call_id;column:miner_id;type:unsigned bigint;" json:"miner_id"`
+	SectorId uint64 `gorm:"uniqueIndex:call_id;column:sector_id;type:unsigned bigint;" json:"sector_id"`
+	Role     string `gorm:"uniqueIndex:call_id;column:role;type:unsigned bigint;" json:"role"`
 
-	RetType string `gorm:"column:ret_type;type:varchar(256);"json:"ret_type"`
+	RetType string `gorm:"column:ret_type;type:varchar(256);" json:"ret_type"`
 
-	State uint64 `gorm:"column:state;type:unsigned bigint;"json:"state"`
+	State uint64 `gorm:"column:state;type:unsigned bigint;" json:"state"`
 
 	//json byte
-	Result []byte `gorm:"column:result;type:blob;"json:"result"`
+	Result []byte `gorm:"column:result;type:blob;" json:"result"`
 }
 
 func (workerCall *workerCall) TableName() string {

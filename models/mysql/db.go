@@ -54,7 +54,7 @@ func (d MysqlRepo) GetDb() *gorm.DB {
 }
 
 func (d MysqlRepo) DbClose() error {
-	return d.DbClose()
+	return nil
 }
 
 func OpenMysql(cfg *config.MySqlConfig) (repo.Repo, error) {

@@ -17,7 +17,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ipfs/go-datastore"
-	logging "github.com/ipfs/go-log"
+	logging "github.com/ipfs/go-log/v2"
 	"github.com/stretchr/testify/require"
 
 	"github.com/filecoin-project/go-state-types/abi"
@@ -27,7 +27,6 @@ import (
 	"github.com/filecoin-project/venus-sealer/sector-storage/ffiwrapper"
 	"github.com/filecoin-project/venus-sealer/sector-storage/fsutil"
 	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
-	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
 )
 
 func init() {
@@ -111,11 +110,11 @@ func newTestMgr(ctx context.Context, t *testing.T, ds datastore.Datastore) (*Man
 
 		Prover: prover,
 
-		work:       statestore.New(ds),
-		callToWork: map[storiface.CallID]WorkID{},
-		callRes:    map[storiface.CallID]chan result{},
-		results:    map[WorkID]result{},
-		waitRes:    map[WorkID]chan struct{}{},
+		work:       statestore.NewDsStateStore(ds),
+		callToWork: map[types.CallID]types.WorkID{},
+		callRes:    map[types.CallID]chan result{},
+		results:    map[types.WorkID]result{},
+		waitRes:    map[types.WorkID]chan struct{}{},
 	}
 
 	m.setupWorkTracker()
@@ -332,7 +331,7 @@ func TestRestartWorker(t *testing.T) {
 		return &testExec{apch: arch}, nil
 	}, WorkerConfig{
 		TaskTypes: localTasks,
-	}, stor, lstor, idx, m, statestore.New(wds))
+	}, stor, lstor, idx, m, statestore.NewDsStateStore(wds))
 
 	err := m.AddWorker(ctx, w)
 	require.NoError(t, err)
@@ -368,7 +367,7 @@ func TestRestartWorker(t *testing.T) {
 		return &testExec{apch: arch}, nil
 	}, WorkerConfig{
 		TaskTypes: localTasks,
-	}, stor, lstor, idx, m, statestore.New(wds))
+	}, stor, lstor, idx, m, statestore.NewDsStateStore(wds))
 
 	err = m.AddWorker(ctx, w)
 	require.NoError(t, err)
@@ -404,7 +403,7 @@ func TestReenableWorker(t *testing.T) {
 		return &testExec{apch: arch}, nil
 	}, WorkerConfig{
 		TaskTypes: localTasks,
-	}, stor, lstor, idx, m, statestore.New(wds))
+	}, stor, lstor, idx, m, statestore.NewDsStateStore(wds))
 
 	err := m.AddWorker(ctx, w)
 	require.NoError(t, err)

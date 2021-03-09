@@ -14,7 +14,7 @@ import (
 type HomeDir string
 
 type StorageWorker struct {
-	ConfigPath string `toml:-`
+	ConfigPath string `toml:"-"`
 	DataDir    string
 	Url        string
 	Token      string
@@ -38,7 +38,7 @@ type StorageMiner struct {
 	Node      NodeConfig
 	JWT       JWTConfig
 
-	ConfigPath string `toml:-`
+	ConfigPath string `toml:"-"`
 }
 
 func (cfg StorageMiner) LocalStorage() *LocalStorage {

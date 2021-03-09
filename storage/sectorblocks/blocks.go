@@ -23,8 +23,6 @@ const (
 	SerializationUnixfs0 SealSerialization = 'u'
 )
 
-var dsPrefix = datastore.NewKey("/sealedblocks")
-
 var ErrNotFound = errors.New("not found")
 
 func DealIDToDsKey(dealID abi.DealID) datastore.Key {

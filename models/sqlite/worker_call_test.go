@@ -19,7 +19,10 @@ func setupWorkerCallRef(suffix string, t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Error(err)
 	}
-	db.AutoMigrate(&workerCall{})
+	err = db.AutoMigrate(&workerCall{})
+	if err != nil {
+		t.Error(err)
+	}
 	return db
 }
 

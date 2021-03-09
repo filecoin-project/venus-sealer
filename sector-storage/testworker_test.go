@@ -47,8 +47,8 @@ func newTestWorker(wcfg WorkerConfig, lstor *stores.Local, ret storiface.WorkerR
 	}
 }
 
-func (t *testWorker) asyncCall(sector storage.SectorRef, work func(ci storiface.CallID)) (storiface.CallID, error) {
-	ci := storiface.CallID{
+func (t *testWorker) asyncCall(sector storage.SectorRef, work func(ci types.CallID)) (types.CallID, error) {
+	ci := types.CallID{
 		Sector: sector.ID,
 		ID:     uuid.New(),
 	}
@@ -58,8 +58,8 @@ func (t *testWorker) asyncCall(sector storage.SectorRef, work func(ci storiface.
 	return ci, nil
 }
 
-func (t *testWorker) AddPiece(ctx context.Context, sector storage.SectorRef, pieceSizes []abi.UnpaddedPieceSize, newPieceSize abi.UnpaddedPieceSize, pieceData storage.Data) (storiface.CallID, error) {
-	return t.asyncCall(sector, func(ci storiface.CallID) {
+func (t *testWorker) AddPiece(ctx context.Context, sector storage.SectorRef, pieceSizes []abi.UnpaddedPieceSize, newPieceSize abi.UnpaddedPieceSize, pieceData storage.Data) (types.CallID, error) {
+	return t.asyncCall(sector, func(ci types.CallID) {
 		p, err := t.mockSeal.AddPiece(ctx, sector, pieceSizes, newPieceSize, pieceData)
 		if err := t.ret.ReturnAddPiece(ctx, ci, p, toCallError(err)); err != nil {
 			log.Error(err)
@@ -67,8 +67,8 @@ func (t *testWorker) AddPiece(ctx context.Context, sector storage.SectorRef, pie
 	})
 }
 
-func (t *testWorker) SealPreCommit1(ctx context.Context, sector storage.SectorRef, ticket abi.SealRandomness, pieces []abi.PieceInfo) (storiface.CallID, error) {
-	return t.asyncCall(sector, func(ci storiface.CallID) {
+func (t *testWorker) SealPreCommit1(ctx context.Context, sector storage.SectorRef, ticket abi.SealRandomness, pieces []abi.PieceInfo) (types.CallID, error) {
+	return t.asyncCall(sector, func(ci types.CallID) {
 		t.pc1s++
 
 		if t.pc1wait != nil {
@@ -85,8 +85,9 @@ func (t *testWorker) SealPreCommit1(ctx context.Context, sector storage.SectorRe
 	})
 }
 
-func (t *testWorker) Fetch(ctx context.Context, sector storage.SectorRef, fileType storiface.SectorFileType, ptype storiface.PathType, am storiface.AcquireMode) (storiface.CallID, error) {
-	return t.asyncCall(sector, func(ci storiface.CallID) {
+func (t *testWorker) Fetch(ctx context.Context, sector storage.SectorRef, fileType storiface.SectorFileType, ptype storiface.PathType, am storiface.AcquireMode) (
+	types.CallID, error) {
+	return t.asyncCall(sector, func(ci types.CallID) {
 		if err := t.ret.ReturnFetch(ctx, ci, nil); err != nil {
 			log.Error(err)
 		}

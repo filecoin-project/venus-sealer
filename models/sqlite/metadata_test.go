@@ -17,7 +17,10 @@ func setupMeta(suffix string, t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Error(err)
 	}
-	db.AutoMigrate(&metadata{})
+	err = db.AutoMigrate(&metadata{})
+	if err != nil {
+		t.Error(err)
+	}
 	return db
 }
 

@@ -10,11 +10,11 @@ import (
 )
 
 type dealRef struct {
-	Id        string `gorm:"column:id;type:varchar(36);primary_key;"json:"id"` // 主键
-	DealId    uint64 `gorm:"column:deal_id;type:unsigned bigint;"json:"deal_id"`
-	SectorId  uint64 `gorm:"column:sector_id;type:unsigned bigint;"json:"sector_id"`
-	PadOffset uint64 `gorm:"column:offset_pad;type:unsigned bigint;"json:"offset_pad"`
-	UnPadSize uint64 `gorm:"column:size_unpad;type:unsigned bigint;"json:"size_unpad"`
+	Id        string `gorm:"column:id;type:varchar(36);primary_key;" json:"id"` // 主键
+	DealId    uint64 `gorm:"column:deal_id;type:unsigned bigint;" json:"deal_id"`
+	SectorId  uint64 `gorm:"column:sector_id;type:unsigned bigint;" json:"sector_id"`
+	PadOffset uint64 `gorm:"column:offset_pad;type:unsigned bigint;" json:"offset_pad"`
+	UnPadSize uint64 `gorm:"column:size_unpad;type:unsigned bigint;" json:"size_unpad"`
 }
 
 func (dealRef *dealRef) TableName() string {

@@ -16,7 +16,10 @@ func setupDealRef(suffix string, t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Error(err)
 	}
-	db.AutoMigrate(&dealRef{})
+	err = db.AutoMigrate(&dealRef{})
+	if err != nil {
+		t.Error(err)
+	}
 	return db
 }
 

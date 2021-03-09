@@ -78,7 +78,7 @@ func (w *SectorInfoStoredState) End() error {
 		return err
 	}
 	if !has {
-		return xerrors.Errorf("No state for %s", w.sectorId)
+		return xerrors.Errorf("No state for %d", w.sectorId)
 	}
 
 	if err := w.SectorInfoRepo.DeleteBySectorId(w.sectorId); err != nil {
@@ -113,7 +113,7 @@ func (st *SectorInfoStoredState) Mutate(mutator interface{}) error {
 		return err
 	}
 	if !has {
-		return xerrors.Errorf("No state for %s", st.sectorId)
+		return xerrors.Errorf("No state for %d", st.sectorId)
 	}
 
 	cur, err := st.SectorInfoRepo.GetSectorInfoByID(st.sectorId)

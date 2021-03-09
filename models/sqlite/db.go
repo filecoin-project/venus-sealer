@@ -76,7 +76,7 @@ func (d SqlLiteRepo) GetDb() *gorm.DB {
 }
 
 func (d SqlLiteRepo) DbClose() error {
-	return d.DbClose()
+	return nil
 }
 
 func OpenSqlite(cfg *config.SqliteConfig) (repo.Repo, error) {
