@@ -12,9 +12,18 @@ import (
 
 func GetDefaultWorkerConfig() *StorageWorker {
 	return &StorageWorker{
-		DataDir: "~/venusworker",
-		Url:     "",
-		Token:   "",
+		DataDir: "~/.venusworker",
+		Sealer: NodeConfig{
+			Url:   "",
+			Token: "",
+		},
+		DB: DbConfig{
+			Type:  "sqlite",
+			MySql: MySqlConfig{},
+			Sqlite: SqliteConfig{
+				Path: "worker.db",
+			},
+		},
 	}
 }
 func GetDefaultStorageConfig(network string) (*StorageMiner, error) {
@@ -29,6 +38,7 @@ func GetDefaultStorageConfig(network string) (*StorageMiner, error) {
 		return nil, errors.New("unsupport network type")
 	}
 }
+
 func DefaultMainnetStorageMiner() *StorageMiner {
 	cfg := &StorageMiner{
 		DataDir: "~/.venussealer",

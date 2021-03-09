@@ -5,6 +5,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus-sealer/types"
+	"github.com/mitchellh/go-homedir"
 	"github.com/zbiljic/go-filelock"
 	"net"
 	"net/http"
@@ -91,7 +92,7 @@ var runCmd = &cli.Command{
 
 		//read config
 		cfgPath := cctx.String("config")
-		cfg, err := config.FromFile(cfgPath)
+		cfg, err := config.MinerFromFile(cfgPath)
 		if err != nil {
 			return err
 		}
@@ -101,7 +102,11 @@ var runCmd = &cli.Command{
 		}
 
 		//lock repo
-		fl, err := filelock.New(path.Join(cfg.DataDir, "repo.lock"))
+		dataDir, err := homedir.Expand(cfg.DataDir)
+		if err != nil {
+			return err
+		}
+		fl, err := filelock.New(path.Join(dataDir, "repo.lock"))
 		if err != nil {
 			return err
 		}

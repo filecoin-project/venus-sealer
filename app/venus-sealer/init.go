@@ -255,7 +255,7 @@ var initCmd = &cli.Command{
 		}
 
 		// TODO: Point to setting storage price, maybe do it interactively or something
-		log.Info("Miner successfully created, you can now start it with 'venus-sealer run'")
+		log.Info("Sealer successfully created, you can now start it with 'venus-sealer run'")
 
 		return nil
 	},

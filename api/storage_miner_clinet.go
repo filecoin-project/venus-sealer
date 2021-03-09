@@ -25,6 +25,18 @@ func StorageMinerUseHttp(opts *GetStorageOptions) {
 	opts.PreferHttp = true
 }
 
+func StorageSealerAddr(address string) func(*GetStorageOptions) {
+	return func(opts *GetStorageOptions) {
+		opts.Address = address
+	}
+}
+
+func StorageSealerToken(token string) func(*GetStorageOptions) {
+	return func(opts *GetStorageOptions) {
+		opts.Token = token
+	}
+}
+
 func GetWorkerAPI(ctx *cli.Context, opts ...GetStorageOption) (WorkerAPI, jsonrpc.ClientCloser, error) {
 	var options GetStorageOptions
 	for _, opt := range opts {
@@ -120,7 +132,7 @@ func GetConfigAPI(cctx *cli.Context, options GetStorageOptions) (string, http.He
 		apiInfo.Token = []byte(options.Token)
 	} else {
 		cfgPath := cctx.String("config")
-		cfg, err := config.FromFile(cfgPath)
+		cfg, err := config.MinerFromFile(cfgPath)
 		if err != nil {
 			return "", nil, err
 		}

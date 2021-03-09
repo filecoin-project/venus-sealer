@@ -17,7 +17,7 @@ type WorkCallService struct {
 }
 
 func NewWorkCallService(repo repo.Repo, role string) *WorkCallService {
-	return &WorkCallService{WorkerCallRepo: repo.WorkerCallRepo()}
+	return &WorkCallService{WorkerCallRepo: repo.WorkerCallRepo(), role: role}
 }
 
 //types.CallID

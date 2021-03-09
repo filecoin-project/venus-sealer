@@ -115,7 +115,7 @@ func infoCmdAct(cctx *cli.Context) error {
 	}
 
 	ssize := types.SizeStr(types.NewInt(uint64(mi.SectorSize)))
-	fmt.Printf("Miner: %s (%s sectors)\n", color.BlueString("%s", maddr), ssize)
+	fmt.Printf("Sealer: %s (%s sectors)\n", color.BlueString("%s", maddr), ssize)
 
 	pow, err := nodeAPI.StateMinerPower(ctx, maddr, types.EmptyTSK)
 	if err != nil {
@@ -187,7 +187,7 @@ func infoCmdAct(cctx *cli.Context) error {
 	}
 	spendable = big.Add(spendable, availBalance)
 
-	fmt.Printf("Miner Balance:    %s\n", color.YellowString("%s", types.FIL(mact.Balance).Short()))
+	fmt.Printf("Sealer Balance:    %s\n", color.YellowString("%s", types.FIL(mact.Balance).Short()))
 	fmt.Printf("      PreCommit:  %s\n", types.FIL(lockedFunds.PreCommitDeposits).Short())
 	fmt.Printf("      Pledge:     %s\n", types.FIL(lockedFunds.InitialPledgeRequirement).Short())
 	fmt.Printf("      Vesting:    %s\n", types.FIL(lockedFunds.VestingFunds).Short())

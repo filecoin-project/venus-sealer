@@ -4,6 +4,7 @@ import (
 	"encoding"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/multiformats/go-multiaddr"
+	"net/http"
 	"strings"
 	"time"
 
@@ -16,8 +17,7 @@ type HomeDir string
 type StorageWorker struct {
 	ConfigPath string `toml:"-"`
 	DataDir    string
-	Url        string
-	Token      string
+	Sealer     NodeConfig
 	DB         DbConfig
 }
 
@@ -63,6 +63,31 @@ func (node *NodeConfig) APIEndpoint() (multiaddr.Multiaddr, error) {
 		return nil, err
 	}
 	return apima, nil
+}
+
+func (node *NodeConfig) ListenAddress() (string, error) {
+	maAddr, err := multiaddr.NewMultiaddr(node.Url)
+	if err != nil {
+		return "", err
+	}
+	ip, err := maAddr.ValueForProtocol(multiaddr.P_IP4)
+	if err != nil {
+		return "", err
+	}
+	port, err := maAddr.ValueForProtocol(multiaddr.P_TCP)
+	if err != nil {
+		return "", err
+	}
+	return ip + ":" + port, nil
+}
+
+func (node *NodeConfig) AuthHeader() http.Header {
+	if len(node.Token) != 0 {
+		headers := http.Header{}
+		headers.Add("Authorization", "Bearer "+string(node.Token))
+		return headers
+	}
+	return nil
 }
 
 type DbConfig struct {

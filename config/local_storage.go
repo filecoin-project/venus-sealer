@@ -95,7 +95,7 @@ func (fsr *LocalStorage) SetConfig(c func(interface{})) error {
 	fsr.configLk.Lock()
 	defer fsr.configLk.Unlock()
 
-	cfg, err := FromFile(fsr.configPath)
+	cfg, err := MinerFromFile(fsr.configPath)
 	if err != nil {
 		return err
 	}

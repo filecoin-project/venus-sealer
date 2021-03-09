@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/constants"
+	"github.com/filecoin-project/venus-sealer/lib/vfile"
 	"github.com/filecoin-project/venus-sealer/models"
 	"github.com/filecoin-project/venus-sealer/service"
 	"github.com/filecoin-project/venus-sealer/types"
@@ -34,7 +35,6 @@ import (
 
 	sealer "github.com/filecoin-project/venus-sealer"
 	"github.com/filecoin-project/venus-sealer/api"
-	"github.com/filecoin-project/venus-sealer/api/repo"
 	"github.com/filecoin-project/venus-sealer/lib/rpcenc"
 	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
 	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
@@ -63,14 +63,14 @@ func main() {
 				Name:    "data",
 				EnvVars: []string{"VENUS_WORKER_PATH"},
 				Hidden:  true,
-				Value:   "~/.venussealer", // TODO: Consider XDG_DATA_HOME
+				Value:   "~/.venusworker", // TODO: Consider XDG_DATA_HOME
 			},
 			&cli.StringFlag{
 				Name:    "config",
 				Aliases: []string{"c"},
 				EnvVars: []string{"VENUS_WORKER_CONFIG"},
 				Hidden:  true,
-				Value:   "~/.venussealer/config.toml", // TODO: Consider XDG_DATA_HOME
+				Value:   "~/.venusworker/config.toml", // TODO: Consider XDG_DATA_HOME
 			},
 			&cli.BoolFlag{
 				Name:  "enable-gpu-proving",
@@ -97,10 +97,6 @@ var runCmd = &cli.Command{
 			Name:  "listen",
 			Usage: "host address and port the worker api will listen on",
 			Value: "0.0.0.0:3456",
-		},
-		&cli.StringFlag{
-			Name:   "address",
-			Hidden: true,
 		},
 		&cli.BoolFlag{
 			Name:  "no-local-storage",
@@ -142,12 +138,12 @@ var runCmd = &cli.Command{
 			Value: 5,
 		},
 		&cli.StringFlag{
-			Name:  "miner_addr",
+			Name:  "miner-addr",
 			Usage: "miner address to connect",
 			Value: "0.0.0.0:3456",
 		},
 		&cli.StringFlag{
-			Name:  "miner_token",
+			Name:  "miner-token",
 			Usage: "miner token to connect",
 			Value: "",
 		},
@@ -156,16 +152,6 @@ var runCmd = &cli.Command{
 			Usage: "used when 'listen' is unspecified. must be a valid duration recognized by golang's time.ParseDuration function",
 			Value: "30m",
 		},
-	},
-	Before: func(cctx *cli.Context) error {
-		if cctx.IsSet("address") {
-			log.Warnf("The '--address' flag is deprecated, it has been replaced by '--listen'")
-			if err := cctx.Set("listen", cctx.String("address")); err != nil {
-				return err
-			}
-		}
-
-		return nil
 	},
 	Action: func(cctx *cli.Context) error {
 		log.Info("Starting lotus worker")
@@ -176,19 +162,59 @@ var runCmd = &cli.Command{
 			}
 		}
 
+		// Open repo
+		cfgPath := cctx.String("config")
+		ok, err := config.ConfigExist(cfgPath)
+		if err != nil {
+			return err
+		}
+		var cfg *config.StorageWorker
+		if !ok {
+			//init config
+			cfg = config.GetDefaultWorkerConfig()
+		} else {
+			//load config
+			cfg, err = config.WorkerFromFile(cfgPath)
+			if err != nil {
+				return err
+			}
+		}
+
+		cfg.ConfigPath = cfgPath
+		err = flagData(cfg, cctx)
+		if err != nil {
+			return err
+		}
+
+		if !ok {
+			//dump config
+			err = config.SaveConfig(cfg.ConfigPath, cfg)
+			if err != nil {
+				return err
+			}
+		}
+
+		dataDir, err := homedir.Expand(cfg.DataDir)
+		if err != nil {
+			return err
+		}
+
+		err = vfile.EnsureDir(dataDir)
+		if err != nil {
+			return err
+		}
 		// Connect to storage-miner
 		ctx := api.ReqContext(cctx)
 
 		var nodeApi api.StorageMiner
 		var closer func()
-		var err error
 		for {
 			select {
 			case <-ctx.Done():
 				return nil
 			default:
 			}
-			nodeApi, closer, err = api.GetStorageMinerAPI(cctx, api.StorageMinerUseHttp)
+			nodeApi, closer, err = api.GetStorageMinerAPI(cctx, api.StorageMinerUseHttp, api.StorageSealerAddr(cfg.Sealer.Url), api.StorageSealerToken(cfg.Sealer.Token))
 			if err == nil {
 				_, err = nodeApi.Version(ctx)
 				if err == nil {
@@ -263,44 +289,9 @@ var runCmd = &cli.Command{
 			return xerrors.Errorf("no task types specified")
 		}
 
-		// Open repo
-		defaultCfg := config.GetDefaultWorkerConfig()
-
-		if cctx.IsSet("miner_addr") {
-			defaultCfg.Url = cctx.String("miner_addr")
-		}
-
-		if cctx.IsSet("miner_token") {
-			defaultCfg.Token = cctx.String("miner_token")
-		}
-
-		cfgPath := cctx.String("config")
-		defaultCfg.ConfigPath = cfgPath
-		if cctx.IsSet("data") {
-			defaultCfg.DataDir = cctx.String("data")
-		}
-
-		ok, err := config.ConfigExist(cfgPath)
-		if err != nil {
-			return err
-		}
-
+		localStorage := cfg.LocalStorage()
 		if !ok {
-			return xerrors.Errorf("config not exit")
-		}
-		dataDir, err := homedir.Expand(defaultCfg.DataDir)
-		if err != nil {
-			return err
-		}
-
-		ok, err = config.ConfigExist(defaultCfg.DataDir)
-		if err != nil {
-			return err
-		}
-
-		localStorage := defaultCfg.LocalStorage()
-		if !ok {
-			err = config.SaveConfig(cfgPath, defaultCfg)
+			err = config.SaveConfig(cfgPath, cfg)
 			if err != nil {
 				return err
 			}
@@ -319,7 +310,7 @@ var runCmd = &cli.Command{
 				}
 
 				if err := ioutil.WriteFile(filepath.Join(dataDir, "sectorstore.json"), b, 0644); err != nil {
-					return xerrors.Errorf("persisting storage metadata (%s): %w", filepath.Join(defaultCfg.DataDir, "sectorstore.json"), err)
+					return xerrors.Errorf("persisting storage metadata (%s): %w", filepath.Join(cfg.DataDir, "sectorstore.json"), err)
 				}
 
 				localPaths = append(localPaths, stores.LocalPath{
@@ -334,7 +325,11 @@ var runCmd = &cli.Command{
 			}
 		}
 
-		dbRepo, err := models.SetDataBase(config.HomeDir(dataDir), &defaultCfg.DB)
+		dbRepo, err := models.SetDataBase(config.HomeDir(dataDir), &cfg.DB)
+		if err != nil {
+			return err
+		}
+		err = dbRepo.AutoMigrate()
 		if err != nil {
 			return err
 		}
@@ -348,7 +343,7 @@ var runCmd = &cli.Command{
 				if err != nil {
 					return err
 				}
-				rip, err := extractRoutableIP(timeout)
+				rip, err := extractRoutableIP(cfg.Sealer.Url, timeout)
 				if err != nil {
 					return err
 				}
@@ -361,13 +356,7 @@ var runCmd = &cli.Command{
 			return err
 		}
 
-		// Setup remote sector store
-		sminfo, err := api.GetAPIInfo(cctx, repo.StorageMiner)
-		if err != nil {
-			return xerrors.Errorf("could not get api info: %w", err)
-		}
-
-		remote := stores.NewRemote(localStore, nodeApi, sminfo.AuthHeader(), cctx.Int("parallel-fetch-limit"))
+		remote := stores.NewRemote(localStore, nodeApi, cfg.Sealer.AuthHeader(), cctx.Int("parallel-fetch-limit"))
 
 		fh := &stores.FetchHandler{Local: localStore}
 		remoteHandler := func(w http.ResponseWriter, r *http.Request) {
@@ -445,17 +434,12 @@ var runCmd = &cli.Command{
 				return xerrors.Errorf("creating api multiaddress: %w", err)
 			}
 
-			if err := defaultCfg.LocalStorage().SetAPIEndpoint(ma); err != nil {
+			if err := cfg.LocalStorage().SetAPIEndpoint(ma); err != nil {
 				return xerrors.Errorf("setting api endpoint: %w", err)
 			}
 
-			ainfo, err := api.GetAPIInfo(cctx, repo.StorageMiner)
-			if err != nil {
-				return xerrors.Errorf("could not get miner API info: %w", err)
-			}
-
 			// TODO: ideally this would be a token with some permissions dropped
-			if err := defaultCfg.LocalStorage().SetAPIToken(ainfo.Token); err != nil {
+			if err := cfg.LocalStorage().SetAPIToken([]byte(cfg.Sealer.Token)); err != nil {
 				return xerrors.Errorf("setting api token: %w", err)
 			}
 		}
@@ -541,19 +525,8 @@ var runCmd = &cli.Command{
 	},
 }
 
-func extractRoutableIP(timeout time.Duration) (string, error) {
-	minerMultiAddrKey := "MINER_API_INFO"
-	deprecatedMinerMultiAddrKey := "STORAGE_API_INFO"
-	env, ok := os.LookupEnv(minerMultiAddrKey)
-	if !ok {
-		// TODO remove after deprecation period
-		_, ok = os.LookupEnv(deprecatedMinerMultiAddrKey)
-		if ok {
-			log.Warnf("Using a deprecated env(%s) value, please use env(%s) instead.", deprecatedMinerMultiAddrKey, minerMultiAddrKey)
-		}
-		return "", xerrors.New("MINER_API_INFO environment variable required to extract IP")
-	}
-	minerAddr := strings.Split(env, "/")
+func extractRoutableIP(url string, timeout time.Duration) (string, error) {
+	minerAddr := strings.Split(url, "/")
 	conn, err := net.DialTimeout("tcp", minerAddr[2]+":"+minerAddr[4], timeout)
 	if err != nil {
 		return "", err
@@ -563,4 +536,20 @@ func extractRoutableIP(timeout time.Duration) (string, error) {
 	localAddr := conn.LocalAddr().(*net.TCPAddr)
 
 	return strings.Split(localAddr.IP.String(), ":")[0], nil
+}
+
+func flagData(cfg *config.StorageWorker, cctx *cli.Context) error {
+	//rewrite sealer connection
+	if cctx.IsSet("miner-addr") {
+		cfg.Sealer.Url = cctx.String("miner-addr")
+	}
+
+	if cctx.IsSet("miner-token") {
+		cfg.Sealer.Token = cctx.String("miner-token")
+	}
+	//check data dir
+	if cctx.IsSet("data") {
+		cfg.DataDir = cctx.String("data")
+	}
+	return nil
 }

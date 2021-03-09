@@ -227,7 +227,7 @@ type FullNode interface {
 	// MpoolSetConfig sets the mpool config to (a copy of) the supplied config
 	MpoolSetConfig(context.Context, *messagepool.MpoolConfig) error
 
-	// MethodGroup: Miner
+	// MethodGroup: Sealer
 
 	MinerGetBaseInfo(context.Context, address.Address, abi.ChainEpoch, types.TipSetKey) (*mining.MiningBaseInfo, error)
 	MinerCreateBlock(context.Context, *mining.BlockTemplate) (*types.BlockMsg, error)

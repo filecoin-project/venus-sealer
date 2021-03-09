@@ -14,9 +14,9 @@ import (
 	"golang.org/x/xerrors"
 )
 
-// FromFile loads config from a specified file overriding defaults specified in
+// MinerFromFile loads config from a specified file overriding defaults specified in
 // the def parameter. If file does not exist or is empty defaults are assumed.
-func FromFile(path string) (*StorageMiner, error) {
+func WorkerFromFile(path string) (*StorageWorker, error) {
 	path, err := homedir.Expand(path)
 	if err != nil {
 		return nil, err
@@ -27,10 +27,26 @@ func FromFile(path string) (*StorageMiner, error) {
 	}
 
 	defer file.Close() //nolint:errcheck // The file is RO
-	return FromReader(file)
+	return WorkerFromReader(file)
 }
 
-// FromFile loads config from a specified file overriding defaults specified in
+// MinerFromFile loads config from a specified file overriding defaults specified in
+// the def parameter. If file does not exist or is empty defaults are assumed.
+func MinerFromFile(path string) (*StorageMiner, error) {
+	path, err := homedir.Expand(path)
+	if err != nil {
+		return nil, err
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+
+	defer file.Close() //nolint:errcheck // The file is RO
+	return MinerFromReader(file)
+}
+
+// MinerFromFile loads config from a specified file overriding defaults specified in
 // the def parameter. If file does not exist or is empty defaults are assumed.
 func ConfigExist(path string) (bool, error) {
 	path, err := homedir.Expand(path)
@@ -69,15 +85,31 @@ func SaveConfig(path string, cfg interface{}) error {
 	return ioutil.WriteFile(path, buf.Bytes(), 0600)
 }
 
-// FromReader loads config from a reader instance.
-func FromReader(reader io.Reader) (*StorageMiner, error) {
+// MinerFromReader loads config from a reader instance.
+func MinerFromReader(reader io.Reader) (*StorageMiner, error) {
 	cfg := DefaultMainnetStorageMiner()
 	_, err := toml.DecodeReader(reader, cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	err = envconfig.Process("LOTUS", cfg)
+	err = envconfig.Process("MINER", cfg)
+	if err != nil {
+		return nil, fmt.Errorf("processing env vars overrides: %s", err)
+	}
+
+	return cfg, nil
+}
+
+// WorkerFromReader loads config from a reader instance.
+func WorkerFromReader(reader io.Reader) (*StorageWorker, error) {
+	cfg := GetDefaultWorkerConfig()
+	_, err := toml.DecodeReader(reader, cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	err = envconfig.Process("WORKER", cfg)
 	if err != nil {
 		return nil, fmt.Errorf("processing env vars overrides: %s", err)
 	}
