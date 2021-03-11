@@ -71,7 +71,7 @@ func SaveConfig(path string, cfg interface{}) error {
 		return xerrors.Errorf("homedir expand error %s", path)
 	}
 	dir := filepath.Dir(path)
-	err = os.MkdirAll(dir, 0777)
+	err = os.MkdirAll(dir, 0755)
 	if err != nil {
 		return xerrors.Errorf("make dir faile: %w", err)
 	}
@@ -82,7 +82,7 @@ func SaveConfig(path string, cfg interface{}) error {
 		return xerrors.Errorf("encoding config: %w", err)
 	}
 
-	return ioutil.WriteFile(path, buf.Bytes(), 0600)
+	return ioutil.WriteFile(path, buf.Bytes(), 0666)
 }
 
 // MinerFromReader loads config from a reader instance.
