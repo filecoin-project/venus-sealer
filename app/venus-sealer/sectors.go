@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	types2 "github.com/filecoin-project/venus-sealer/types"
 	"os"
 	"sort"
 	"strconv"
@@ -21,8 +22,6 @@ import (
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
 	"github.com/filecoin-project/venus/pkg/specactors/policy"
 	"github.com/filecoin-project/venus/pkg/types"
-
-	sealing "github.com/filecoin-project/venus-sealer/extern/storage-sealing"
 )
 
 var sectorsCmd = &cli.Command{
@@ -268,7 +267,7 @@ var sectorsListCmd = &cli.Command{
 				continue
 			}
 
-			if showRemoved || st.State != api.SectorState(sealing.Removed) {
+			if showRemoved || st.State != api.SectorState(types2.Removed) {
 				_, inSSet := commitedIDs[s]
 				_, inASet := activeIDs[s]
 
@@ -291,7 +290,7 @@ var sectorsListCmd = &cli.Command{
 
 				m := map[string]interface{}{
 					"ID":      s,
-					"State":   color.New(stateOrder[sealing.SectorState(st.State)].col).Sprint(st.State),
+					"State":   color.New(stateOrder[types2.SectorState(st.State)].col).Sprint(st.State),
 					"OnChain": yesno(inSSet),
 					"Active":  yesno(inASet),
 				}
@@ -699,9 +698,9 @@ var sectorsUpdateCmd = &cli.Command{
 		}
 
 		newState := cctx.Args().Get(1)
-		if _, ok := sealing.ExistSectorStateList[sealing.SectorState(newState)]; !ok {
+		if _, ok := types2.ExistSectorStateList[types2.SectorState(newState)]; !ok {
 			fmt.Printf(" \"%s\" is not a valid state. Possible states for sectors are: \n", newState)
-			for state := range sealing.ExistSectorStateList {
+			for state := range types2.ExistSectorStateList {
 				fmt.Printf("%s\n", string(state))
 			}
 			return nil

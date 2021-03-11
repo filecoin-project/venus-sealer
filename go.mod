@@ -26,14 +26,15 @@ require (
 	github.com/filecoin-project/go-statemachine v0.0.0-20200925172917-aaed5359be39
 	github.com/filecoin-project/go-statestore v0.1.0
 	github.com/filecoin-project/go-storedcounter v0.0.0-20200421200003-1c99c62e8a5b
-	github.com/filecoin-project/lotus v1.5.0-pre3
 	github.com/filecoin-project/specs-actors v0.9.13
 	github.com/filecoin-project/specs-actors/v2 v2.3.4
 	github.com/filecoin-project/specs-actors/v3 v3.0.3
 	github.com/filecoin-project/specs-storage v0.1.1-0.20201105051918-5188d9774506
 	github.com/filecoin-project/venus v0.9.1-0.20210225095040-cb8a4427312b
 	github.com/gbrlsnchs/jwt/v3 v3.0.0
-	github.com/golangci/golangci-lint v1.37.0 // indirect
+	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/golang/snappy v0.0.2-0.20190904063534-ff6b7dc882cf // indirect
+	github.com/google/go-cmp v0.5.4 // indirect
 	github.com/google/uuid v1.2.0
 	github.com/gorilla/mux v1.8.0
 	github.com/hako/durafmt v0.0.0-20200710122514-c0fb7b4da026
@@ -41,38 +42,58 @@ require (
 	github.com/ipfs/go-block-format v0.0.3
 	github.com/ipfs/go-cid v0.0.7
 	github.com/ipfs/go-datastore v0.4.5
-	github.com/ipfs/go-ds-badger2 v0.1.1-0.20200708190120-187fc06f714e
-	github.com/ipfs/go-ds-leveldb v0.4.2
-	github.com/ipfs/go-ds-measure v0.1.0
-	github.com/ipfs/go-fs-lock v0.0.6
 	github.com/ipfs/go-ipfs-blockstore v1.0.3
 	github.com/ipfs/go-ipfs-ds-help v1.0.0
 	github.com/ipfs/go-ipfs-util v0.0.2
 	github.com/ipfs/go-ipld-cbor v0.0.5
 	github.com/ipfs/go-log v1.0.4
-	github.com/ipfs/go-log/v2 v2.1.2-0.20200626104915-0016c0b4b3e4
+	github.com/ipfs/go-log/v2 v2.1.2
 	github.com/ipfs/go-metrics-interface v0.0.1
 	github.com/kelseyhightower/envconfig v1.4.0
+	github.com/kr/text v0.2.0 // indirect
 	github.com/libp2p/go-buffer-pool v0.0.2
 	github.com/libp2p/go-libp2p-core v0.7.0
+	github.com/libp2p/go-libp2p-noise v0.1.2 // indirect
 	github.com/libp2p/go-libp2p-pubsub v0.4.1
+	github.com/minio/sha256-simd v1.0.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/multiformats/go-base32 v0.0.3
 	github.com/multiformats/go-multiaddr v0.3.1
-	github.com/polydawn/refmt v0.0.0-20190809202753-05966cbd336a
+	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
+	github.com/onsi/ginkgo v1.14.2 // indirect
+	github.com/onsi/gomega v1.10.4 // indirect
+	github.com/polydawn/refmt v0.0.0-20201211092308-30ac6d18308e
 	github.com/raulk/clock v1.1.0
+	github.com/sirupsen/logrus v1.7.0 // indirect
 	github.com/stretchr/testify v1.7.0
-	github.com/syndtr/goleveldb v1.0.0
 	github.com/urfave/cli/v2 v2.3.0
-	github.com/whyrusleeping/cbor-gen v0.0.0-20210118024343-169e9d70c0c2
+	github.com/whyrusleeping/cbor-gen v0.0.0-20210219115102-f37d292932f2
+	github.com/xorcare/golden v0.6.1-0.20191112154924-b87f686d7542 // indirect
+	github.com/zbiljic/go-filelock v0.0.0-20170914061330-1dbf7103ab7d
 	go.opencensus.io v0.22.6
+	go.uber.org/dig v1.10.0 // indirect
 	go.uber.org/fx v1.9.0
 	go.uber.org/multierr v1.6.0
 	go.uber.org/zap v1.16.0
+	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
+	golang.org/x/exp v0.0.0-20200513190911-00229845015e // indirect
+	golang.org/x/mod v0.4.0 // indirect
 	golang.org/x/net v0.0.0-20201202161906-c7110b5ffcbb
-	golang.org/x/sys v0.0.0-20210119212857-b64e53b001e4
+	golang.org/x/sys v0.0.0-20210301091718-77cc2087c03b
+	golang.org/x/text v0.3.4 // indirect
+	golang.org/x/tools v0.1.0 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
+	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
+	gorm.io/driver/mysql v1.0.4
+	gorm.io/driver/sqlite v1.1.4
+	gorm.io/gorm v1.20.12
 	gotest.tools v2.2.0+incompatible
+	honnef.co/go/tools v0.0.1-2020.1.6 // indirect
 )
 
 replace github.com/filecoin-project/filecoin-ffi => ./extern/filecoin-ffi
+
+replace github.com/filecoin-project/go-statemachine => github.com/hunjixin/go-statemachine v0.0.0-20210309063909-a65119041e93
+
+replace github.com/filecoin-project/go-statestore => github.com/hunjixin/go-statestore v0.1.1-0.20210309025204-01c69afffbd7

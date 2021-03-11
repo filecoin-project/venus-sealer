@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 
 	"golang.org/x/xerrors"
-
-	"github.com/filecoin-project/venus-sealer/repo"
 )
 
 const RFC3339nocolon = "2006-01-02T150405Z0700"
@@ -32,8 +30,8 @@ type fsJournal struct {
 
 // OpenFSJournal constructs a rolling filesystem journal, with a default
 // per-file size limit of 1GiB.
-func OpenFSJournal(lr repo.LockedRepo, disabled DisabledEvents) (Journal, error) {
-	dir := filepath.Join(lr.Path(), "journal")
+func OpenFSJournal(path string, disabled DisabledEvents) (Journal, error) {
+	dir := filepath.Join(path, "journal")
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to mk directory %s for file journal: %w", dir, err)
 	}

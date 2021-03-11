@@ -4,8 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/constants"
+	"github.com/filecoin-project/venus-sealer/lib/vfile"
+	"github.com/filecoin-project/venus-sealer/models"
+	"github.com/filecoin-project/venus-sealer/service"
+	"github.com/filecoin-project/venus-sealer/types"
 	"github.com/filecoin-project/venus/fixtures/asset"
+	"github.com/mitchellh/go-homedir"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -16,7 +22,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	"github.com/ipfs/go-datastore/namespace"
 	logging "github.com/ipfs/go-log/v2"
 	manet "github.com/multiformats/go-multiaddr/net"
 	"github.com/urfave/cli/v2"
@@ -27,23 +32,15 @@ import (
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/go-jsonrpc/auth"
 	paramfetch "github.com/filecoin-project/go-paramfetch"
-	"github.com/filecoin-project/go-statestore"
 
 	sealer "github.com/filecoin-project/venus-sealer"
 	"github.com/filecoin-project/venus-sealer/api"
-	sectorstorage "github.com/filecoin-project/venus-sealer/extern/sector-storage"
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/sealtasks"
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/stores"
 	"github.com/filecoin-project/venus-sealer/lib/rpcenc"
-	"github.com/filecoin-project/venus-sealer/repo"
+	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
+	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
 )
 
 var log = logging.Logger("main")
-
-const FlagWorkerRepo = "worker-repo"
-
-// TODO remove after deprecation period
-const FlagWorkerRepoDeprecation = "workerrepo"
 
 func main() {
 	sealer.SetupLogLevels()
@@ -63,18 +60,17 @@ func main() {
 		Version: constants.UserVersion(),
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:    FlagWorkerRepo,
-				Aliases: []string{FlagWorkerRepoDeprecation},
-				EnvVars: []string{"LOTUS_WORKER_PATH", "WORKER_PATH"},
-				Value:   "~/.lotusworker", // TODO: Consider XDG_DATA_HOME
-				Usage:   fmt.Sprintf("Specify worker repo path. flag %s and env WORKER_PATH are DEPRECATION, will REMOVE SOON", FlagWorkerRepoDeprecation),
+				Name:    "data",
+				EnvVars: []string{"VENUS_WORKER_PATH"},
+				Hidden:  true,
+				Value:   "~/.venusworker", // TODO: Consider XDG_DATA_HOME
 			},
 			&cli.StringFlag{
-				Name:    "miner-repo",
-				Aliases: []string{"storagerepo"},
-				EnvVars: []string{"LOTUS_MINER_PATH", "LOTUS_STORAGE_PATH"},
-				Value:   "~/.lotusminer", // TODO: Consider XDG_DATA_HOME
-				Usage:   "Specify miner repo path. flag storagerepo and env LOTUS_STORAGE_PATH are DEPRECATION, will REMOVE SOON",
+				Name:    "config",
+				Aliases: []string{"c"},
+				EnvVars: []string{"VENUS_WORKER_CONFIG"},
+				Hidden:  true,
+				Value:   "~/.venusworker/config.toml", // TODO: Consider XDG_DATA_HOME
 			},
 			&cli.BoolFlag{
 				Name:  "enable-gpu-proving",
@@ -86,7 +82,6 @@ func main() {
 		Commands: local,
 	}
 	app.Setup()
-	app.Metadata["repoType"] = repo.Worker
 
 	if err := app.Run(os.Args); err != nil {
 		log.Warnf("%+v", err)
@@ -102,10 +97,6 @@ var runCmd = &cli.Command{
 			Name:  "listen",
 			Usage: "host address and port the worker api will listen on",
 			Value: "0.0.0.0:3456",
-		},
-		&cli.StringFlag{
-			Name:   "address",
-			Hidden: true,
 		},
 		&cli.BoolFlag{
 			Name:  "no-local-storage",
@@ -147,20 +138,20 @@ var runCmd = &cli.Command{
 			Value: 5,
 		},
 		&cli.StringFlag{
+			Name:  "miner-addr",
+			Usage: "miner address to connect",
+			Value: "0.0.0.0:3456",
+		},
+		&cli.StringFlag{
+			Name:  "miner-token",
+			Usage: "miner token to connect",
+			Value: "",
+		},
+		&cli.StringFlag{
 			Name:  "timeout",
 			Usage: "used when 'listen' is unspecified. must be a valid duration recognized by golang's time.ParseDuration function",
 			Value: "30m",
 		},
-	},
-	Before: func(cctx *cli.Context) error {
-		if cctx.IsSet("address") {
-			log.Warnf("The '--address' flag is deprecated, it has been replaced by '--listen'")
-			if err := cctx.Set("listen", cctx.String("address")); err != nil {
-				return err
-			}
-		}
-
-		return nil
 	},
 	Action: func(cctx *cli.Context) error {
 		log.Info("Starting lotus worker")
@@ -171,19 +162,59 @@ var runCmd = &cli.Command{
 			}
 		}
 
+		// Open repo
+		cfgPath := cctx.String("config")
+		ok, err := config.ConfigExist(cfgPath)
+		if err != nil {
+			return err
+		}
+		var cfg *config.StorageWorker
+		if !ok {
+			//init config
+			cfg = config.GetDefaultWorkerConfig()
+		} else {
+			//load config
+			cfg, err = config.WorkerFromFile(cfgPath)
+			if err != nil {
+				return err
+			}
+		}
+
+		cfg.ConfigPath = cfgPath
+		err = flagData(cfg, cctx)
+		if err != nil {
+			return err
+		}
+
+		if !ok {
+			//dump config
+			err = config.SaveConfig(cfg.ConfigPath, cfg)
+			if err != nil {
+				return err
+			}
+		}
+
+		dataDir, err := homedir.Expand(cfg.DataDir)
+		if err != nil {
+			return err
+		}
+
+		err = vfile.EnsureDir(dataDir)
+		if err != nil {
+			return err
+		}
 		// Connect to storage-miner
 		ctx := api.ReqContext(cctx)
 
 		var nodeApi api.StorageMiner
 		var closer func()
-		var err error
 		for {
 			select {
 			case <-ctx.Done():
 				return nil
 			default:
 			}
-			nodeApi, closer, err = api.GetStorageMinerAPI(cctx, api.StorageMinerUseHttp)
+			nodeApi, closer, err = api.GetStorageMinerAPI(cctx, api.StorageMinerUseHttp, api.StorageSealerAddr(cfg.Sealer.Url), api.StorageSealerToken(cfg.Sealer.Token))
 			if err == nil {
 				_, err = nodeApi.Version(ctx)
 				if err == nil {
@@ -234,48 +265,33 @@ var runCmd = &cli.Command{
 			}
 		}
 
-		var taskTypes []sealtasks.TaskType
+		var taskTypes []types.TaskType
 
-		taskTypes = append(taskTypes, sealtasks.TTFetch, sealtasks.TTCommit1, sealtasks.TTFinalize)
+		taskTypes = append(taskTypes, types.TTFetch, types.TTCommit1, types.TTFinalize)
 
 		if cctx.Bool("addpiece") {
-			taskTypes = append(taskTypes, sealtasks.TTAddPiece)
+			taskTypes = append(taskTypes, types.TTAddPiece)
 		}
 		if cctx.Bool("precommit1") {
-			taskTypes = append(taskTypes, sealtasks.TTPreCommit1)
+			taskTypes = append(taskTypes, types.TTPreCommit1)
 		}
 		if cctx.Bool("unseal") {
-			taskTypes = append(taskTypes, sealtasks.TTUnseal)
+			taskTypes = append(taskTypes, types.TTUnseal)
 		}
 		if cctx.Bool("precommit2") {
-			taskTypes = append(taskTypes, sealtasks.TTPreCommit2)
+			taskTypes = append(taskTypes, types.TTPreCommit2)
 		}
 		if cctx.Bool("commit") {
-			taskTypes = append(taskTypes, sealtasks.TTCommit2)
+			taskTypes = append(taskTypes, types.TTCommit2)
 		}
 
 		if len(taskTypes) == 0 {
 			return xerrors.Errorf("no task types specified")
 		}
 
-		// Open repo
-
-		repoPath := cctx.String(FlagWorkerRepo)
-		r, err := repo.NewFS(repoPath)
-		if err != nil {
-			return err
-		}
-
-		ok, err := r.Exists()
-		if err != nil {
-			return err
-		}
+		localStorage := cfg.LocalStorage()
 		if !ok {
-			if err := r.Init(repo.Worker); err != nil {
-				return err
-			}
-
-			lr, err := r.Lock(repo.Worker)
+			err = config.SaveConfig(cfgPath, cfg)
 			if err != nil {
 				return err
 			}
@@ -293,47 +309,30 @@ var runCmd = &cli.Command{
 					return xerrors.Errorf("marshaling storage config: %w", err)
 				}
 
-				if err := ioutil.WriteFile(filepath.Join(lr.Path(), "sectorstore.json"), b, 0644); err != nil {
-					return xerrors.Errorf("persisting storage metadata (%s): %w", filepath.Join(lr.Path(), "sectorstore.json"), err)
+				if err := ioutil.WriteFile(filepath.Join(dataDir, "sectorstore.json"), b, 0644); err != nil {
+					return xerrors.Errorf("persisting storage metadata (%s): %w", filepath.Join(cfg.DataDir, "sectorstore.json"), err)
 				}
 
 				localPaths = append(localPaths, stores.LocalPath{
-					Path: lr.Path(),
+					Path: dataDir,
 				})
 			}
 
-			if err := lr.SetStorage(func(sc *stores.StorageConfig) {
+			if err := localStorage.SetStorage(func(sc *stores.StorageConfig) {
 				sc.StoragePaths = append(sc.StoragePaths, localPaths...)
 			}); err != nil {
 				return xerrors.Errorf("set storage config: %w", err)
 			}
-
-			{
-				// init datastore for r.Exists
-				_, err := lr.Datastore("/metadata")
-				if err != nil {
-					return err
-				}
-			}
-			if err := lr.Close(); err != nil {
-				return xerrors.Errorf("close repo: %w", err)
-			}
 		}
 
-		lr, err := r.Lock(repo.Worker)
+		dbRepo, err := models.SetDataBase(config.HomeDir(dataDir), &cfg.DB)
 		if err != nil {
 			return err
 		}
-		defer func() {
-			if err := lr.Close(); err != nil {
-				log.Error("closing repo", err)
-			}
-		}()
-		ds, err := lr.Datastore("/metadata")
+		err = dbRepo.AutoMigrate()
 		if err != nil {
 			return err
 		}
-
 		log.Info("Opening local storage; connecting to master")
 		const unspecifiedAddress = "0.0.0.0"
 		address := cctx.String("listen")
@@ -344,7 +343,7 @@ var runCmd = &cli.Command{
 				if err != nil {
 					return err
 				}
-				rip, err := extractRoutableIP(timeout)
+				rip, err := extractRoutableIP(cfg.Sealer.Url, timeout)
 				if err != nil {
 					return err
 				}
@@ -352,18 +351,12 @@ var runCmd = &cli.Command{
 			}
 		}
 
-		localStore, err := stores.NewLocal(ctx, lr, nodeApi, []string{"http://" + address + "/remote"})
+		localStore, err := stores.NewLocal(ctx, localStorage, nodeApi, []string{"http://" + address + "/remote"})
 		if err != nil {
 			return err
 		}
 
-		// Setup remote sector store
-		sminfo, err := api.GetAPIInfo(cctx, repo.StorageMiner)
-		if err != nil {
-			return xerrors.Errorf("could not get api info: %w", err)
-		}
-
-		remote := stores.NewRemote(localStore, nodeApi, sminfo.AuthHeader(), cctx.Int("parallel-fetch-limit"))
+		remote := stores.NewRemote(localStore, nodeApi, cfg.Sealer.AuthHeader(), cctx.Int("parallel-fetch-limit"))
 
 		fh := &stores.FetchHandler{Local: localStore}
 		remoteHandler := func(w http.ResponseWriter, r *http.Request) {
@@ -377,8 +370,8 @@ var runCmd = &cli.Command{
 		}
 
 		// Create / expose the worker
-
-		wsts := statestore.New(namespace.Wrap(ds, sealer.WorkerCallsPrefix))
+		wsts := service.NewWorkCallService(dbRepo, "worker")
+		//wsts := statestore.New(namespace.Wrap(ds, sealer.WorkerCallsPrefix))
 
 		workerApi := &worker{
 			LocalWorker: sectorstorage.NewLocalWorker(sectorstorage.WorkerConfig{
@@ -386,7 +379,7 @@ var runCmd = &cli.Command{
 				NoSwap:    cctx.Bool("no-swap"),
 			}, remote, localStore, nodeApi, nodeApi, wsts),
 			localStore: localStore,
-			ls:         lr,
+			ls:         localStorage,
 		}
 
 		mux := mux.NewRouter()
@@ -441,17 +434,12 @@ var runCmd = &cli.Command{
 				return xerrors.Errorf("creating api multiaddress: %w", err)
 			}
 
-			if err := lr.SetAPIEndpoint(ma); err != nil {
+			if err := cfg.LocalStorage().SetAPIEndpoint(ma); err != nil {
 				return xerrors.Errorf("setting api endpoint: %w", err)
 			}
 
-			ainfo, err := api.GetAPIInfo(cctx, repo.StorageMiner)
-			if err != nil {
-				return xerrors.Errorf("could not get miner API info: %w", err)
-			}
-
 			// TODO: ideally this would be a token with some permissions dropped
-			if err := lr.SetAPIToken(ainfo.Token); err != nil {
+			if err := cfg.LocalStorage().SetAPIToken([]byte(cfg.Sealer.Token)); err != nil {
 				return xerrors.Errorf("setting api token: %w", err)
 			}
 		}
@@ -537,19 +525,8 @@ var runCmd = &cli.Command{
 	},
 }
 
-func extractRoutableIP(timeout time.Duration) (string, error) {
-	minerMultiAddrKey := "MINER_API_INFO"
-	deprecatedMinerMultiAddrKey := "STORAGE_API_INFO"
-	env, ok := os.LookupEnv(minerMultiAddrKey)
-	if !ok {
-		// TODO remove after deprecation period
-		_, ok = os.LookupEnv(deprecatedMinerMultiAddrKey)
-		if ok {
-			log.Warnf("Using a deprecated env(%s) value, please use env(%s) instead.", deprecatedMinerMultiAddrKey, minerMultiAddrKey)
-		}
-		return "", xerrors.New("MINER_API_INFO environment variable required to extract IP")
-	}
-	minerAddr := strings.Split(env, "/")
+func extractRoutableIP(url string, timeout time.Duration) (string, error) {
+	minerAddr := strings.Split(url, "/")
 	conn, err := net.DialTimeout("tcp", minerAddr[2]+":"+minerAddr[4], timeout)
 	if err != nil {
 		return "", err
@@ -559,4 +536,20 @@ func extractRoutableIP(timeout time.Duration) (string, error) {
 	localAddr := conn.LocalAddr().(*net.TCPAddr)
 
 	return strings.Split(localAddr.IP.String(), ":")[0], nil
+}
+
+func flagData(cfg *config.StorageWorker, cctx *cli.Context) error {
+	//rewrite sealer connection
+	if cctx.IsSet("miner-addr") {
+		cfg.Sealer.Url = cctx.String("miner-addr")
+	}
+
+	if cctx.IsSet("miner-token") {
+		cfg.Sealer.Token = cctx.String("miner-token")
+	}
+	//check data dir
+	if cctx.IsSet("data") {
+		cfg.DataDir = cctx.String("data")
+	}
+	return nil
 }

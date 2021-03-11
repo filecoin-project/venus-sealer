@@ -4,11 +4,15 @@ import (
 	"context"
 	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/constants"
+	"github.com/filecoin-project/venus-sealer/types"
+	"github.com/mitchellh/go-homedir"
+	"github.com/zbiljic/go-filelock"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"path"
 	"syscall"
 
 	mux "github.com/gorilla/mux"
@@ -25,9 +29,7 @@ import (
 	sealer "github.com/filecoin-project/venus-sealer"
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/api/impl"
-	"github.com/filecoin-project/venus-sealer/dtypes"
 	"github.com/filecoin-project/venus-sealer/lib/ulimit"
-	"github.com/filecoin-project/venus-sealer/repo"
 )
 
 var runCmd = &cli.Command{
@@ -88,33 +90,33 @@ var runCmd = &cli.Command{
 			return xerrors.Errorf("venus-daemon API version doesn't match: expected: %s", api.Version{APIVersion: constants.FullAPIVersion})
 		}
 
-		minerRepoPath := cctx.String(FlagMinerRepo)
-		r, err := repo.NewFS(minerRepoPath)
+		//read config
+		cfgPath := cctx.String("config")
+		cfg, err := config.MinerFromFile(cfgPath)
 		if err != nil {
 			return err
+		}
+		cfg.ConfigPath = cfgPath
+		if cctx.IsSet("data") {
+			cfg.DataDir = cctx.String("data")
 		}
 
-		ok, err := r.Exists()
+		//lock repo
+		dataDir, err := homedir.Expand(cfg.DataDir)
 		if err != nil {
 			return err
 		}
-		if !ok {
-			return xerrors.Errorf("repo at '%s' is not initialized, run 'venus-sealer init' to set it up", minerRepoPath)
+		fl, err := filelock.New(path.Join(dataDir, "repo.lock"))
+		if err != nil {
+			return err
 		}
+		err = fl.Lock()
+		if err != nil {
+			return err
+		}
+		defer fl.Unlock()
 
 		log.Info("Checking full node sync status")
-
-		lr, err := r.Lock(repo.StorageMiner)
-		if err != nil {
-			return err
-		}
-
-		icfg, err := lr.Config()
-		if err != nil {
-			return err
-		}
-
-		cfg := icfg.(*config.StorageMiner)
 		if !cctx.Bool("nosync") {
 			if err := api.SyncWait(ctx, nodeApi, cfg.NetParams.BlockDelaySecs, false); err != nil {
 				return xerrors.Errorf("sync wait: %w", err)
@@ -126,20 +128,20 @@ var runCmd = &cli.Command{
 		var minerapi api.StorageMiner
 		stop, err := sealer.New(ctx,
 			sealer.ConfigStorageAPIImpl(&minerapi),
-			sealer.Repo(lr),
-			sealer.Online(),
+			sealer.Repo(cfg),
+			sealer.Online(cfg),
 			sealer.ApplyIf(func(s *sealer.Settings) bool { return cctx.IsSet("miner-api") },
-				sealer.Override(new(dtypes.APIEndpoint), func() (dtypes.APIEndpoint, error) {
+				sealer.Override(new(types.APIEndpoint), func() (types.APIEndpoint, error) {
 					return multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/" + cctx.String("miner-api"))
 				})),
 			sealer.Override(new(api.FullNode), nodeApi),
-			sealer.Override(new(dtypes.ShutdownChan), shutdownChan),
+			sealer.Override(new(types.ShutdownChan), shutdownChan),
 		)
 		if err != nil {
 			return xerrors.Errorf("creating node: %w", err)
 		}
 
-		endpoint, err := r.APIEndpoint()
+		endpoint, err := cfg.API.APIEndpoint()
 		if err != nil {
 			return xerrors.Errorf("getting API endpoint: %w", err)
 		}

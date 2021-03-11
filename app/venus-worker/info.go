@@ -3,12 +3,12 @@ package main
 import (
 	"fmt"
 	"github.com/filecoin-project/venus-sealer/api"
+	types2 "github.com/filecoin-project/venus-sealer/types"
 	"sort"
 
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/sealtasks"
 	"github.com/filecoin-project/venus/pkg/types"
 )
 
@@ -95,8 +95,8 @@ var infoCmd = &cli.Command{
 	},
 }
 
-func ttList(tt map[sealtasks.TaskType]struct{}) []sealtasks.TaskType {
-	tasks := make([]sealtasks.TaskType, 0, len(tt))
+func ttList(tt map[types2.TaskType]struct{}) []types2.TaskType {
+	tasks := make([]types2.TaskType, 0, len(tt))
 	for taskType := range tt {
 		tasks = append(tasks, taskType)
 	}

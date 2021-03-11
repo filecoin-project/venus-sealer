@@ -4,7 +4,7 @@ import (
 	"io"
 
 	"github.com/filecoin-project/go-state-types/abi"
-	nr "github.com/filecoin-project/venus-sealer/extern/storage-sealing/lib/nullreader"
+	nr "github.com/filecoin-project/venus-sealer/storage-sealing/lib/nullreader"
 )
 
 type NullReader struct {

@@ -9,9 +9,9 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"golang.org/x/xerrors"
 
-	sectorstorage "github.com/filecoin-project/venus-sealer/extern/sector-storage"
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/stores"
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/storiface"
+	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
+	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
+	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
 )
 
 type worker struct {

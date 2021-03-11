@@ -37,7 +37,7 @@ var infoAllCmd = &cli.Command{
 			return err
 		}
 
-		fmt.Println("\n#: Miner Info")
+		fmt.Println("\n#: Sealer Info")
 		if err := infoCmdAct(cctx); err != nil {
 			return err
 		}

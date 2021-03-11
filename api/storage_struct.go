@@ -8,9 +8,10 @@ import (
 	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 	"github.com/filecoin-project/specs-storage/storage"
 	"github.com/filecoin-project/venus-sealer/config"
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/fsutil"
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/stores"
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/storiface"
+	"github.com/filecoin-project/venus-sealer/sector-storage/fsutil"
+	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
+	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
+	"github.com/filecoin-project/venus-sealer/types"
 	chain2 "github.com/filecoin-project/venus/app/submodule/chain"
 	"github.com/google/uuid"
 	"github.com/ipfs/go-cid"
@@ -45,7 +46,7 @@ type StorageMiner interface {
 	// List sectors in particular states
 	SectorsListInStates(context.Context, []SectorState) ([]abi.SectorNumber, error)
 
-	SectorsRefs(context.Context) (map[string][]SealedRef, error)
+	SectorsRefs(context.Context) (map[string][]types.SealedRef, error)
 
 	// SectorStartSealing can be called on sectors in Empty or WaitDeals states
 	// to trigger sealing early
@@ -86,7 +87,7 @@ type StorageMiner interface {
 
 	// SealingSchedDiag dumps internal sealing scheduler state
 	SealingSchedDiag(ctx context.Context, doSched bool) (interface{}, error)
-	SealingAbort(ctx context.Context, call storiface.CallID) error
+	SealingAbort(ctx context.Context, call types.CallID) error
 
 	stores.SectorIndex
 
@@ -140,7 +141,7 @@ type StorageMinerStruct struct {
 		SectorsList                   func(context.Context) ([]abi.SectorNumber, error)                                         `perm:"read"`
 		SectorsListInStates           func(context.Context, []SectorState) ([]abi.SectorNumber, error)                          `perm:"read"`
 		SectorsSummary                func(ctx context.Context) (map[SectorState]int, error)                                    `perm:"read"`
-		SectorsRefs                   func(context.Context) (map[string][]SealedRef, error)                                     `perm:"read"`
+		SectorsRefs                   func(context.Context) (map[string][]types.SealedRef, error)                               `perm:"read"`
 		SectorStartSealing            func(context.Context, abi.SectorNumber) error                                             `perm:"write"`
 		SectorSetSealDelay            func(context.Context, time.Duration) error                                                `perm:"write"`
 		SectorGetSealDelay            func(context.Context) (time.Duration, error)                                              `perm:"read"`
@@ -157,20 +158,20 @@ type StorageMinerStruct struct {
 		WorkerStats   func(context.Context) (map[uuid.UUID]storiface.WorkerStats, error) `perm:"admin"`
 		WorkerJobs    func(context.Context) (map[uuid.UUID][]storiface.WorkerJob, error) `perm:"admin"`
 
-		ReturnAddPiece        func(ctx context.Context, callID storiface.CallID, pi abi.PieceInfo, err *storiface.CallError) error          `perm:"admin" retry:"true"`
-		ReturnSealPreCommit1  func(ctx context.Context, callID storiface.CallID, p1o storage.PreCommit1Out, err *storiface.CallError) error `perm:"admin" retry:"true"`
-		ReturnSealPreCommit2  func(ctx context.Context, callID storiface.CallID, sealed storage.SectorCids, err *storiface.CallError) error `perm:"admin" retry:"true"`
-		ReturnSealCommit1     func(ctx context.Context, callID storiface.CallID, out storage.Commit1Out, err *storiface.CallError) error    `perm:"admin" retry:"true"`
-		ReturnSealCommit2     func(ctx context.Context, callID storiface.CallID, proof storage.Proof, err *storiface.CallError) error       `perm:"admin" retry:"true"`
-		ReturnFinalizeSector  func(ctx context.Context, callID storiface.CallID, err *storiface.CallError) error                            `perm:"admin" retry:"true"`
-		ReturnReleaseUnsealed func(ctx context.Context, callID storiface.CallID, err *storiface.CallError) error                            `perm:"admin" retry:"true"`
-		ReturnMoveStorage     func(ctx context.Context, callID storiface.CallID, err *storiface.CallError) error                            `perm:"admin" retry:"true"`
-		ReturnUnsealPiece     func(ctx context.Context, callID storiface.CallID, err *storiface.CallError) error                            `perm:"admin" retry:"true"`
-		ReturnReadPiece       func(ctx context.Context, callID storiface.CallID, ok bool, err *storiface.CallError) error                   `perm:"admin" retry:"true"`
-		ReturnFetch           func(ctx context.Context, callID storiface.CallID, err *storiface.CallError) error                            `perm:"admin" retry:"true"`
+		ReturnAddPiece        func(ctx context.Context, callID types.CallID, pi abi.PieceInfo, err *storiface.CallError) error          `perm:"admin" retry:"true"`
+		ReturnSealPreCommit1  func(ctx context.Context, callID types.CallID, p1o storage.PreCommit1Out, err *storiface.CallError) error `perm:"admin" retry:"true"`
+		ReturnSealPreCommit2  func(ctx context.Context, callID types.CallID, sealed storage.SectorCids, err *storiface.CallError) error `perm:"admin" retry:"true"`
+		ReturnSealCommit1     func(ctx context.Context, callID types.CallID, out storage.Commit1Out, err *storiface.CallError) error    `perm:"admin" retry:"true"`
+		ReturnSealCommit2     func(ctx context.Context, callID types.CallID, proof storage.Proof, err *storiface.CallError) error       `perm:"admin" retry:"true"`
+		ReturnFinalizeSector  func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                            `perm:"admin" retry:"true"`
+		ReturnReleaseUnsealed func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                            `perm:"admin" retry:"true"`
+		ReturnMoveStorage     func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                            `perm:"admin" retry:"true"`
+		ReturnUnsealPiece     func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                            `perm:"admin" retry:"true"`
+		ReturnReadPiece       func(ctx context.Context, callID types.CallID, ok bool, err *storiface.CallError) error                   `perm:"admin" retry:"true"`
+		ReturnFetch           func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                            `perm:"admin" retry:"true"`
 
-		SealingSchedDiag func(context.Context, bool) (interface{}, error)       `perm:"admin"`
-		SealingAbort     func(ctx context.Context, call storiface.CallID) error `perm:"admin"`
+		SealingSchedDiag func(context.Context, bool) (interface{}, error)   `perm:"admin"`
+		SealingAbort     func(ctx context.Context, call types.CallID) error `perm:"admin"`
 
 		StorageList          func(context.Context) (map[stores.ID][]stores.Decl, error)                                                                                   `perm:"admin"`
 		StorageLocal         func(context.Context) (map[stores.ID]string, error)                                                                                          `perm:"admin"`
@@ -253,7 +254,7 @@ func (c *StorageMinerStruct) SectorsSummary(ctx context.Context) (map[SectorStat
 	return c.Internal.SectorsSummary(ctx)
 }
 
-func (c *StorageMinerStruct) SectorsRefs(ctx context.Context) (map[string][]SealedRef, error) {
+func (c *StorageMinerStruct) SectorsRefs(ctx context.Context) (map[string][]types.SealedRef, error) {
 	return c.Internal.SectorsRefs(ctx)
 }
 
@@ -313,47 +314,47 @@ func (c *StorageMinerStruct) WorkerJobs(ctx context.Context) (map[uuid.UUID][]st
 	return c.Internal.WorkerJobs(ctx)
 }
 
-func (c *StorageMinerStruct) ReturnAddPiece(ctx context.Context, callID storiface.CallID, pi abi.PieceInfo, err *storiface.CallError) error {
+func (c *StorageMinerStruct) ReturnAddPiece(ctx context.Context, callID types.CallID, pi abi.PieceInfo, err *storiface.CallError) error {
 	return c.Internal.ReturnAddPiece(ctx, callID, pi, err)
 }
 
-func (c *StorageMinerStruct) ReturnSealPreCommit1(ctx context.Context, callID storiface.CallID, p1o storage.PreCommit1Out, err *storiface.CallError) error {
+func (c *StorageMinerStruct) ReturnSealPreCommit1(ctx context.Context, callID types.CallID, p1o storage.PreCommit1Out, err *storiface.CallError) error {
 	return c.Internal.ReturnSealPreCommit1(ctx, callID, p1o, err)
 }
 
-func (c *StorageMinerStruct) ReturnSealPreCommit2(ctx context.Context, callID storiface.CallID, sealed storage.SectorCids, err *storiface.CallError) error {
+func (c *StorageMinerStruct) ReturnSealPreCommit2(ctx context.Context, callID types.CallID, sealed storage.SectorCids, err *storiface.CallError) error {
 	return c.Internal.ReturnSealPreCommit2(ctx, callID, sealed, err)
 }
 
-func (c *StorageMinerStruct) ReturnSealCommit1(ctx context.Context, callID storiface.CallID, out storage.Commit1Out, err *storiface.CallError) error {
+func (c *StorageMinerStruct) ReturnSealCommit1(ctx context.Context, callID types.CallID, out storage.Commit1Out, err *storiface.CallError) error {
 	return c.Internal.ReturnSealCommit1(ctx, callID, out, err)
 }
 
-func (c *StorageMinerStruct) ReturnSealCommit2(ctx context.Context, callID storiface.CallID, proof storage.Proof, err *storiface.CallError) error {
+func (c *StorageMinerStruct) ReturnSealCommit2(ctx context.Context, callID types.CallID, proof storage.Proof, err *storiface.CallError) error {
 	return c.Internal.ReturnSealCommit2(ctx, callID, proof, err)
 }
 
-func (c *StorageMinerStruct) ReturnFinalizeSector(ctx context.Context, callID storiface.CallID, err *storiface.CallError) error {
+func (c *StorageMinerStruct) ReturnFinalizeSector(ctx context.Context, callID types.CallID, err *storiface.CallError) error {
 	return c.Internal.ReturnFinalizeSector(ctx, callID, err)
 }
 
-func (c *StorageMinerStruct) ReturnReleaseUnsealed(ctx context.Context, callID storiface.CallID, err *storiface.CallError) error {
+func (c *StorageMinerStruct) ReturnReleaseUnsealed(ctx context.Context, callID types.CallID, err *storiface.CallError) error {
 	return c.Internal.ReturnReleaseUnsealed(ctx, callID, err)
 }
 
-func (c *StorageMinerStruct) ReturnMoveStorage(ctx context.Context, callID storiface.CallID, err *storiface.CallError) error {
+func (c *StorageMinerStruct) ReturnMoveStorage(ctx context.Context, callID types.CallID, err *storiface.CallError) error {
 	return c.Internal.ReturnMoveStorage(ctx, callID, err)
 }
 
-func (c *StorageMinerStruct) ReturnUnsealPiece(ctx context.Context, callID storiface.CallID, err *storiface.CallError) error {
+func (c *StorageMinerStruct) ReturnUnsealPiece(ctx context.Context, callID types.CallID, err *storiface.CallError) error {
 	return c.Internal.ReturnUnsealPiece(ctx, callID, err)
 }
 
-func (c *StorageMinerStruct) ReturnReadPiece(ctx context.Context, callID storiface.CallID, ok bool, err *storiface.CallError) error {
+func (c *StorageMinerStruct) ReturnReadPiece(ctx context.Context, callID types.CallID, ok bool, err *storiface.CallError) error {
 	return c.Internal.ReturnReadPiece(ctx, callID, ok, err)
 }
 
-func (c *StorageMinerStruct) ReturnFetch(ctx context.Context, callID storiface.CallID, err *storiface.CallError) error {
+func (c *StorageMinerStruct) ReturnFetch(ctx context.Context, callID types.CallID, err *storiface.CallError) error {
 	return c.Internal.ReturnFetch(ctx, callID, err)
 }
 
@@ -361,7 +362,7 @@ func (c *StorageMinerStruct) SealingSchedDiag(ctx context.Context, doSched bool)
 	return c.Internal.SealingSchedDiag(ctx, doSched)
 }
 
-func (c *StorageMinerStruct) SealingAbort(ctx context.Context, call storiface.CallID) error {
+func (c *StorageMinerStruct) SealingAbort(ctx context.Context, call types.CallID) error {
 	return c.Internal.SealingAbort(ctx, call)
 }
 

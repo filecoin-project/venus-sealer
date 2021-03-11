@@ -28,8 +28,8 @@ import (
 	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 	tutils "github.com/filecoin-project/specs-actors/v2/support/testing"
 
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/storiface"
 	"github.com/filecoin-project/venus-sealer/journal"
+	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
 	"github.com/filecoin-project/venus/pkg/types"
 )

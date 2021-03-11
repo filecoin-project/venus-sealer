@@ -68,7 +68,7 @@ var provingFaultsCmd = &cli.Command{
 			return err
 		}
 
-		fmt.Printf("Miner: %s\n", color.BlueString("%s", maddr))
+		fmt.Printf("Sealer: %s\n", color.BlueString("%s", maddr))
 
 		tw := tabwriter.NewWriter(os.Stdout, 2, 4, 2, ' ', 0)
 		_, _ = fmt.Fprintln(tw, "deadline\tpartition\tsectors")
@@ -142,7 +142,7 @@ var provingInfoCmd = &cli.Command{
 			return xerrors.Errorf("getting miner info: %w", err)
 		}
 
-		fmt.Printf("Miner: %s\n", color.BlueString("%s", maddr))
+		fmt.Printf("Sealer: %s\n", color.BlueString("%s", maddr))
 
 		proving := uint64(0)
 		faults := uint64(0)
@@ -243,7 +243,7 @@ var provingDeadlinesCmd = &cli.Command{
 			return xerrors.Errorf("getting deadlines: %w", err)
 		}
 
-		fmt.Printf("Miner: %s\n", color.BlueString("%s", maddr))
+		fmt.Printf("Sealer: %s\n", color.BlueString("%s", maddr))
 
 		tw := tabwriter.NewWriter(os.Stdout, 2, 4, 2, ' ', 0)
 		_, _ = fmt.Fprintln(tw, "deadline\tpartitions\tsectors (faults)\tproven partitions")

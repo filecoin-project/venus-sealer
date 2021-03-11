@@ -2,44 +2,39 @@ package venus_sealer
 
 import (
 	"context"
-	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-jsonrpc/auth"
 	paramfetch "github.com/filecoin-project/go-paramfetch"
 	"github.com/filecoin-project/go-state-types/abi"
-	"github.com/filecoin-project/go-statestore"
 	"github.com/filecoin-project/go-storedcounter"
-	types2 "github.com/filecoin-project/lotus/chain/types"
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/config"
-	"github.com/filecoin-project/venus-sealer/dtypes"
-	sectorstorage "github.com/filecoin-project/venus-sealer/extern/sector-storage"
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/ffiwrapper"
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/stores"
-	sealing "github.com/filecoin-project/venus-sealer/extern/storage-sealing"
-	"github.com/filecoin-project/venus-sealer/extern/storage-sealing/sealiface"
 	"github.com/filecoin-project/venus-sealer/journal"
-	"github.com/filecoin-project/venus-sealer/lib/backupds"
-	"github.com/filecoin-project/venus-sealer/repo"
+	"github.com/filecoin-project/venus-sealer/models/repo"
+	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
+	"github.com/filecoin-project/venus-sealer/sector-storage/ffiwrapper"
+	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
+	"github.com/filecoin-project/venus-sealer/service"
 	"github.com/filecoin-project/venus-sealer/storage"
+	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
+	types2 "github.com/filecoin-project/venus-sealer/types"
 	"github.com/filecoin-project/venus/fixtures/asset"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
 	"github.com/filecoin-project/venus/pkg/types"
 	"github.com/gbrlsnchs/jwt/v3"
 	"github.com/ipfs/go-datastore"
-	"github.com/ipfs/go-datastore/namespace"
+	"github.com/mitchellh/go-homedir"
 	"go.uber.org/fx"
 	"go.uber.org/multierr"
 	"golang.org/x/xerrors"
-	"io"
-	"io/ioutil"
 	"net/http"
 	"time"
 )
 
-func OpenFilesystemJournal(lr repo.LockedRepo, lc fx.Lifecycle, disabled journal.DisabledEvents) (journal.Journal, error) {
-	jrnl, err := journal.OpenFSJournal(lr, disabled)
+func OpenFilesystemJournal(homeDir config.HomeDir, lc fx.Lifecycle, disabled journal.DisabledEvents) (journal.Journal, error) {
+	jrnl, err := journal.OpenFSJournal(string(homeDir), disabled)
 	if err != nil {
 		return nil, err
 	}
@@ -49,10 +44,6 @@ func OpenFilesystemJournal(lr repo.LockedRepo, lc fx.Lifecycle, disabled journal
 	})
 
 	return jrnl, err
-}
-
-func KeyStore(lr repo.LockedRepo) (types2.KeyStore, error) {
-	return lr.KeyStore()
 }
 
 //auth
@@ -66,65 +57,32 @@ type JwtPayload struct {
 	Allow []auth.Permission
 }
 
-func APISecret(keystore types2.KeyStore, lr repo.LockedRepo) (*dtypes.APIAlg, error) {
-	key, err := keystore.Get(JWTSecretName)
+func APISecret(cfg *config.StorageMiner) (*types2.APIAlg, error) {
+	log.Warn("Generating new API secret")
 
-	if errors.Is(err, types.ErrKeyInfoNotFound) {
-		log.Warn("Generating new API secret")
-
-		sk, err := ioutil.ReadAll(io.LimitReader(rand.Reader, 32))
-		if err != nil {
-			return nil, err
-		}
-
-		key = types2.KeyInfo{
-			Type:       KTJwtHmacSecret,
-			PrivateKey: sk,
-		}
-
-		if err := keystore.Put(JWTSecretName, key); err != nil {
-			return nil, xerrors.Errorf("writing API secret: %w", err)
-		}
-
-		// TODO: make this configurable
-		p := JwtPayload{
-			Allow: api.AllPermissions,
-		}
-
-		cliToken, err := jwt.Sign(&p, jwt.NewHS256(key.PrivateKey))
-		if err != nil {
-			return nil, err
-		}
-
-		if err := lr.SetAPIToken(cliToken); err != nil {
-			return nil, err
-		}
-	} else if err != nil {
-		return nil, xerrors.Errorf("could not get JWT Token: %w", err)
-	}
-
-	return (*dtypes.APIAlg)(jwt.NewHS256(key.PrivateKey)), nil
-}
-
-//repo
-func LockedRepo(lr repo.LockedRepo) func(lc fx.Lifecycle) repo.LockedRepo {
-	return func(lc fx.Lifecycle) repo.LockedRepo {
-		lc.Append(fx.Hook{
-			OnStop: func(_ context.Context) error {
-				return lr.Close()
-			},
-		})
-		return lr
-	}
-}
-
-func Datastore(r repo.LockedRepo) (dtypes.MetadataDS, error) {
-	mds, err := r.Datastore("/metadata")
+	sk, err := hex.DecodeString(cfg.JWT.Secret)
 	if err != nil {
 		return nil, err
 	}
 
-	return backupds.Wrap(mds), nil
+	if len(sk) != 32 {
+		return nil, xerrors.Errorf("error private key format")
+	}
+
+	// TODO: make this configurable
+	p := JwtPayload{
+		Allow: api.AllPermissions,
+	}
+
+	cliToken, err := jwt.Sign(&p, jwt.NewHS256(sk))
+	if err != nil {
+		return nil, err
+	}
+
+	if err := cfg.LocalStorage().SetAPIToken(cliToken); err != nil {
+		return nil, err
+	}
+	return (*types2.APIAlg)(jwt.NewHS256(sk)), nil
 }
 
 //storage
@@ -140,26 +98,17 @@ func StorageAuth(ctx MetricsCtx, ca api.Common) (sectorstorage.StorageAuth, erro
 	return sectorstorage.StorageAuth(headers), nil
 }
 
-func MinerID(ma dtypes.MinerAddress) (dtypes.MinerID, error) {
+func MinerID(ma types2.MinerAddress) (types2.MinerID, error) {
 	id, err := address.IDFromAddress(address.Address(ma))
-	return dtypes.MinerID(id), err
+	return types2.MinerID(id), err
 }
 
-func MinerAddress(ds dtypes.MetadataDS) (dtypes.MinerAddress, error) {
-	ma, err := minerAddrFromDS(ds)
-	return dtypes.MinerAddress(ma), err
+func MinerAddress(metaDataService *service.MetadataService) (types2.MinerAddress, error) {
+	ma, err := metaDataService.GetMinerAddress()
+	return types2.MinerAddress(ma), err
 }
 
-func minerAddrFromDS(ds dtypes.MetadataDS) (address.Address, error) {
-	maddrb, err := ds.Get(datastore.NewKey("miner-address"))
-	if err != nil {
-		return address.Undef, err
-	}
-
-	return address.NewFromBytes(maddrb)
-}
-
-func SealProofType(maddr dtypes.MinerAddress, fnapi api.FullNode) (abi.RegisteredSealProof, error) {
+func SealProofType(maddr types2.MinerAddress, fnapi api.FullNode) (abi.RegisteredSealProof, error) {
 	mi, err := fnapi.StateMinerInfo(context.TODO(), address.Address(maddr), types.EmptyTSK)
 	if err != nil {
 		return 0, err
@@ -183,19 +132,18 @@ func (s *sidsc) Next() (abi.SectorNumber, error) {
 	return abi.SectorNumber(i), err
 }
 
-func SectorIDCounter(ds dtypes.MetadataDS) sealing.SectorIDCounter {
-	sc := storedcounter.New(ds, datastore.NewKey(StorageCounterDSPrefix))
-	return &sidsc{sc}
+func SectorIDCounter(metaDataService *service.MetadataService) types2.SectorIDCounter {
+	return metaDataService
 }
 
 var WorkerCallsPrefix = datastore.NewKey("/worker/calls")
 var ManagerWorkPrefix = datastore.NewKey("/stmgr/calls")
 
-func SectorStorage(mctx MetricsCtx, lc fx.Lifecycle, ls stores.LocalStorage, si stores.SectorIndex, sc sectorstorage.SealerConfig, urls sectorstorage.URLs, sa sectorstorage.StorageAuth, ds dtypes.MetadataDS) (*sectorstorage.Manager, error) {
+func SectorStorage(mctx MetricsCtx, lc fx.Lifecycle, ls stores.LocalStorage, si stores.SectorIndex, sc sectorstorage.SealerConfig, urls sectorstorage.URLs, sa sectorstorage.StorageAuth, repo repo.Repo) (*sectorstorage.Manager, error) {
 	ctx := LifecycleCtx(mctx, lc)
 
-	wsts := statestore.New(namespace.Wrap(ds, WorkerCallsPrefix))
-	smsts := statestore.New(namespace.Wrap(ds, ManagerWorkPrefix))
+	wsts := service.NewWorkCallService(repo, "sealer")
+	smsts := service.NewWorkStateService(repo)
 
 	sst, err := sectorstorage.New(ctx, ls, si, sc, urls, sa, wsts, smsts)
 	if err != nil {
@@ -225,7 +173,7 @@ func GetParams(mctx MetricsCtx, spt abi.RegisteredSealProof) error {
 	return nil
 }
 
-func StorageNetworkName(ctx MetricsCtx, a api.FullNode) (dtypes.NetworkName, error) {
+func StorageNetworkName(ctx MetricsCtx, a api.FullNode) (types2.NetworkName, error) {
 	/*	if !build.Devnet {
 		return "testnetnet", nil
 	}*/
@@ -267,11 +215,13 @@ type StorageMinerParams struct {
 	Lifecycle          fx.Lifecycle
 	MetricsCtx         MetricsCtx
 	API                api.FullNode
-	MetadataDS         dtypes.MetadataDS
+	MetadataService    *service.MetadataService
+	LogService         *service.LogService
+	SectorInfoService  *service.SectorInfoService
 	Sealer             sectorstorage.SectorManager
-	SectorIDCounter    sealing.SectorIDCounter
+	SectorIDCounter    types2.SectorIDCounter
 	Verifier           ffiwrapper.Verifier
-	GetSealingConfigFn dtypes.GetSealingConfigFunc
+	GetSealingConfigFn types2.GetSealingConfigFunc
 	Journal            journal.Journal
 	AddrSel            *storage.AddressSelector
 	NetworkParams      *config.NetParamsConfig
@@ -280,20 +230,22 @@ type StorageMinerParams struct {
 func StorageMiner(fc config.MinerFeeConfig) func(params StorageMinerParams) (*storage.Miner, error) {
 	return func(params StorageMinerParams) (*storage.Miner, error) {
 		var (
-			ds     = params.MetadataDS
-			mctx   = params.MetricsCtx
-			lc     = params.Lifecycle
-			api    = params.API
-			sealer = params.Sealer
-			sc     = params.SectorIDCounter
-			verif  = params.Verifier
-			gsd    = params.GetSealingConfigFn
-			j      = params.Journal
-			as     = params.AddrSel
-			np     = params.NetworkParams
+			metadataService   = params.MetadataService
+			sectorinfoService = params.SectorInfoService
+			logService        = params.LogService
+			mctx              = params.MetricsCtx
+			lc                = params.Lifecycle
+			api               = params.API
+			sealer            = params.Sealer
+			sc                = params.SectorIDCounter
+			verif             = params.Verifier
+			gsd               = params.GetSealingConfigFn
+			j                 = params.Journal
+			as                = params.AddrSel
+			np                = params.NetworkParams
 		)
 
-		maddr, err := minerAddrFromDS(ds)
+		maddr, err := metadataService.GetMinerAddress()
 		if err != nil {
 			return nil, err
 		}
@@ -305,7 +257,7 @@ func StorageMiner(fc config.MinerFeeConfig) func(params StorageMinerParams) (*st
 			return nil, err
 		}
 
-		sm, err := storage.NewMiner(api, maddr, ds, sealer, sc, verif, gsd, fc, j, as, np)
+		sm, err := storage.NewMiner(api, maddr, metadataService, sectorinfoService, logService, sealer, sc, verif, gsd, fc, j, as, np)
 		if err != nil {
 			return nil, err
 		}
@@ -322,7 +274,7 @@ func StorageMiner(fc config.MinerFeeConfig) func(params StorageMinerParams) (*st
 	}
 }
 
-func NewSetSealConfigFunc(r repo.LockedRepo) (dtypes.SetSealingConfigFunc, error) {
+func NewSetSealConfigFunc(r *config.StorageMiner) (types2.SetSealingConfigFunc, error) {
 	return func(cfg sealiface.Config) (err error) {
 		err = mutateCfg(r, func(c *config.StorageMiner) {
 			c.Sealing = config.SealingConfig{
@@ -336,7 +288,7 @@ func NewSetSealConfigFunc(r repo.LockedRepo) (dtypes.SetSealingConfigFunc, error
 	}, nil
 }
 
-func NewGetSealConfigFunc(r repo.LockedRepo) (dtypes.GetSealingConfigFunc, error) {
+func NewGetSealConfigFunc(r *config.StorageMiner) (types2.GetSealingConfigFunc, error) {
 	return func() (out sealiface.Config, err error) {
 		err = readCfg(r, func(cfg *config.StorageMiner) {
 			out = sealiface.Config{
@@ -350,26 +302,14 @@ func NewGetSealConfigFunc(r repo.LockedRepo) (dtypes.GetSealingConfigFunc, error
 	}, nil
 }
 
-func readCfg(r repo.LockedRepo, accessor func(*config.StorageMiner)) error {
-	raw, err := r.Config()
-	if err != nil {
-		return err
-	}
-
-	cfg, ok := raw.(*config.StorageMiner)
-	if !ok {
-		return xerrors.New("expected address of config.StorageMiner")
-	}
-
+func readCfg(cfg *config.StorageMiner, accessor func(*config.StorageMiner)) error {
 	accessor(cfg)
-
 	return nil
 }
 
-func mutateCfg(r repo.LockedRepo, mutator func(*config.StorageMiner)) error {
+func mutateCfg(cfg *config.StorageMiner, mutator func(*config.StorageMiner)) error {
 	var typeErr error
-
-	setConfigErr := r.SetConfig(func(raw interface{}) {
+	setConfigErr := cfg.LocalStorage().SetConfig(func(raw interface{}) {
 		cfg, ok := raw.(*config.StorageMiner)
 		if !ok {
 			typeErr = errors.New("expected miner config")
@@ -398,4 +338,14 @@ func LifecycleCtx(mctx MetricsCtx, lc fx.Lifecycle) context.Context {
 		},
 	})
 	return ctx
+}
+
+func HomeDir(path string) func() (config.HomeDir, error) {
+	return func() (config.HomeDir, error) {
+		path, err := homedir.Expand(path)
+		if err != nil {
+			return "", err
+		}
+		return config.HomeDir(path), nil
+	}
 }

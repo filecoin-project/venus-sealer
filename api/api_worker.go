@@ -4,9 +4,9 @@ import (
 	"context"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/venus-sealer/constants"
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/sealtasks"
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/stores"
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/storiface"
+	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
+	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
+	"github.com/filecoin-project/venus-sealer/types"
 	"github.com/google/uuid"
 )
 
@@ -14,14 +14,14 @@ type WorkerAPI interface {
 	Version(context.Context) (constants.Version, error)
 	// TODO: Info() (name, ...) ?
 
-	TaskTypes(context.Context) (map[sealtasks.TaskType]struct{}, error) // TaskType -> Weight
+	TaskTypes(context.Context) (map[types.TaskType]struct{}, error) // TaskType -> Weight
 	Paths(context.Context) ([]stores.StoragePath, error)
 	Info(context.Context) (storiface.WorkerInfo, error)
 
 	storiface.WorkerCalls
 
-	TaskDisable(ctx context.Context, tt sealtasks.TaskType) error
-	TaskEnable(ctx context.Context, tt sealtasks.TaskType) error
+	TaskDisable(ctx context.Context, tt types.TaskType) error
+	TaskEnable(ctx context.Context, tt types.TaskType) error
 
 	// Storage / Other
 	Remove(ctx context.Context, sector abi.SectorID) error

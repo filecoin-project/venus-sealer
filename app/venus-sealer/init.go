@@ -4,17 +4,15 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	cborutil "github.com/filecoin-project/go-cbor-util"
 	market2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
-	venus_sealer "github.com/filecoin-project/venus-sealer"
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/constants"
-	"github.com/filecoin-project/venus-sealer/dtypes"
-	sealing "github.com/filecoin-project/venus-sealer/extern/storage-sealing"
+	"github.com/filecoin-project/venus-sealer/models"
+	"github.com/filecoin-project/venus-sealer/service"
+	types2 "github.com/filecoin-project/venus-sealer/types"
 	"github.com/filecoin-project/venus/fixtures/asset"
 	"github.com/filecoin-project/venus/pkg/gen/genesis"
 	"io/ioutil"
@@ -24,7 +22,6 @@ import (
 
 	"github.com/docker/go-units"
 	"github.com/google/uuid"
-	"github.com/ipfs/go-datastore"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/mitchellh/go-homedir"
@@ -36,8 +33,7 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	power2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/power"
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/stores"
-	"github.com/filecoin-project/venus-sealer/repo"
+	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
 	actors "github.com/filecoin-project/venus/pkg/specactors"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/power"
@@ -152,7 +148,7 @@ var initCmd = &cli.Command{
 		defer closer()
 
 		network := cctx.String("network")
-		netParamsConfig, err := config.GetDefaultStorageConfig(network)
+		defaultCfg, err := config.GetDefaultStorageConfig(network)
 		if err != nil {
 			return err
 		}
@@ -160,29 +156,27 @@ var initCmd = &cli.Command{
 		log.Info("Checking full node sync status")
 
 		if !cctx.Bool("genesis-miner") && !cctx.Bool("nosync") {
-			if err := api.SyncWait(ctx, fullNode, netParamsConfig.NetParams.BlockDelaySecs, false); err != nil {
+			if err := api.SyncWait(ctx, fullNode, defaultCfg.NetParams.BlockDelaySecs, false); err != nil {
 				return xerrors.Errorf("sync wait: %w", err)
 			}
 		}
 
 		log.Info("Checking if repo exists")
+		cfgPath := cctx.String("config")
+		defaultCfg.ConfigPath = cfgPath
+		if cctx.IsSet("data") {
+			defaultCfg.DataDir = cctx.String("data")
+		}
 
-		repoPath := cctx.String(FlagMinerRepo)
-		r, err := repo.NewFS(repoPath)
+		exit, err := config.ConfigExist(defaultCfg.DataDir)
 		if err != nil {
 			return err
 		}
-
-		ok, err := r.Exists()
-		if err != nil {
-			return err
-		}
-		if ok {
-			return xerrors.Errorf("repo at '%s' is already initialized", cctx.String(FlagMinerRepo))
+		if exit {
+			return xerrors.Errorf("data has exit in %s", defaultCfg.DataDir)
 		}
 
 		log.Info("Checking full node version")
-
 		v, err := fullNode.Version(ctx)
 		if err != nil {
 			return err
@@ -193,12 +187,9 @@ var initCmd = &cli.Command{
 		}
 
 		log.Info("Initializing repo")
-		if err := r.InitWithConfig(repo.StorageMiner, netParamsConfig); err != nil {
-			return err
-		}
-
 		{
-			lr, err := r.Lock(repo.StorageMiner)
+			//write config
+			err = config.SaveConfig(cfgPath, defaultCfg)
 			if err != nil {
 				return err
 			}
@@ -229,30 +220,30 @@ var initCmd = &cli.Command{
 				if err != nil {
 					return xerrors.Errorf("marshaling storage config: %w", err)
 				}
-
-				if err := ioutil.WriteFile(filepath.Join(lr.Path(), "sectorstore.json"), b, 0644); err != nil {
-					return xerrors.Errorf("persisting storage metadata (%s): %w", filepath.Join(lr.Path(), "sectorstore.json"), err)
+				dataDir, err := homedir.Expand(defaultCfg.DataDir)
+				if err != nil {
+					return err
+				}
+				if err := ioutil.WriteFile(filepath.Join(dataDir, "sectorstore.json"), b, 0644); err != nil {
+					return xerrors.Errorf("persisting storage metadata (%s): %w", filepath.Join(dataDir, "sectorstore.json"), err)
 				}
 
 				localPaths = append(localPaths, stores.LocalPath{
-					Path: lr.Path(),
+					Path: dataDir,
 				})
 			}
 
-			if err := lr.SetStorage(func(sc *stores.StorageConfig) {
+			localStorage := defaultCfg.LocalStorage()
+			if err := localStorage.SetStorage(func(sc *stores.StorageConfig) {
 				sc.StoragePaths = append(sc.StoragePaths, localPaths...)
 			}); err != nil {
 				return xerrors.Errorf("set storage config: %w", err)
 			}
-
-			if err := lr.Close(); err != nil {
-				return err
-			}
 		}
 
-		if err := storageMinerInit(ctx, cctx, fullNode, r, ssize, gasPrice); err != nil {
+		if err := storageMinerInit(ctx, cctx, fullNode, defaultCfg, ssize, gasPrice); err != nil {
 			log.Errorf("Failed to initialize venus-miner: %+v", err)
-			path, err := homedir.Expand(repoPath)
+			path, err := homedir.Expand(defaultCfg.DataDir)
 			if err != nil {
 				return err
 			}
@@ -264,21 +255,25 @@ var initCmd = &cli.Command{
 		}
 
 		// TODO: Point to setting storage price, maybe do it interactively or something
-		log.Info("Miner successfully created, you can now start it with 'venus-sealer run'")
+		log.Info("Sealer successfully created, you can now start it with 'venus-sealer run'")
 
 		return nil
 	},
 }
 
-func storageMinerInit(ctx context.Context, cctx *cli.Context, api api.FullNode, r repo.Repo, ssize abi.SectorSize, gasPrice types.BigInt) error {
-	lr, err := r.Lock(repo.StorageMiner)
+func storageMinerInit(ctx context.Context, cctx *cli.Context, api api.FullNode, cfg *config.StorageMiner, ssize abi.SectorSize, gasPrice types.BigInt) error {
+	log.Info("Initializing libp2p identity")
+	repo, err := models.SetDataBase(config.HomeDir(cfg.DataDir), &cfg.DB)
 	if err != nil {
 		return err
 	}
-	defer lr.Close() //nolint:errcheck
+	err = repo.AutoMigrate()
+	if err != nil {
+		return err
+	}
 
-	log.Info("Initializing libp2p identity")
-
+	metaDataService := service.NewMetadataService(repo)
+	sectorInfoService := service.NewSectorInfoService(repo)
 	p2pSk, _, err := crypto.GenerateEd25519Key(rand.Reader)
 	if err != nil {
 		return xerrors.Errorf("make host key: %w", err)
@@ -289,11 +284,6 @@ func storageMinerInit(ctx context.Context, cctx *cli.Context, api api.FullNode, 
 		return xerrors.Errorf("peer ID from private key: %w", err)
 	}
 
-	mds, err := lr.Datastore("/metadata")
-	if err != nil {
-		return err
-	}
-
 	var addr address.Address
 	if act := cctx.String("actor"); act != "" {
 		a, err := address.NewFromString(act)
@@ -302,7 +292,7 @@ func storageMinerInit(ctx context.Context, cctx *cli.Context, api api.FullNode, 
 		}
 
 		if cctx.Bool("genesis-miner") {
-			if err := mds.Put(datastore.NewKey("miner-address"), a.Bytes()); err != nil {
+			if err := metaDataService.SaveMinerAddress(a); err != nil {
 				return err
 			}
 			if pssb := cctx.String("pre-sealed-metadata"); pssb != "" {
@@ -313,7 +303,7 @@ func storageMinerInit(ctx context.Context, cctx *cli.Context, api api.FullNode, 
 
 				log.Infof("Importing pre-sealed sector metadata for %s", a)
 
-				if err := migratePreSealMeta(ctx, api, pssb, a, mds); err != nil {
+				if err := migratePreSealMeta(ctx, api, pssb, a, metaDataService, sectorInfoService); err != nil {
 					return xerrors.Errorf("migrating presealed sector metadata: %w", err)
 				}
 			}
@@ -329,7 +319,7 @@ func storageMinerInit(ctx context.Context, cctx *cli.Context, api api.FullNode, 
 
 			log.Infof("Importing pre-sealed sector metadata for %s", a)
 
-			if err := migratePreSealMeta(ctx, api, pssb, a, mds); err != nil {
+			if err := migratePreSealMeta(ctx, api, pssb, a, metaDataService, sectorInfoService); err != nil {
 				return xerrors.Errorf("migrating presealed sector metadata: %w", err)
 			}
 		}
@@ -345,7 +335,8 @@ func storageMinerInit(ctx context.Context, cctx *cli.Context, api api.FullNode, 
 	}
 
 	log.Infof("Created new miner: %s", addr)
-	if err := mds.Put(datastore.NewKey("miner-address"), addr.Bytes()); err != nil {
+
+	if err := metaDataService.SaveMinerAddress(addr); err != nil {
 		return err
 	}
 
@@ -470,7 +461,7 @@ func createStorageMiner(ctx context.Context, nodeAPI api.FullNode, peerid peer.I
 	return retval.IDAddress, nil
 }
 
-func migratePreSealMeta(ctx context.Context, api api.FullNode, metadata string, maddr address.Address, mds dtypes.MetadataDS) error {
+func migratePreSealMeta(ctx context.Context, api api.FullNode, metadata string, maddr address.Address, metadataService *service.MetadataService, sectorInfoService *service.SectorInfoService) error {
 	metadata, err := homedir.Expand(metadata)
 	if err != nil {
 		return xerrors.Errorf("expanding preseal dir: %w", err)
@@ -501,7 +492,7 @@ func migratePreSealMeta(ctx context.Context, api api.FullNode, metadata string, 
 
 	maxSectorID := abi.SectorNumber(0)
 	for _, sector := range meta.Sectors {
-		sectorKey := datastore.NewKey(sealing.SectorStorePrefix).ChildString(fmt.Sprint(sector.SectorID))
+		//	sectorKey := datastore.NewKey(sealing.SectorStorePrefix).ChildString(fmt.Sprint(sector.SectorID))
 
 		dealID, err := findMarketDealID(ctx, api, sector.Deal)
 		if err != nil {
@@ -510,18 +501,18 @@ func migratePreSealMeta(ctx context.Context, api api.FullNode, metadata string, 
 		commD := sector.CommD
 		commR := sector.CommR
 
-		info := &sealing.SectorInfo{
-			State:        sealing.Proving,
+		info := &types2.SectorInfo{
+			State:        types2.Proving,
 			SectorNumber: sector.SectorID,
-			Pieces: []sealing.Piece{
+			Pieces: []types2.Piece{
 				{
 					Piece: abi.PieceInfo{
 						Size:     abi.PaddedPieceSize(meta.SectorSize),
 						PieceCID: commD,
 					},
-					DealInfo: &sealing.DealInfo{
+					DealInfo: &types2.DealInfo{
 						DealID: dealID,
-						DealSchedule: sealing.DealSchedule{
+						DealSchedule: types2.DealSchedule{
 							StartEpoch: sector.Deal.StartEpoch,
 							EndEpoch:   sector.Deal.EndEpoch,
 						},
@@ -539,12 +530,7 @@ func migratePreSealMeta(ctx context.Context, api api.FullNode, metadata string, 
 			CommitMessage:    nil,
 		}
 
-		b, err := cborutil.Dump(info)
-		if err != nil {
-			return err
-		}
-
-		if err := mds.Put(sectorKey, b); err != nil {
+		if err := sectorInfoService.Save(info); err != nil {
 			return err
 		}
 
@@ -577,15 +563,11 @@ func migratePreSealMeta(ctx context.Context, api api.FullNode, metadata string, 
 			return err
 		}
 
-		if err := mds.Put(dealKey, b); err != nil {
+		if err := metadataService.Put(dealKey, b); err != nil {
 			return err
 		}*/
 	}
-
-	buf := make([]byte, binary.MaxVarintLen64)
-	size := binary.PutUvarint(buf, uint64(maxSectorID))
-
-	return mds.Put(datastore.NewKey(venus_sealer.StorageCounterDSPrefix), buf[:size])
+	return metadataService.SetStorageCounter(uint64(maxSectorID))
 }
 
 func findMarketDealID(ctx context.Context, api api.FullNode, deal market2.DealProposal) (abi.DealID, error) {

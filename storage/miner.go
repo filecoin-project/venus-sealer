@@ -5,6 +5,8 @@ import (
 	"errors"
 	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 	"github.com/filecoin-project/venus-sealer/constants"
+	"github.com/filecoin-project/venus-sealer/service"
+	types2 "github.com/filecoin-project/venus-sealer/types"
 	chain2 "github.com/filecoin-project/venus/app/submodule/chain"
 	"github.com/filecoin-project/venus/app/submodule/syncer"
 	"github.com/filecoin-project/venus/pkg/chain"
@@ -17,7 +19,6 @@ import (
 	"github.com/filecoin-project/go-bitfield"
 
 	"github.com/ipfs/go-cid"
-	"github.com/ipfs/go-datastore"
 	logging "github.com/ipfs/go-log/v2"
 	"golang.org/x/xerrors"
 
@@ -25,14 +26,13 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/crypto"
 	"github.com/filecoin-project/specs-storage/storage"
-	sectorstorage "github.com/filecoin-project/venus-sealer/extern/sector-storage"
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/ffiwrapper"
+	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
+	"github.com/filecoin-project/venus-sealer/sector-storage/ffiwrapper"
 
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/config"
-	"github.com/filecoin-project/venus-sealer/dtypes"
-	sealing "github.com/filecoin-project/venus-sealer/extern/storage-sealing"
 	"github.com/filecoin-project/venus-sealer/journal"
+	sealing "github.com/filecoin-project/venus-sealer/storage-sealing"
 	"github.com/filecoin-project/venus/pkg/events"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
@@ -43,17 +43,19 @@ import (
 var log = logging.Logger("storageminer")
 
 type Miner struct {
-	api     storageMinerApi
-	feeCfg  config.MinerFeeConfig
-	sealer  sectorstorage.SectorManager
-	ds      datastore.Batching
-	sc      sealing.SectorIDCounter
-	verif   ffiwrapper.Verifier
-	addrSel *AddressSelector
+	api               storageMinerApi
+	feeCfg            config.MinerFeeConfig
+	sealer            sectorstorage.SectorManager
+	metadataService   *service.MetadataService
+	sectorInfoService *service.SectorInfoService
+	logService        *service.LogService
+	sc                types2.SectorIDCounter
+	verif             ffiwrapper.Verifier
+	addrSel           *AddressSelector
 
 	maddr         address.Address
 	networkParams *config.NetParamsConfig
-	getSealConfig dtypes.GetSealingConfigFunc
+	getSealConfig types2.GetSealingConfigFunc
 	sealing       *sealing.Sealing
 
 	sealingEvtType journal.EventType
@@ -65,8 +67,8 @@ type Miner struct {
 type SealingStateEvt struct {
 	SectorNumber abi.SectorNumber
 	SectorType   abi.RegisteredSealProof
-	From         sealing.SectorState
-	After        sealing.SectorState
+	From         types2.SectorState
+	After        types2.SectorState
 	Error        string
 }
 
@@ -117,20 +119,22 @@ type storageMinerApi interface {
 	WalletHas(context.Context, address.Address) (bool, error)
 }
 
-func NewMiner(api storageMinerApi, maddr address.Address, ds datastore.Batching, sealer sectorstorage.SectorManager, sc sealing.SectorIDCounter, verif ffiwrapper.Verifier, gsd dtypes.GetSealingConfigFunc, feeCfg config.MinerFeeConfig, journal journal.Journal, as *AddressSelector, networkParams *config.NetParamsConfig) (*Miner, error) {
+func NewMiner(api storageMinerApi, maddr address.Address, metaService *service.MetadataService, sectorInfoService *service.SectorInfoService, logService *service.LogService, sealer sectorstorage.SectorManager, sc types2.SectorIDCounter, verif ffiwrapper.Verifier, gsd types2.GetSealingConfigFunc, feeCfg config.MinerFeeConfig, journal journal.Journal, as *AddressSelector, networkParams *config.NetParamsConfig) (*Miner, error) {
 	m := &Miner{
-		api:            api,
-		feeCfg:         feeCfg,
-		sealer:         sealer,
-		ds:             ds,
-		sc:             sc,
-		verif:          verif,
-		addrSel:        as,
-		networkParams:  networkParams,
-		maddr:          maddr,
-		getSealConfig:  gsd,
-		journal:        journal,
-		sealingEvtType: journal.RegisterEventType("storage", "sealing_states"),
+		api:               api,
+		feeCfg:            feeCfg,
+		sealer:            sealer,
+		metadataService:   metaService,
+		sectorInfoService: sectorInfoService,
+		sc:                sc,
+		verif:             verif,
+		addrSel:           as,
+		networkParams:     networkParams,
+		maddr:             maddr,
+		getSealConfig:     gsd,
+		journal:           journal,
+		logService:        logService,
+		sealingEvtType:    journal.RegisterEventType("storage", "sealing_states"),
 	}
 
 	return m, nil
@@ -161,14 +165,14 @@ func (m *Miner) Run(ctx context.Context) error {
 		return m.addrSel.AddressFor(ctx, m.api, mi, use, goodFunds, minFunds)
 	}
 
-	m.sealing = sealing.New(adaptedAPI, fc, NewEventsAdapter(evts), m.maddr, m.ds, m.sealer, m.sc, m.verif, &pcp, sealing.GetSealingConfigFunc(m.getSealConfig), m.handleSealingNotifications, as, m.networkParams)
+	m.sealing = sealing.New(adaptedAPI, fc, NewEventsAdapter(evts), m.maddr, m.metadataService, m.sectorInfoService, m.logService, m.sealer, m.sc, m.verif, &pcp, types2.GetSealingConfigFunc(m.getSealConfig), m.handleSealingNotifications, as, m.networkParams)
 
 	go m.sealing.Run(ctx) //nolint:errcheck // logged intside the function
 
 	return nil
 }
 
-func (m *Miner) handleSealingNotifications(before, after sealing.SectorInfo) {
+func (m *Miner) handleSealingNotifications(before, after types2.SectorInfo) {
 	m.journal.RecordEvent(m.sealingEvtType, func() interface{} {
 		return SealingStateEvt{
 			SectorNumber: before.SectorNumber,
@@ -215,7 +219,7 @@ type StorageWpp struct {
 	winnRpt  abi.RegisteredPoStProof
 }
 
-func NewWinningPoStProver(api api.FullNode, prover storage.Prover, verifier ffiwrapper.Verifier, miner dtypes.MinerID) (*StorageWpp, error) {
+func NewWinningPoStProver(api api.FullNode, prover storage.Prover, verifier ffiwrapper.Verifier, miner types2.MinerID) (*StorageWpp, error) {
 	ma, err := address.NewIDAddress(uint64(miner))
 	if err != nil {
 		return nil, err

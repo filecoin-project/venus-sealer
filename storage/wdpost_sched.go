@@ -14,9 +14,9 @@ import (
 	"github.com/filecoin-project/specs-storage/storage"
 
 	"github.com/filecoin-project/venus-sealer/config"
-	sectorstorage "github.com/filecoin-project/venus-sealer/extern/sector-storage"
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/ffiwrapper"
 	"github.com/filecoin-project/venus-sealer/journal"
+	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
+	"github.com/filecoin-project/venus-sealer/sector-storage/ffiwrapper"
 	"github.com/filecoin-project/venus/pkg/types"
 
 	"go.opencensus.io/trace"

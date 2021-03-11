@@ -2,14 +2,13 @@ package storage
 
 import (
 	"context"
+	"github.com/filecoin-project/venus-sealer/types"
 	"io"
 
 	"github.com/ipfs/go-cid"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
-
-	sealing "github.com/filecoin-project/venus-sealer/extern/storage-sealing"
 )
 
 // TODO: refactor this to be direct somehow
@@ -18,7 +17,7 @@ func (m *Miner) Address() address.Address {
 	return m.sealing.Address()
 }
 
-func (m *Miner) AddPieceToAnySector(ctx context.Context, size abi.UnpaddedPieceSize, r io.Reader, d sealing.DealInfo) (abi.SectorNumber, abi.PaddedPieceSize, error) {
+func (m *Miner) AddPieceToAnySector(ctx context.Context, size abi.UnpaddedPieceSize, r io.Reader, d types.DealInfo) (abi.SectorNumber, abi.PaddedPieceSize, error) {
 	return m.sealing.AddPieceToAnySector(ctx, size, r, d)
 }
 
@@ -26,11 +25,11 @@ func (m *Miner) StartPackingSector(sectorNum abi.SectorNumber) error {
 	return m.sealing.StartPacking(sectorNum)
 }
 
-func (m *Miner) ListSectors() ([]sealing.SectorInfo, error) {
+func (m *Miner) ListSectors() ([]types.SectorInfo, error) {
 	return m.sealing.ListSectors()
 }
 
-func (m *Miner) GetSectorInfo(sid abi.SectorNumber) (sealing.SectorInfo, error) {
+func (m *Miner) GetSectorInfo(sid abi.SectorNumber) (types.SectorInfo, error) {
 	return m.sealing.GetSectorInfo(sid)
 }
 
@@ -38,7 +37,7 @@ func (m *Miner) PledgeSector() error {
 	return m.sealing.PledgeSector()
 }
 
-func (m *Miner) ForceSectorState(ctx context.Context, id abi.SectorNumber, state sealing.SectorState) error {
+func (m *Miner) ForceSectorState(ctx context.Context, id abi.SectorNumber, state types.SectorState) error {
 	return m.sealing.ForceSectorState(ctx, id, state)
 }
 

@@ -2,13 +2,13 @@ package main
 
 import (
 	"context"
+	"github.com/filecoin-project/venus-sealer/types"
 	"strings"
 
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/venus-sealer/api"
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/sealtasks"
 )
 
 var tasksCmd = &cli.Command{
@@ -20,12 +20,12 @@ var tasksCmd = &cli.Command{
 	},
 }
 
-var allowSetting = map[sealtasks.TaskType]struct{}{
-	sealtasks.TTAddPiece:   {},
-	sealtasks.TTPreCommit1: {},
-	sealtasks.TTPreCommit2: {},
-	sealtasks.TTCommit2:    {},
-	sealtasks.TTUnseal:     {},
+var allowSetting = map[types.TaskType]struct{}{
+	types.TTAddPiece:   {},
+	types.TTPreCommit1: {},
+	types.TTPreCommit2: {},
+	types.TTCommit2:    {},
+	types.TTUnseal:     {},
 }
 
 var settableStr = func() string {
@@ -50,13 +50,13 @@ var tasksDisableCmd = &cli.Command{
 	Action:    taskAction(api.WorkerAPI.TaskDisable),
 }
 
-func taskAction(tf func(a api.WorkerAPI, ctx context.Context, tt sealtasks.TaskType) error) func(cctx *cli.Context) error {
+func taskAction(tf func(a api.WorkerAPI, ctx context.Context, tt types.TaskType) error) func(cctx *cli.Context) error {
 	return func(cctx *cli.Context) error {
 		if cctx.NArg() != 1 {
 			return xerrors.Errorf("expected 1 argument")
 		}
 
-		var tt sealtasks.TaskType
+		var tt types.TaskType
 		for taskType := range allowSetting {
 			if taskType.Short() == cctx.Args().First() {
 				tt = taskType

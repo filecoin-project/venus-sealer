@@ -274,16 +274,6 @@ type SectorInfo struct {
 	Early abi.ChainEpoch
 }
 
-type SealedRef struct {
-	SectorID abi.SectorNumber
-	Offset   abi.PaddedPieceSize
-	Size     abi.UnpaddedPieceSize
-}
-
-type SealedRefs struct {
-	Refs []SealedRef
-}
-
 type SealTicket struct {
 	Value abi.SealRandomness
 	Epoch abi.ChainEpoch

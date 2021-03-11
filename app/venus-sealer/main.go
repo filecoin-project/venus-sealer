@@ -5,7 +5,6 @@ import (
 	sealer "github.com/filecoin-project/venus-sealer"
 	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus-sealer/lib/tracing"
-	"github.com/filecoin-project/venus-sealer/repo"
 	logging "github.com/ipfs/go-log/v2"
 	"github.com/urfave/cli/v2"
 	"go.opencensus.io/trace"
@@ -14,11 +13,6 @@ import (
 )
 
 var log = logging.Logger("main")
-
-const FlagMinerRepo = "miner-repo"
-
-// TODO remove after deprecation period
-const FlagMinerRepoDeprecation = "storagerepo"
 
 func main() {
 	sealer.SetupLogLevels()
@@ -63,23 +57,28 @@ func main() {
 				Name: "color",
 			},
 			&cli.StringFlag{
-				Name:    "repo",
-				EnvVars: []string{"LOTUS_PATH"},
+				Name:    "data",
+				EnvVars: []string{"VENUS_SEALER_PATH"},
 				Hidden:  true,
-				Value:   "~/.venus", // TODO: Consider XDG_DATA_HOME
+				Value:   "~/.venussealer", // TODO: Consider XDG_DATA_HOME
 			},
 			&cli.StringFlag{
-				Name:    FlagMinerRepo,
-				Aliases: []string{FlagMinerRepoDeprecation},
-				EnvVars: []string{"LOTUS_MINER_PATH", "LOTUS_STORAGE_PATH"},
-				Value:   "~/.venussealer", // TODO: Consider XDG_DATA_HOME
-				Usage:   fmt.Sprintf("Specify miner repo path. flag(%s) and env(LOTUS_STORAGE_PATH) are DEPRECATION, will REMOVE SOON", FlagMinerRepoDeprecation),
+				Name:    "config",
+				Aliases: []string{"c"},
+				EnvVars: []string{"VENUS_SEALER_CONFIG"},
+				Hidden:  true,
+				Value:   "~/.venussealer/config.toml", // TODO: Consider XDG_DATA_HOME
+			},
+			&cli.StringFlag{
+				Name:    "repo",
+				EnvVars: []string{"VENUS_PATH"},
+				Hidden:  true,
+				Value:   "~/.venus", // TODO: Consider XDG_DATA_HOME
 			},
 		},
 		Commands: local,
 	}
 	app.Setup()
-	app.Metadata["repoType"] = repo.StorageMiner
 
 	RunApp(app)
 }

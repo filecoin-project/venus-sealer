@@ -2,16 +2,21 @@ package config
 
 import (
 	"encoding/json"
+	"github.com/mitchellh/go-homedir"
 	"io"
 	"io/ioutil"
 	"os"
 
 	"golang.org/x/xerrors"
 
-	"github.com/filecoin-project/venus-sealer/extern/sector-storage/stores"
+	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
 )
 
 func StorageFromFile(path string, def *stores.StorageConfig) (*stores.StorageConfig, error) {
+	path, err := homedir.Expand(path)
+	if err != nil {
+		return nil, err
+	}
 	file, err := os.Open(path)
 	switch {
 	case os.IsNotExist(err):
@@ -37,7 +42,11 @@ func StorageFromReader(reader io.Reader) (*stores.StorageConfig, error) {
 	return &cfg, nil
 }
 
-func WriteStorageFile(path string, config stores.StorageConfig) error {
+func WriteStorageFile(path string, config *stores.StorageConfig) error {
+	path, err := homedir.Expand(path)
+	if err != nil {
+		return err
+	}
 	b, err := json.MarshalIndent(config, "", "  ")
 	if err != nil {
 		return xerrors.Errorf("marshaling storage config: %w", err)

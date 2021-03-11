@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/constants"
+	"github.com/filecoin-project/venus-sealer/types"
 
 	"github.com/gbrlsnchs/jwt/v3"
 	"github.com/google/uuid"
@@ -14,7 +15,6 @@ import (
 	"github.com/filecoin-project/go-jsonrpc/auth"
 
 	"github.com/filecoin-project/venus-sealer/api"
-	"github.com/filecoin-project/venus-sealer/dtypes"
 )
 
 var session = uuid.New()
@@ -22,8 +22,8 @@ var session = uuid.New()
 type CommonAPI struct {
 	fx.In
 
-	APISecret     *dtypes.APIAlg
-	ShutdownChan  dtypes.ShutdownChan
+	APISecret     *types.APIAlg
+	ShutdownChan  types.ShutdownChan
 	NetworkParams *config.NetParamsConfig
 }
 
