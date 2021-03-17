@@ -82,7 +82,7 @@ func (m *Sealing) handlePreCommitFailed(ctx statemachine.Context, sector types.S
 	}
 
 	if sector.PreCommitMessage != nil {
-		mw, err := m.api.StateSearchMsg(ctx.Context(), *sector.PreCommitMessage)
+		mw, err := m.api.MessagerSearchMsg(ctx.Context(), *sector.PreCommitMessage)
 		if err != nil {
 			// API error
 			if err := m.failedCooldown(ctx, sector); err != nil {
@@ -92,6 +92,7 @@ func (m *Sealing) handlePreCommitFailed(ctx statemachine.Context, sector types.S
 			return ctx.Send(SectorRetryPreCommitWait{})
 		}
 
+		//todo which situation err is nil ,and result is nil
 		if mw == nil {
 			// API error in precommit
 			return ctx.Send(SectorRetryPreCommitWait{})
@@ -193,7 +194,7 @@ func (m *Sealing) handleCommitFailed(ctx statemachine.Context, sector types.Sect
 	}
 
 	if sector.CommitMessage != nil {
-		mw, err := m.api.StateSearchMsg(ctx.Context(), *sector.CommitMessage)
+		mw, err := m.api.MessagerSearchMsg(ctx.Context(), *sector.CommitMessage)
 		if err != nil {
 			// API error
 			if err := m.failedCooldown(ctx, sector); err != nil {

@@ -18,6 +18,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/storage"
 	"github.com/filecoin-project/venus-sealer/storage/sectorblocks"
 	"github.com/filecoin-project/venus-sealer/types"
+	"github.com/ipfs-force-community/venus-messager/api/client"
 	logging "github.com/ipfs/go-log/v2"
 	metricsi "github.com/ipfs/go-metrics-interface"
 	"github.com/multiformats/go-multiaddr"
@@ -104,7 +105,6 @@ func New(ctx context.Context, opts ...Option) (StopFunc, error) {
 	return app.Stop, nil
 }
 
-// Online sets up basic libp2p node
 func Online(cfg *config.StorageMiner) Option {
 	return Options(
 		Override(new(MetricsCtx), func() context.Context {
@@ -153,8 +153,10 @@ func Repo(cfg *config.StorageMiner) Option {
 			Override(new(*storage.AddressSelector), AddressSelector(&cfg.Addresses)),
 			Override(new(*config.DbConfig), &cfg.DB),
 			Override(new(*config.StorageMiner), cfg),
+			Override(new(*config.MessagerConfig), &cfg.Messager),
 			ConfigAPI(cfg),
 
+			Override(new(client.IMessager), api.NewMessageRPC),
 			Override(new(repo.Repo), models.SetDataBase),
 			Providers(
 				service.NewDealRefServiceService,

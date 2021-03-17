@@ -18,8 +18,8 @@ require (
 	github.com/filecoin-project/go-commp-utils v0.0.0-20201119054358-b88f7a96a434
 	github.com/filecoin-project/go-data-transfer v1.2.7
 	github.com/filecoin-project/go-fil-commcid v0.0.0-20201016201715-d41df56b4f6a
-	github.com/filecoin-project/go-fil-markets v1.1.2
-	github.com/filecoin-project/go-jsonrpc v0.1.2
+	github.com/filecoin-project/go-fil-markets v1.1.7
+	github.com/filecoin-project/go-jsonrpc v0.1.4-0.20210217175800-45ea43ac2bec
 	github.com/filecoin-project/go-padreader v0.0.0-20201016201355-9c5eb1faedb5
 	github.com/filecoin-project/go-paramfetch v0.0.2-0.20200701152213-3e0f0afdc261
 	github.com/filecoin-project/go-state-types v0.1.0
@@ -30,7 +30,7 @@ require (
 	github.com/filecoin-project/specs-actors/v2 v2.3.4
 	github.com/filecoin-project/specs-actors/v3 v3.0.3
 	github.com/filecoin-project/specs-storage v0.1.1-0.20201105051918-5188d9774506
-	github.com/filecoin-project/venus v0.9.1-0.20210225095040-cb8a4427312b
+	github.com/filecoin-project/venus v0.9.1
 	github.com/gbrlsnchs/jwt/v3 v3.0.0
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/snappy v0.0.2-0.20190904063534-ff6b7dc882cf // indirect
@@ -39,6 +39,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/hako/durafmt v0.0.0-20200710122514-c0fb7b4da026
 	github.com/hashicorp/go-multierror v1.1.0
+	github.com/ipfs-force-community/venus-messager v0.0.0-20210315092247-075942fe61c4
 	github.com/ipfs/go-block-format v0.0.3
 	github.com/ipfs/go-cid v0.0.7
 	github.com/ipfs/go-datastore v0.4.5
@@ -64,7 +65,6 @@ require (
 	github.com/onsi/gomega v1.10.4 // indirect
 	github.com/polydawn/refmt v0.0.0-20201211092308-30ac6d18308e
 	github.com/raulk/clock v1.1.0
-	github.com/sirupsen/logrus v1.7.0 // indirect
 	github.com/stretchr/testify v1.7.0
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/whyrusleeping/cbor-gen v0.0.0-20210219115102-f37d292932f2
@@ -72,7 +72,7 @@ require (
 	github.com/zbiljic/go-filelock v0.0.0-20170914061330-1dbf7103ab7d
 	go.opencensus.io v0.22.6
 	go.uber.org/dig v1.10.0 // indirect
-	go.uber.org/fx v1.9.0
+	go.uber.org/fx v1.13.1
 	go.uber.org/multierr v1.6.0
 	go.uber.org/zap v1.16.0
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
@@ -89,7 +89,6 @@ require (
 	gorm.io/driver/sqlite v1.1.4
 	gorm.io/gorm v1.20.12
 	gotest.tools v2.2.0+incompatible
-	honnef.co/go/tools v0.0.1-2020.1.6 // indirect
 )
 
 replace github.com/filecoin-project/filecoin-ffi => ./extern/filecoin-ffi
@@ -97,3 +96,5 @@ replace github.com/filecoin-project/filecoin-ffi => ./extern/filecoin-ffi
 replace github.com/filecoin-project/go-statemachine => github.com/hunjixin/go-statemachine v0.0.0-20210309063909-a65119041e93
 
 replace github.com/filecoin-project/go-statestore => github.com/hunjixin/go-statestore v0.1.1-0.20210309025204-01c69afffbd7
+
+replace github.com/ipfs-force-community/venus-messager v0.0.0-20210315092247-075942fe61c4 => /Users/lijunlong/Desktop/workload/venus-messager

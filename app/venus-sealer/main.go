@@ -18,7 +18,7 @@ func main() {
 	sealer.SetupLogLevels()
 
 	local := []*cli.Command{
-		initCmd, runCmd, pprofCmd, sectorsCmd, actorCmd, infoCmd, sealingCmd, storageCmd, provingCmd, stopCmd, VersionCmd,
+		initCmd, runCmd, pprofCmd, sectorsCmd, actorCmd, infoCmd, sealingCmd, storageCmd, messagerCmds, provingCmd, stopCmd, versionCmd,
 	}
 	jaeger := tracing.SetupJaegerTracing("venus-sealer")
 	defer func() {
@@ -85,11 +85,7 @@ func main() {
 
 func RunApp(app *cli.App) {
 	if err := app.Run(os.Args); err != nil {
-		if os.Getenv("LOTUS_DEV") != "" {
-			log.Warnf("%+v", err)
-		} else {
-			fmt.Fprintf(os.Stderr, "ERROR: %s\n\n", err) // nolint:errcheck
-		}
+		fmt.Fprintf(os.Stderr, "ERROR: %s\n\n", err) // nolint:errcheck
 		var phe *PrintHelpErr
 		if xerrors.As(err, &phe) {
 			_ = cli.ShowCommandHelp(phe.Ctx, phe.Ctx.Command.Name)

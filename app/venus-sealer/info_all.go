@@ -33,7 +33,7 @@ var infoAllCmd = &cli.Command{
 		// Top-level info
 
 		fmt.Println("#: Version")
-		if err := VersionCmd.Action(cctx); err != nil {
+		if err := versionCmd.Action(cctx); err != nil {
 			return err
 		}
 

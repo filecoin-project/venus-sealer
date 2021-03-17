@@ -272,7 +272,7 @@ func (m *Sealing) handlePreCommitting(ctx statemachine.Context, sector types.Sec
 	}
 
 	log.Infof("submitting precommit for sector %d (deposit: %s): ", sector.SectorNumber, deposit)
-	mcid, err := m.api.SendMsg(ctx.Context(), from, m.maddr, miner.Methods.PreCommitSector, deposit, m.feeCfg.MaxPreCommitGasFee, enc.Bytes())
+	uid, err := m.api.MessagerSendMsg(ctx.Context(), from, m.maddr, miner.Methods.PreCommitSector, deposit, m.feeCfg.MaxPreCommitGasFee, enc.Bytes())
 	if err != nil {
 		if params.ReplaceCapacity {
 			m.remarkForUpgrade(params.ReplaceSectorNumber)
@@ -280,7 +280,7 @@ func (m *Sealing) handlePreCommitting(ctx statemachine.Context, sector types.Sec
 		return ctx.Send(SectorChainPreCommitFailed{xerrors.Errorf("pushing message to mpool: %w", err)})
 	}
 
-	return ctx.Send(SectorPreCommitted{Message: mcid, PreCommitDeposit: deposit, PreCommitInfo: *params})
+	return ctx.Send(SectorPreCommitted{Message: uid, PreCommitDeposit: deposit, PreCommitInfo: *params})
 }
 
 func (m *Sealing) handlePreCommitWait(ctx statemachine.Context, sector types.SectorInfo) error {
@@ -290,7 +290,7 @@ func (m *Sealing) handlePreCommitWait(ctx statemachine.Context, sector types.Sec
 
 	// would be ideal to just use the events.Called handler, but it wouldn't be able to handle individual message timeouts
 	log.Info("Sector precommitted: ", sector.SectorNumber)
-	mw, err := m.api.StateWaitMsg(ctx.Context(), *sector.PreCommitMessage)
+	mw, err := m.api.MessagerWaitMsg(ctx.Context(), *sector.PreCommitMessage)
 	if err != nil {
 		return ctx.Send(SectorChainPreCommitFailed{err})
 	}
@@ -371,7 +371,7 @@ func (m *Sealing) handleCommitting(ctx statemachine.Context, sector types.Sector
 	if sector.CommitMessage != nil {
 		log.Warnf("sector %d entered committing state with a commit message cid", sector.SectorNumber)
 
-		ml, err := m.api.StateSearchMsg(ctx.Context(), *sector.CommitMessage)
+		ml, err := m.api.MessagerSearchMsg(ctx.Context(), *sector.CommitMessage)
 		if err != nil {
 			log.Warnf("sector %d searching existing commit message %s: %+v", sector.SectorNumber, *sector.CommitMessage, err)
 		}
@@ -462,13 +462,13 @@ func (m *Sealing) handleSubmitCommit(ctx statemachine.Context, sector types.Sect
 	}
 
 	// TODO: check seed / ticket / deals are up to date
-	mcid, err := m.api.SendMsg(ctx.Context(), from, m.maddr, miner.Methods.ProveCommitSector, collateral, m.feeCfg.MaxCommitGasFee, enc.Bytes())
+	uid, err := m.api.MessagerSendMsg(ctx.Context(), from, m.maddr, miner.Methods.ProveCommitSector, collateral, m.feeCfg.MaxCommitGasFee, enc.Bytes())
 	if err != nil {
 		return ctx.Send(SectorCommitFailed{xerrors.Errorf("pushing message to mpool: %w", err)})
 	}
 
 	return ctx.Send(SectorCommitSubmitted{
-		Message: mcid,
+		Message: uid,
 	})
 }
 
@@ -478,7 +478,7 @@ func (m *Sealing) handleCommitWait(ctx statemachine.Context, sector types.Sector
 		return ctx.Send(SectorCommitFailed{xerrors.Errorf("entered commit wait with no commit cid")})
 	}
 
-	mw, err := m.api.StateWaitMsg(ctx.Context(), *sector.CommitMessage)
+	mw, err := m.api.MessagerWaitMsg(ctx.Context(), *sector.CommitMessage)
 	if err != nil {
 		return ctx.Send(SectorCommitFailed{xerrors.Errorf("failed to wait for porep inclusion: %w", err)})
 	}

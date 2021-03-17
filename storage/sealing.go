@@ -3,9 +3,8 @@ package storage
 import (
 	"context"
 	"github.com/filecoin-project/venus-sealer/types"
+	types3 "github.com/ipfs-force-community/venus-messager/types"
 	"io"
-
-	"github.com/ipfs/go-cid"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
@@ -49,7 +48,7 @@ func (m *Miner) TerminateSector(ctx context.Context, id abi.SectorNumber) error 
 	return m.sealing.Terminate(ctx, id)
 }
 
-func (m *Miner) TerminateFlush(ctx context.Context) (*cid.Cid, error) {
+func (m *Miner) TerminateFlush(ctx context.Context) (*types3.UUID, error) {
 	return m.sealing.TerminateFlush(ctx)
 }
 

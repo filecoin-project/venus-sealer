@@ -8,6 +8,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/models/repo"
 	"github.com/filecoin-project/venus-sealer/types"
 	"github.com/google/uuid"
+	types3 "github.com/ipfs-force-community/venus-messager/types"
 	"github.com/ipfs/go-cid"
 	"gorm.io/gorm"
 	"sync"
@@ -116,14 +117,14 @@ func (sectorInfo *sectorInfo) SectorInfo() (*types.SectorInfo, error) {
 	}
 
 	if len(sectorInfo.PreCommitMessage) > 0 {
-		preCommitMessage, err := cid.Decode(sectorInfo.PreCommitMessage)
+		preCommitMessage, err := types3.ParseUUID(sectorInfo.PreCommitMessage)
 		if err != nil {
 			return nil, err
 		}
 		sinfo.PreCommitMessage = &preCommitMessage
 	}
 	if len(sectorInfo.CommitMessage) > 0 {
-		commitMsg, err := cid.Decode(sectorInfo.CommitMessage)
+		commitMsg, err := types3.ParseUUID(sectorInfo.CommitMessage)
 		if err != nil {
 			return nil, err
 		}
@@ -147,7 +148,7 @@ func (sectorInfo *sectorInfo) SectorInfo() (*types.SectorInfo, error) {
 	}
 
 	if len(sectorInfo.TerminateMessage) > 0 {
-		terminateMessage, err := cid.Decode(sectorInfo.TerminateMessage)
+		terminateMessage, err := types3.ParseUUID(sectorInfo.TerminateMessage)
 		if err != nil {
 			return nil, err
 		}

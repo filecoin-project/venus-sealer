@@ -24,6 +24,7 @@ import (
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
 	"github.com/filecoin-project/venus/pkg/types"
 	"github.com/gbrlsnchs/jwt/v3"
+	"github.com/ipfs-force-community/venus-messager/api/client"
 	"github.com/ipfs/go-datastore"
 	"github.com/mitchellh/go-homedir"
 	"go.uber.org/fx"
@@ -215,6 +216,7 @@ type StorageMinerParams struct {
 	Lifecycle          fx.Lifecycle
 	MetricsCtx         MetricsCtx
 	API                api.FullNode
+	Messager           client.IMessager
 	MetadataService    *service.MetadataService
 	LogService         *service.LogService
 	SectorInfoService  *service.SectorInfoService
@@ -236,6 +238,7 @@ func StorageMiner(fc config.MinerFeeConfig) func(params StorageMinerParams) (*st
 			mctx              = params.MetricsCtx
 			lc                = params.Lifecycle
 			api               = params.API
+			messager          = params.Messager
 			sealer            = params.Sealer
 			sc                = params.SectorIDCounter
 			verif             = params.Verifier
@@ -252,12 +255,12 @@ func StorageMiner(fc config.MinerFeeConfig) func(params StorageMinerParams) (*st
 
 		ctx := LifecycleCtx(mctx, lc)
 
-		fps, err := storage.NewWindowedPoStScheduler(api, fc, as, sealer, verif, sealer, j, maddr, np)
+		fps, err := storage.NewWindowedPoStScheduler(api, messager, fc, as, sealer, verif, sealer, j, maddr, np)
 		if err != nil {
 			return nil, err
 		}
 
-		sm, err := storage.NewMiner(api, maddr, metadataService, sectorinfoService, logService, sealer, sc, verif, gsd, fc, j, as, np)
+		sm, err := storage.NewMiner(api, messager, maddr, metadataService, sectorinfoService, logService, sealer, sc, verif, gsd, fc, j, as, np)
 		if err != nil {
 			return nil, err
 		}

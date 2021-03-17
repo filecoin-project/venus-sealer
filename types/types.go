@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	builtin0 "github.com/filecoin-project/specs-actors/actors/builtin"
+	types3 "github.com/ipfs-force-community/venus-messager/types"
 	"github.com/ipfs/go-cid"
 
 	"github.com/filecoin-project/go-state-types/abi"
@@ -89,7 +90,7 @@ type SectorInfo struct {
 
 	PreCommitInfo    *miner.SectorPreCommitInfo
 	PreCommitDeposit big.Int
-	PreCommitMessage *cid.Cid
+	PreCommitMessage *types3.UUID
 	PreCommitTipSet  TipSetToken
 
 	PreCommit2Fails uint64
@@ -99,7 +100,7 @@ type SectorInfo struct {
 	SeedEpoch abi.ChainEpoch
 
 	// Committing
-	CommitMessage *cid.Cid
+	CommitMessage *types3.UUID
 	InvalidProofs uint64 // failed proof computations (doesn't validate with proof inputs; can't compute)
 
 	// Faults
@@ -109,7 +110,7 @@ type SectorInfo struct {
 	Return ReturnState
 
 	// Termination
-	TerminateMessage *cid.Cid
+	TerminateMessage *types3.UUID
 	TerminatedAt     abi.ChainEpoch
 
 	// Debug

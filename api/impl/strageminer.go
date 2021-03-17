@@ -10,6 +10,9 @@ import (
 	"github.com/filecoin-project/venus-sealer/service"
 	types2 "github.com/filecoin-project/venus-sealer/types"
 	chain2 "github.com/filecoin-project/venus/app/submodule/chain"
+	"github.com/filecoin-project/venus/pkg/chain"
+	"github.com/ipfs-force-community/venus-messager/api/client"
+	types3 "github.com/ipfs-force-community/venus-messager/types"
 	"net/http"
 	"strconv"
 	"time"
@@ -43,6 +46,7 @@ type StorageMinerAPI struct {
 	SectorBlocks *sectorblocks.SectorBlocks
 	Miner        *storage.Miner
 	Full         api.FullNode
+	Messager     client.IMessager
 	StorageMgr   *sectorstorage.Manager `optional:"true"`
 	IStorageMgr  sectorstorage.SectorManager
 	*stores.Index
@@ -305,7 +309,7 @@ func (sm *StorageMinerAPI) SectorTerminate(ctx context.Context, id abi.SectorNum
 	return sm.Miner.TerminateSector(ctx, id)
 }
 
-func (sm *StorageMinerAPI) SectorTerminateFlush(ctx context.Context) (*cid.Cid, error) {
+func (sm *StorageMinerAPI) SectorTerminateFlush(ctx context.Context) (*types3.UUID, error) {
 	return sm.Miner.TerminateFlush(ctx)
 }
 
@@ -550,6 +554,34 @@ func (sm *StorageMinerAPI) NetParamsConfig(ctx context.Context) (*config.NetPara
 
 func (sm *StorageMinerAPI) ComputeProof(ctx context.Context, sectorInfo []proof2.SectorInfo, randoness abi.PoStRandomness) ([]proof2.PoStProof, error) {
 	return sm.Prover.ComputeProof(ctx, sectorInfo, randoness)
+}
+
+func (sm *StorageMinerAPI) MessagerWaitMessage(ctx context.Context, uuid types3.UUID, confidence uint64) (*chain.MsgLookup, error) {
+	msg, err := sm.Messager.WaitMessage(ctx, uuid, confidence)
+	if err != nil {
+		return nil, err
+	}
+
+	return &chain.MsgLookup{
+		Message: *msg.SignedCid,
+		Receipt: *msg.Receipt,
+		//	ReturnDec interface{}
+		//TipSet   :msg.
+		Height: abi.ChainEpoch(msg.Height),
+	}, nil
+}
+
+func (sm *StorageMinerAPI) MessagerPushMessage(ctx context.Context, msg *types.Message, meta *types3.MsgMeta) (types3.UUID, error) {
+	return sm.Messager.PushMessage(ctx, msg, meta)
+}
+
+func (sm *StorageMinerAPI) MessagerGetMessage(ctx context.Context, uuid types3.UUID) (*types3.Message, error) {
+	msg, err := sm.Messager.GetMessageByUid(ctx, uuid)
+	if err != nil {
+		return nil, err
+	}
+
+	return msg, nil
 }
 
 var _ api.StorageMiner = &StorageMinerAPI{}

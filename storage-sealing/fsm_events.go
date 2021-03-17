@@ -3,6 +3,7 @@ package sealing
 import (
 	"github.com/filecoin-project/venus-sealer/types"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
+	types3 "github.com/ipfs-force-community/venus-messager/types"
 	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
 
@@ -167,7 +168,7 @@ func (evt SectorChainPreCommitFailed) FormatError(xerrors.Printer) (next error) 
 func (evt SectorChainPreCommitFailed) apply(*types.SectorInfo)                  {}
 
 type SectorPreCommitted struct {
-	Message          cid.Cid
+	Message          types3.UUID
 	PreCommitDeposit big.Int
 	PreCommitInfo    miner.SectorPreCommitInfo
 }
@@ -221,7 +222,7 @@ func (evt SectorCommitted) apply(state *types.SectorInfo) {
 }
 
 type SectorCommitSubmitted struct {
-	Message cid.Cid
+	Message types3.UUID
 }
 
 func (evt SectorCommitSubmitted) apply(state *types.SectorInfo) {
@@ -324,7 +325,7 @@ func (evt SectorTerminate) applyGlobal(state *types.SectorInfo) bool {
 	return true
 }
 
-type SectorTerminating struct{ Message *cid.Cid }
+type SectorTerminating struct{ Message *types3.UUID }
 
 func (evt SectorTerminating) apply(state *types.SectorInfo) {
 	state.TerminateMessage = evt.Message

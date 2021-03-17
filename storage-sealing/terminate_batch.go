@@ -5,11 +5,11 @@ import (
 	"context"
 	"github.com/filecoin-project/venus-sealer/types"
 	"github.com/filecoin-project/venus/app/submodule/chain"
+	types3 "github.com/ipfs-force-community/venus-messager/types"
 	"sort"
 	"sync"
 	"time"
 
-	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/go-address"
@@ -33,7 +33,7 @@ var (
 
 type TerminateBatcherApi interface {
 	StateSectorPartition(ctx context.Context, maddr address.Address, sectorNumber abi.SectorNumber, tok types.TipSetToken) (*SectorLocation, error)
-	SendMsg(ctx context.Context, from, to address.Address, method abi.MethodNum, value, maxFee abi.TokenAmount, params []byte) (cid.Cid, error)
+	MessagerSendMsg(ctx context.Context, from, to address.Address, method abi.MethodNum, value, maxFee abi.TokenAmount, params []byte) (types3.UUID, error)
 	StateMinerInfo(context.Context, address.Address, types.TipSetToken) (miner.MinerInfo, error)
 	StateMinerProvingDeadline(context.Context, address.Address, types.TipSetToken) (*dline.Info, error)
 	StateMinerPartitions(ctx context.Context, m address.Address, dlIdx uint64, tok types.TipSetToken) ([]chain.Partition, error)
@@ -48,10 +48,10 @@ type TerminateBatcher struct {
 
 	todo map[SectorLocation]*bitfield.BitField // MinerSectorLocation -> BitField
 
-	waiting map[abi.SectorNumber][]chan cid.Cid
+	waiting map[abi.SectorNumber][]chan types3.UUID
 
 	notify, stop, stopped chan struct{}
-	force                 chan chan *cid.Cid
+	force                 chan chan *types3.UUID
 	lk                    sync.Mutex
 }
 
@@ -64,10 +64,10 @@ func NewTerminationBatcher(mctx context.Context, maddr address.Address, api Term
 		feeCfg:  feeCfg,
 
 		todo:    map[SectorLocation]*bitfield.BitField{},
-		waiting: map[abi.SectorNumber][]chan cid.Cid{},
+		waiting: map[abi.SectorNumber][]chan types3.UUID{},
 
 		notify:  make(chan struct{}, 1),
-		force:   make(chan chan *cid.Cid),
+		force:   make(chan chan *types3.UUID),
 		stop:    make(chan struct{}),
 		stopped: make(chan struct{}),
 	}
@@ -78,8 +78,8 @@ func NewTerminationBatcher(mctx context.Context, maddr address.Address, api Term
 }
 
 func (b *TerminateBatcher) run() {
-	var forceRes chan *cid.Cid
-	var lastMsg *cid.Cid
+	var forceRes chan *types3.UUID
+	var lastMsg *types3.UUID
 
 	for {
 		if forceRes != nil {
@@ -108,7 +108,7 @@ func (b *TerminateBatcher) run() {
 	}
 }
 
-func (b *TerminateBatcher) processBatch(notif, after bool) (*cid.Cid, error) {
+func (b *TerminateBatcher) processBatch(notif, after bool) (*types3.UUID, error) {
 	dl, err := b.api.StateMinerProvingDeadline(b.mctx, b.maddr, nil)
 	if err != nil {
 		return nil, xerrors.Errorf("getting proving deadline info failed: %w", err)
@@ -205,7 +205,7 @@ func (b *TerminateBatcher) processBatch(notif, after bool) (*cid.Cid, error) {
 		return nil, xerrors.Errorf("no good address found: %w", err)
 	}
 
-	mcid, err := b.api.SendMsg(b.mctx, from, b.maddr, miner.Methods.TerminateSectors, big.Zero(), b.feeCfg.MaxTerminateGasFee, enc.Bytes())
+	mcid, err := b.api.MessagerSendMsg(b.mctx, from, b.maddr, miner.Methods.TerminateSectors, big.Zero(), b.feeCfg.MaxTerminateGasFee, enc.Bytes())
 	if err != nil {
 		return nil, xerrors.Errorf("sending message failed: %w", err)
 	}
@@ -235,33 +235,33 @@ func (b *TerminateBatcher) processBatch(notif, after bool) (*cid.Cid, error) {
 
 // register termination, wait for batch message, return message CID
 // can return cid.Undef,true if the sector is already terminated on-chain
-func (b *TerminateBatcher) AddTermination(ctx context.Context, s abi.SectorID) (mcid cid.Cid, terminated bool, err error) {
+func (b *TerminateBatcher) AddTermination(ctx context.Context, s abi.SectorID) (mcid types3.UUID, terminated bool, err error) {
 	maddr, err := address.NewIDAddress(uint64(s.Miner))
 	if err != nil {
-		return cid.Undef, false, err
+		return types3.UUID{}, false, err
 	}
 
 	loc, err := b.api.StateSectorPartition(ctx, maddr, s.Number, nil)
 	if err != nil {
-		return cid.Undef, false, xerrors.Errorf("getting sector location: %w", err)
+		return types3.UUID{}, false, xerrors.Errorf("getting sector location: %w", err)
 	}
 	if loc == nil {
-		return cid.Undef, false, xerrors.New("sector location not found")
+		return types3.UUID{}, false, xerrors.New("sector location not found")
 	}
 
 	{
 		// check if maybe already terminated
 		parts, err := b.api.StateMinerPartitions(ctx, maddr, loc.Deadline, nil)
 		if err != nil {
-			return cid.Cid{}, false, xerrors.Errorf("getting partitions: %w", err)
+			return types3.UUID{}, false, xerrors.Errorf("getting partitions: %w", err)
 		}
 		live, err := parts[loc.Partition].LiveSectors.IsSet(uint64(s.Number))
 		if err != nil {
-			return cid.Cid{}, false, xerrors.Errorf("checking if sector is in live set: %w", err)
+			return types3.UUID{}, false, xerrors.Errorf("checking if sector is in live set: %w", err)
 		}
 		if !live {
 			// already terminated
-			return cid.Undef, true, nil
+			return types3.UUID{}, true, nil
 		}
 	}
 
@@ -274,7 +274,7 @@ func (b *TerminateBatcher) AddTermination(ctx context.Context, s abi.SectorID) (
 	}
 	bf.Set(uint64(s.Number))
 
-	sent := make(chan cid.Cid, 1)
+	sent := make(chan types3.UUID, 1)
 	b.waiting[s.Number] = append(b.waiting[s.Number], sent)
 
 	select {
@@ -287,12 +287,12 @@ func (b *TerminateBatcher) AddTermination(ctx context.Context, s abi.SectorID) (
 	case c := <-sent:
 		return c, false, nil
 	case <-ctx.Done():
-		return cid.Undef, false, ctx.Err()
+		return types3.UUID{}, false, ctx.Err()
 	}
 }
 
-func (b *TerminateBatcher) Flush(ctx context.Context) (*cid.Cid, error) {
-	resCh := make(chan *cid.Cid, 1)
+func (b *TerminateBatcher) Flush(ctx context.Context) (*types3.UUID, error) {
+	resCh := make(chan *types3.UUID, 1)
 	select {
 	case b.force <- resCh:
 		select {

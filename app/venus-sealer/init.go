@@ -54,10 +54,6 @@ var initCmd = &cli.Command{
 			Usage:  "enable genesis mining (DON'T USE ON BOOTSTRAPPED NETWORK)",
 			Hidden: true,
 		},
-		&cli.BoolFlag{
-			Name:  "create-worker-key",
-			Usage: "create separate worker key",
-		},
 		&cli.StringFlag{
 			Name:    "worker",
 			Aliases: []string{"w"},
@@ -107,6 +103,15 @@ var initCmd = &cli.Command{
 			Usage:       "set network type mainnet calibration 2k",
 			Value:       "mainnet",
 			DefaultText: "mainnet",
+		},
+
+		&cli.StringFlag{
+			Name:  "messager-url",
+			Usage: "messager usrl",
+		},
+		&cli.StringFlag{
+			Name:  "messager-token",
+			Usage: "messager token",
 		},
 	},
 	Action: func(cctx *cli.Context) error {
@@ -166,6 +171,14 @@ var initCmd = &cli.Command{
 		defaultCfg.ConfigPath = cfgPath
 		if cctx.IsSet("data") {
 			defaultCfg.DataDir = cctx.String("data")
+		}
+
+		if cctx.IsSet("messager-url") {
+			defaultCfg.Messager.Url = cctx.String("messager-url")
+		}
+
+		if cctx.IsSet("messager-token") {
+			defaultCfg.Messager.Token = cctx.String("messager-token")
 		}
 
 		exit, err := config.ConfigExist(defaultCfg.DataDir)
@@ -363,11 +376,9 @@ func createStorageMiner(ctx context.Context, nodeAPI api.FullNode, peerid peer.I
 	worker := owner
 	if cctx.String("worker") != "" {
 		worker, err = address.NewFromString(cctx.String("worker"))
-	} else if cctx.Bool("create-worker-key") { // TODO: Do we need to force this if owner is Secpk?
-		worker, err = nodeAPI.WalletNew(ctx, types.KTBLS)
-	}
-	if err != nil {
-		return address.Address{}, err
+		if err != nil {
+			return address.Address{}, err
+		}
 	}
 
 	// make sure the worker account exists on chain

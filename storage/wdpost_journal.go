@@ -4,6 +4,7 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/dline"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
+	types3 "github.com/ipfs-force-community/venus-messager/types"
 
 	"github.com/ipfs/go-cid"
 )
@@ -63,7 +64,7 @@ type WdPoStProofsProcessedEvt struct {
 type WdPoStRecoveriesProcessedEvt struct {
 	evtCommon
 	Declarations []miner.RecoveryDeclaration
-	MessageCID   cid.Cid `json:",omitempty"`
+	MessageUID   types3.UUID `json:",omitempty"`
 }
 
 // WdPoStFaultsProcessedEvt is the journal event that gets recorded when
@@ -71,5 +72,5 @@ type WdPoStRecoveriesProcessedEvt struct {
 type WdPoStFaultsProcessedEvt struct {
 	evtCommon
 	Declarations []miner.FaultDeclaration
-	MessageCID   cid.Cid `json:",omitempty"`
+	MessageUID   types3.UUID `json:",omitempty"`
 }

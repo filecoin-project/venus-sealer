@@ -81,7 +81,7 @@ func (m *Sealing) handleTerminateWait(ctx statemachine.Context, sector types.Sec
 		return xerrors.New("entered TerminateWait with nil TerminateMessage")
 	}
 
-	mw, err := m.api.StateWaitMsg(ctx.Context(), *sector.TerminateMessage)
+	mw, err := m.api.MessagerWaitMsg(ctx.Context(), *sector.TerminateMessage)
 	if err != nil {
 		return ctx.Send(SectorTerminateFailed{xerrors.Errorf("waiting for terminate message to land on chain: %w", err)})
 	}
