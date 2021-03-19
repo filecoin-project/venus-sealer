@@ -5,6 +5,7 @@ import (
 	"context"
 	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus/app/submodule/chain"
+	types3 "github.com/ipfs-force-community/venus-messager/types"
 	"time"
 
 	"github.com/filecoin-project/go-bitfield"
@@ -234,7 +235,7 @@ func (s *WindowPoStScheduler) checkSectors(ctx context.Context, check bitfield.B
 	return sbf, nil
 }
 
-func (s *WindowPoStScheduler) checkNextRecoveries(ctx context.Context, dlIdx uint64, partitions []chain.Partition, tsk types.TipSetKey) ([]miner.RecoveryDeclaration, *types.SignedMessage, error) {
+func (s *WindowPoStScheduler) checkNextRecoveries(ctx context.Context, dlIdx uint64, partitions []chain.Partition, tsk types.TipSetKey) ([]miner.RecoveryDeclaration, *types3.MessageWithUID, error) {
 	ctx, span := trace.StartSpan(ctx, "storage.checkNextRecoveries")
 	defer span.End()
 
@@ -296,7 +297,7 @@ func (s *WindowPoStScheduler) checkNextRecoveries(ctx context.Context, dlIdx uin
 		return recoveries, nil, xerrors.Errorf("could not serialize declare recoveries parameters: %w", aerr)
 	}
 
-	msg := &types.Message{
+	msg := &types.UnsignedMessage{
 		To:     s.actor,
 		Method: miner.Methods.DeclareFaultsRecovered,
 		Params: enc,
@@ -307,14 +308,18 @@ func (s *WindowPoStScheduler) checkNextRecoveries(ctx context.Context, dlIdx uin
 		return recoveries, nil, err
 	}
 
-	sm, err := s.api.MpoolPushMessage(ctx, msg, &types.MessageSendSpec{MaxFee: abi.TokenAmount(s.feeCfg.MaxWindowPoStGasFee)})
+	uid, err := s.Messager.PushMessage(ctx, msg, &types3.MsgMeta{MaxFee: abi.TokenAmount(s.feeCfg.MaxWindowPoStGasFee)})
 	if err != nil {
-		return recoveries, sm, xerrors.Errorf("pushing message to mpool: %w", err)
+		return recoveries, nil, xerrors.Errorf("pushing message to mpool: %w", err)
 	}
 
-	log.Warnw("declare faults recovered Message CID", "cid", sm.Cid())
+	sm := &types3.MessageWithUID{
+		UnsignedMessage: *msg,
+		ID:              uid,
+	}
+	log.Warnw("declare faults recovered Message CID", "uid", uid)
 
-	rec, err := s.api.StateWaitMsg(context.TODO(), sm.Cid(), constants.MessageConfidence)
+	rec, err := s.Messager.WaitMessage(context.TODO(), uid, constants.MessageConfidence)
 	if err != nil {
 		return recoveries, sm, xerrors.Errorf("declare faults recovered wait error: %w", err)
 	}
@@ -326,7 +331,7 @@ func (s *WindowPoStScheduler) checkNextRecoveries(ctx context.Context, dlIdx uin
 	return recoveries, sm, nil
 }
 
-func (s *WindowPoStScheduler) checkNextFaults(ctx context.Context, dlIdx uint64, partitions []chain.Partition, tsk types.TipSetKey) ([]miner.FaultDeclaration, *types.SignedMessage, error) {
+func (s *WindowPoStScheduler) checkNextFaults(ctx context.Context, dlIdx uint64, partitions []chain.Partition, tsk types.TipSetKey) ([]miner.FaultDeclaration, *types3.MessageWithUID, error) {
 	ctx, span := trace.StartSpan(ctx, "storage.checkNextFaults")
 	defer span.End()
 
@@ -392,14 +397,17 @@ func (s *WindowPoStScheduler) checkNextFaults(ctx context.Context, dlIdx uint64,
 		return faults, nil, err
 	}
 
-	sm, err := s.api.MpoolPushMessage(ctx, msg, spec)
+	uid, err := s.Messager.PushMessage(ctx, msg, &types3.MsgMeta{MaxFee: spec.MaxFee})
 	if err != nil {
-		return faults, sm, xerrors.Errorf("pushing message to mpool: %w", err)
+		return faults, nil, xerrors.Errorf("pushing message to mpool: %w", err)
 	}
+	sm := &types3.MessageWithUID{
+		UnsignedMessage: *msg,
+		ID:              uid,
+	}
+	log.Warnw("declare faults Message CID", "uuid", sm.ID)
 
-	log.Warnw("declare faults Message CID", "cid", sm.Cid())
-
-	rec, err := s.api.StateWaitMsg(context.TODO(), sm.Cid(), constants.MessageConfidence)
+	rec, err := s.Messager.WaitMessage(context.TODO(), sm.ID, constants.MessageConfidence)
 	if err != nil {
 		return faults, sm, xerrors.Errorf("declare faults wait error: %w", err)
 	}
@@ -429,22 +437,22 @@ func (s *WindowPoStScheduler) runPost(ctx context.Context, di dline.Info, ts *ty
 		}
 
 		var (
-			sigmsg     *types.SignedMessage
+			uidMsg     *types3.MessageWithUID
 			recoveries []miner.RecoveryDeclaration
 			faults     []miner.FaultDeclaration
 
 			// optionalCid returns the CID of the message, or cid.Undef is the
 			// message is nil. We don't need the argument (could capture the
 			// pointer), but it's clearer and purer like that.
-			optionalCid = func(sigmsg *types.SignedMessage) cid.Cid {
-				if sigmsg == nil {
-					return cid.Undef
+			optionalUid = func(uidMsg *types3.MessageWithUID) types3.UUID {
+				if uidMsg == nil {
+					return types3.UUID{}
 				}
-				return sigmsg.Cid()
+				return uidMsg.ID
 			}
 		)
 
-		if recoveries, sigmsg, err = s.checkNextRecoveries(context.TODO(), declDeadline, partitions, ts.Key()); err != nil {
+		if recoveries, uidMsg, err = s.checkNextRecoveries(context.TODO(), declDeadline, partitions, ts.Key()); err != nil {
 			// TODO: This is potentially quite bad, but not even trying to post when this fails is objectively worse
 			log.Errorf("checking sector recoveries: %v", err)
 		}
@@ -453,7 +461,7 @@ func (s *WindowPoStScheduler) runPost(ctx context.Context, di dline.Info, ts *ty
 			j := WdPoStRecoveriesProcessedEvt{
 				evtCommon:    s.getEvtCommon(err),
 				Declarations: recoveries,
-				MessageCID:   optionalCid(sigmsg),
+				MessageUID:   optionalUid(uidMsg),
 			}
 			j.Error = err
 			return j
@@ -463,7 +471,7 @@ func (s *WindowPoStScheduler) runPost(ctx context.Context, di dline.Info, ts *ty
 			return // FORK: declaring faults after ignition upgrade makes no sense
 		}
 
-		if faults, sigmsg, err = s.checkNextFaults(context.TODO(), declDeadline, partitions, ts.Key()); err != nil {
+		if faults, uidMsg, err = s.checkNextFaults(context.TODO(), declDeadline, partitions, ts.Key()); err != nil {
 			// TODO: This is also potentially really bad, but we try to post anyways
 			log.Errorf("checking sector faults: %v", err)
 		}
@@ -472,7 +480,7 @@ func (s *WindowPoStScheduler) runPost(ctx context.Context, di dline.Info, ts *ty
 			return WdPoStFaultsProcessedEvt{
 				evtCommon:    s.getEvtCommon(err),
 				Declarations: faults,
-				MessageCID:   optionalCid(sigmsg),
+				MessageUID:   optionalUid(uidMsg),
 			}
 		})
 	}()

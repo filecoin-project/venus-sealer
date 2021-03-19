@@ -13,7 +13,10 @@ import (
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
 	"github.com/filecoin-project/venus-sealer/types"
 	chain2 "github.com/filecoin-project/venus/app/submodule/chain"
+	"github.com/filecoin-project/venus/pkg/chain"
+	types2 "github.com/filecoin-project/venus/pkg/types"
 	"github.com/google/uuid"
+	types3 "github.com/ipfs-force-community/venus-messager/types"
 	"github.com/ipfs/go-cid"
 	"time"
 )
@@ -70,7 +73,7 @@ type StorageMiner interface {
 	SectorTerminate(context.Context, abi.SectorNumber) error
 	// SectorTerminateFlush immediately sends a terminate message with sectors batched for termination.
 	// Returns null if message wasn't sent
-	SectorTerminateFlush(ctx context.Context) (*cid.Cid, error)
+	SectorTerminateFlush(ctx context.Context) (*types3.UUID, error)
 	// SectorTerminatePending returns a list of pending sector terminations to be sent in the next batch message
 	SectorTerminatePending(ctx context.Context) ([]abi.SectorID, error)
 	SectorMarkForUpgrade(ctx context.Context, id abi.SectorNumber) error
@@ -122,6 +125,11 @@ type StorageMiner interface {
 	CreateBackup(ctx context.Context, fpath string) error
 
 	CheckProvable(ctx context.Context, pp abi.RegisteredPoStProof, sectors []storage.SectorRef, expensive bool) (map[abi.SectorNumber]string, error)
+
+	//messager
+	MessagerWaitMessage(ctx context.Context, uuid types3.UUID, confidence uint64) (*chain.MsgLookup, error)
+	MessagerPushMessage(ctx context.Context, msg *types2.Message, meta *types3.MsgMeta) (types3.UUID, error)
+	MessagerGetMessage(ctx context.Context, uuid types3.UUID) (*types3.Message, error)
 }
 
 // StorageMinerStruct
@@ -150,7 +158,7 @@ type StorageMinerStruct struct {
 		SectorsUpdate                 func(context.Context, abi.SectorNumber, SectorState) error                                `perm:"admin"`
 		SectorRemove                  func(context.Context, abi.SectorNumber) error                                             `perm:"admin"`
 		SectorTerminate               func(context.Context, abi.SectorNumber) error                                             `perm:"admin"`
-		SectorTerminateFlush          func(ctx context.Context) (*cid.Cid, error)                                               `perm:"admin"`
+		SectorTerminateFlush          func(ctx context.Context) (*types3.UUID, error)                                           `perm:"admin"`
 		SectorTerminatePending        func(ctx context.Context) ([]abi.SectorID, error)                                         `perm:"admin"`
 		SectorMarkForUpgrade          func(ctx context.Context, id abi.SectorNumber) error                                      `perm:"admin"`
 
@@ -213,6 +221,10 @@ type StorageMinerStruct struct {
 		CreateBackup func(ctx context.Context, fpath string) error `perm:"admin"`
 
 		CheckProvable func(ctx context.Context, pp abi.RegisteredPoStProof, sectors []storage.SectorRef, expensive bool) (map[abi.SectorNumber]string, error) `perm:"admin"`
+
+		MessagerWaitMessage func(ctx context.Context, uuid types3.UUID, confidence uint64) (*chain.MsgLookup, error)
+		MessagerPushMessage func(ctx context.Context, msg *types2.Message, meta *types3.MsgMeta) (types3.UUID, error)
+		MessagerGetMessage  func(ctx context.Context, uuid types3.UUID) (*types3.Message, error)
 	}
 }
 
@@ -290,7 +302,7 @@ func (c *StorageMinerStruct) SectorTerminate(ctx context.Context, number abi.Sec
 	return c.Internal.SectorTerminate(ctx, number)
 }
 
-func (c *StorageMinerStruct) SectorTerminateFlush(ctx context.Context) (*cid.Cid, error) {
+func (c *StorageMinerStruct) SectorTerminateFlush(ctx context.Context) (*types3.UUID, error) {
 	return c.Internal.SectorTerminateFlush(ctx)
 }
 
@@ -508,4 +520,16 @@ func (c *StorageMinerStruct) CheckProvable(ctx context.Context, pp abi.Registere
 
 func (c *StorageMinerStruct) ComputeProof(ctx context.Context, sectorInfos []proof2.SectorInfo, randomness abi.PoStRandomness) ([]proof2.PoStProof, error) {
 	return c.Internal.ComputeProof(ctx, sectorInfos, randomness)
+}
+
+func (c *StorageMinerStruct) MessagerWaitMessage(ctx context.Context, uuid types3.UUID, confidence uint64) (*chain.MsgLookup, error) {
+	return c.Internal.MessagerWaitMessage(ctx, uuid, confidence)
+}
+
+func (c *StorageMinerStruct) MessagerPushMessage(ctx context.Context, msg *types2.Message, meta *types3.MsgMeta) (types3.UUID, error) {
+	return c.Internal.MessagerPushMessage(ctx, msg, meta)
+}
+
+func (c *StorageMinerStruct) MessagerGetMessage(ctx context.Context, uuid types3.UUID) (*types3.Message, error) {
+	return c.Internal.MessagerGetMessage(ctx, uuid)
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus/pkg/chain"
+	"github.com/ipfs-force-community/venus-messager/api/client"
 	"time"
 
 	"golang.org/x/xerrors"
@@ -24,6 +25,7 @@ import (
 
 type WindowPoStScheduler struct {
 	api              storageMinerApi
+	Messager         client.IMessager
 	feeCfg           config.MinerFeeConfig
 	addrSel          *AddressSelector
 	prover           storage.Prover
@@ -42,7 +44,7 @@ type WindowPoStScheduler struct {
 	// failLk sync.Mutex
 }
 
-func NewWindowedPoStScheduler(api storageMinerApi, fc config.MinerFeeConfig, as *AddressSelector, sb storage.Prover, verif ffiwrapper.Verifier, ft sectorstorage.FaultTracker, j journal.Journal, actor address.Address, networkParams *config.NetParamsConfig) (*WindowPoStScheduler, error) {
+func NewWindowedPoStScheduler(api storageMinerApi, messager client.IMessager, fc config.MinerFeeConfig, as *AddressSelector, sb storage.Prover, verif ffiwrapper.Verifier, ft sectorstorage.FaultTracker, j journal.Journal, actor address.Address, networkParams *config.NetParamsConfig) (*WindowPoStScheduler, error) {
 	mi, err := api.StateMinerInfo(context.TODO(), actor, types.EmptyTSK)
 	if err != nil {
 		return nil, xerrors.Errorf("getting sector size: %w", err)
@@ -50,6 +52,7 @@ func NewWindowedPoStScheduler(api storageMinerApi, fc config.MinerFeeConfig, as 
 
 	return &WindowPoStScheduler{
 		api:              api,
+		Messager:         messager,
 		feeCfg:           fc,
 		addrSel:          as,
 		prover:           sb,

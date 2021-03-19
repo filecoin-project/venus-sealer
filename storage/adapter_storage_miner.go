@@ -8,6 +8,8 @@ import (
 	types2 "github.com/filecoin-project/venus-sealer/types"
 	"github.com/filecoin-project/venus/app/submodule/chain"
 	chain2 "github.com/filecoin-project/venus/pkg/chain"
+	"github.com/ipfs-force-community/venus-messager/api/client"
+	types3 "github.com/ipfs-force-community/venus-messager/types"
 
 	"github.com/ipfs/go-cid"
 	cbg "github.com/whyrusleeping/cbor-gen"
@@ -33,10 +35,11 @@ var _ sealing.SealingAPI = new(SealingAPIAdapter)
 
 type SealingAPIAdapter struct {
 	delegate storageMinerApi
+	messager client.IMessager
 }
 
-func NewSealingAPIAdapter(api storageMinerApi) SealingAPIAdapter {
-	return SealingAPIAdapter{delegate: api}
+func NewSealingAPIAdapter(api storageMinerApi, messager client.IMessager) SealingAPIAdapter {
+	return SealingAPIAdapter{delegate: api, messager: messager}
 }
 
 func (s SealingAPIAdapter) StateMinerSectorSize(ctx context.Context, maddr address.Address, tok types2.TipSetToken) (abi.SectorSize, error) {
@@ -353,4 +356,58 @@ func (s SealingAPIAdapter) ChainGetRandomnessFromTickets(ctx context.Context, to
 
 func (s SealingAPIAdapter) ChainReadObj(ctx context.Context, ocid cid.Cid) ([]byte, error) {
 	return s.delegate.ChainReadObj(ctx, ocid)
+}
+
+//todo MsgLookup use types in venus
+func (s SealingAPIAdapter) MessagerWaitMsg(ctx context.Context, uuid types3.UUID) (types2.MsgLookup, error) {
+	msg, err := s.messager.WaitMessage(ctx, uuid, constants.MessageConfidence)
+	if err != nil {
+		return types2.MsgLookup{}, err
+	}
+
+	return types2.MsgLookup{
+		Receipt: types2.MessageReceipt{
+			ExitCode: msg.Receipt.ExitCode,
+			Return:   msg.Receipt.ReturnValue,
+			GasUsed:  msg.Receipt.GasUsed,
+		},
+		TipSetTok: msg.TipSetKey.Bytes(),
+		Height:    abi.ChainEpoch(msg.Height),
+	}, nil
+}
+
+func (s SealingAPIAdapter) MessagerSearchMsg(ctx context.Context, uuid types3.UUID) (*types2.MsgLookup, error) {
+	msg, err := s.messager.GetMessageByUid(ctx, uuid)
+	if err != nil {
+		return nil, err
+	}
+	if msg.State != types3.FillMsg {
+		return nil, nil
+	}
+	return &types2.MsgLookup{
+		Receipt: types2.MessageReceipt{
+			ExitCode: msg.Receipt.ExitCode,
+			Return:   msg.Receipt.ReturnValue,
+			GasUsed:  msg.Receipt.GasUsed,
+		},
+		TipSetTok: msg.TipSetKey.Bytes(),
+		Height:    abi.ChainEpoch(msg.Height),
+	}, nil
+}
+
+func (s SealingAPIAdapter) MessagerSendMsg(ctx context.Context, from, to address.Address, method abi.MethodNum, value, maxFee abi.TokenAmount, params []byte) (types3.UUID, error) {
+	return s.messager.PushMessage(ctx, &types.UnsignedMessage{
+		Version: 0,
+		To:      to,
+		From:    from,
+		Value:   value,
+		Method:  method,
+		Params:  params,
+	}, &types3.MsgMeta{
+		ExpireEpoch:       0,
+		GasOverEstimation: 0,
+		//todo give a maxFee or for nil
+		MaxFee: maxFee,
+		//MaxFeeCap:        big.NewInt(10000000000000),
+	})
 }

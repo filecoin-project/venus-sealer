@@ -37,6 +37,7 @@ type StorageMiner struct {
 	DB        DbConfig
 	Node      NodeConfig
 	JWT       JWTConfig
+	Messager  MessagerConfig
 
 	ConfigPath string `toml:"-"`
 }
@@ -50,6 +51,11 @@ type JWTConfig struct {
 }
 
 type NodeConfig struct {
+	Url   string
+	Token string
+}
+
+type MessagerConfig struct {
 	Url   string
 	Token string
 }

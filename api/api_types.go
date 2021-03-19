@@ -13,6 +13,7 @@ import (
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus/pkg/types"
+	types3 "github.com/ipfs-force-community/venus-messager/types"
 	"github.com/ipfs/go-cid"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -251,8 +252,8 @@ type SectorInfo struct {
 	Deals        []abi.DealID
 	Ticket       SealTicket
 	Seed         SealSeed
-	PreCommitMsg *cid.Cid
-	CommitMsg    *cid.Cid
+	PreCommitMsg *types3.UUID
+	CommitMsg    *types3.UUID
 	Retries      uint64
 	ToUpgrade    bool
 
