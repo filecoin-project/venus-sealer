@@ -39,7 +39,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/hako/durafmt v0.0.0-20200710122514-c0fb7b4da026
 	github.com/hashicorp/go-multierror v1.1.0
-	github.com/ipfs-force-community/venus-messager v0.0.0-20210315092247-075942fe61c4
+	github.com/ipfs-force-community/venus-messager v0.0.0-20210325080111-009a063e8c97
 	github.com/ipfs/go-block-format v0.0.3
 	github.com/ipfs/go-cid v0.0.7
 	github.com/ipfs/go-datastore v0.4.5
@@ -65,6 +65,7 @@ require (
 	github.com/onsi/gomega v1.10.4 // indirect
 	github.com/polydawn/refmt v0.0.0-20201211092308-30ac6d18308e
 	github.com/raulk/clock v1.1.0
+	github.com/shopspring/decimal v1.2.0 // indirect
 	github.com/stretchr/testify v1.7.0
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/whyrusleeping/cbor-gen v0.0.0-20210219115102-f37d292932f2
@@ -96,5 +97,3 @@ replace github.com/filecoin-project/filecoin-ffi => ./extern/filecoin-ffi
 replace github.com/filecoin-project/go-statemachine => github.com/hunjixin/go-statemachine v0.0.0-20210309063909-a65119041e93
 
 replace github.com/filecoin-project/go-statestore => github.com/hunjixin/go-statestore v0.1.1-0.20210309025204-01c69afffbd7
-
-replace github.com/ipfs-force-community/venus-messager v0.0.0-20210315092247-075942fe61c4 => /Users/lijunlong/Desktop/workload/venus-messager
