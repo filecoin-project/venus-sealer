@@ -15,6 +15,8 @@ import (
 	types2 "github.com/filecoin-project/venus-sealer/types"
 	"github.com/filecoin-project/venus/fixtures/asset"
 	"github.com/filecoin-project/venus/pkg/gen/genesis"
+	"github.com/ipfs-force-community/venus-messager/api/client"
+	types3 "github.com/ipfs-force-community/venus-messager/types"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -107,11 +109,20 @@ var initCmd = &cli.Command{
 
 		&cli.StringFlag{
 			Name:  "messager-url",
-			Usage: "messager usrl",
+			Usage: "messager usl",
 		},
 		&cli.StringFlag{
 			Name:  "messager-token",
 			Usage: "messager token",
+		},
+
+		&cli.StringFlag{
+			Name:  "node-url",
+			Usage: "node usl",
+		},
+		&cli.StringFlag{
+			Name:  "node-token",
+			Usage: "node token",
 		},
 	},
 	Action: func(cctx *cli.Context) error {
@@ -181,6 +192,14 @@ var initCmd = &cli.Command{
 			defaultCfg.Messager.Token = cctx.String("messager-token")
 		}
 
+		if cctx.IsSet("node-url") {
+			defaultCfg.Node.Url = cctx.String("node-url")
+		}
+
+		if cctx.IsSet("node-token") {
+			defaultCfg.Node.Token = cctx.String("node-token")
+		}
+
 		exit, err := config.ConfigExist(defaultCfg.DataDir)
 		if err != nil {
 			return err
@@ -198,6 +217,12 @@ var initCmd = &cli.Command{
 		if !v.APIVersion.EqMajorMinor(constants.FullAPIVersion) {
 			return xerrors.Errorf("Remote API version didn't match (expected %s, remote %s)", constants.FullAPIVersion, v.APIVersion)
 		}
+
+		messagerClient, closer, err := api.NewMessageRPC(&defaultCfg.Messager)
+		if err != nil {
+			return err
+		}
+		defer closer()
 
 		log.Info("Initializing repo")
 		{
@@ -254,7 +279,7 @@ var initCmd = &cli.Command{
 			}
 		}
 
-		if err := storageMinerInit(ctx, cctx, fullNode, defaultCfg, ssize, gasPrice); err != nil {
+		if err := storageMinerInit(ctx, cctx, fullNode, messagerClient, defaultCfg, ssize, gasPrice); err != nil {
 			log.Errorf("Failed to initialize venus-miner: %+v", err)
 			path, err := homedir.Expand(defaultCfg.DataDir)
 			if err != nil {
@@ -274,7 +299,7 @@ var initCmd = &cli.Command{
 	},
 }
 
-func storageMinerInit(ctx context.Context, cctx *cli.Context, api api.FullNode, cfg *config.StorageMiner, ssize abi.SectorSize, gasPrice types.BigInt) error {
+func storageMinerInit(ctx context.Context, cctx *cli.Context, api api.FullNode, messagerClient client.IMessager, cfg *config.StorageMiner, ssize abi.SectorSize, gasPrice types.BigInt) error {
 	log.Info("Initializing libp2p identity")
 	repo, err := models.SetDataBase(config.HomeDir(cfg.DataDir), &cfg.DB)
 	if err != nil {
@@ -339,7 +364,7 @@ func storageMinerInit(ctx context.Context, cctx *cli.Context, api api.FullNode, 
 
 		addr = a
 	} else {
-		a, err := createStorageMiner(ctx, api, peerid, gasPrice, cctx)
+		a, err := createStorageMiner(ctx, api, messagerClient, peerid, gasPrice, cctx)
 		if err != nil {
 			return xerrors.Errorf("creating miner failed: %w", err)
 		}
@@ -356,7 +381,7 @@ func storageMinerInit(ctx context.Context, cctx *cli.Context, api api.FullNode, 
 	return nil
 }
 
-func createStorageMiner(ctx context.Context, nodeAPI api.FullNode, peerid peer.ID, gasPrice types.BigInt, cctx *cli.Context) (address.Address, error) {
+func createStorageMiner(ctx context.Context, nodeAPI api.FullNode, messagerClient client.IMessager, peerid peer.ID, gasPrice types.BigInt, cctx *cli.Context) (address.Address, error) {
 	var err error
 	var owner address.Address
 	if cctx.String("owner") != "" {
@@ -384,7 +409,7 @@ func createStorageMiner(ctx context.Context, nodeAPI api.FullNode, peerid peer.I
 	// make sure the worker account exists on chain
 	_, err = nodeAPI.StateLookupID(ctx, worker, types.EmptyTSK)
 	if err != nil {
-		signed, err := nodeAPI.MpoolPushMessage(ctx, &types.Message{
+		msgUid, err := messagerClient.PushMessage(ctx, &types.Message{
 			From:  owner,
 			To:    worker,
 			Value: types.NewInt(0),
@@ -393,10 +418,10 @@ func createStorageMiner(ctx context.Context, nodeAPI api.FullNode, peerid peer.I
 			return address.Undef, xerrors.Errorf("push worker init: %w", err)
 		}
 
-		log.Infof("Initializing worker account %s, message: %s", worker, signed.Cid())
+		log.Infof("Initializing worker account %s, message uid: %s", worker, msgUid)
 		log.Infof("Waiting for confirmation")
 
-		mw, err := nodeAPI.StateWaitMsg(ctx, signed.Cid(), constants.MessageConfidence)
+		mw, err := messagerClient.WaitMessage(ctx, msgUid, constants.MessageConfidence)
 		if err != nil {
 			return address.Undef, xerrors.Errorf("waiting for worker init: %w", err)
 		}
@@ -446,15 +471,15 @@ func createStorageMiner(ctx context.Context, nodeAPI api.FullNode, peerid peer.I
 		GasPremium: gasPrice,
 	}
 
-	signed, err := nodeAPI.MpoolPushMessage(ctx, createStorageMinerMsg, &types.MessageSendSpec{MaxFee: types.FromFil(1)})
+	msgUid, err := messagerClient.PushMessage(ctx, createStorageMinerMsg, &types3.MsgMeta{MaxFee: types.FromFil(1)})
 	if err != nil {
 		return address.Undef, xerrors.Errorf("pushing createMiner message: %w", err)
 	}
 
-	log.Infof("Pushed CreateMiner message: %s", signed.Cid())
+	log.Infof("Pushed CreateMiner message: %s", msgUid)
 	log.Infof("Waiting for confirmation")
 
-	mw, err := nodeAPI.StateWaitMsg(ctx, signed.Cid(), constants.MessageConfidence)
+	mw, err := messagerClient.WaitMessage(ctx, msgUid, constants.MessageConfidence)
 	if err != nil {
 		return address.Undef, xerrors.Errorf("waiting for createMiner message: %w", err)
 	}
