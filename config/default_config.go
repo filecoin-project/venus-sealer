@@ -34,7 +34,7 @@ func GetDefaultStorageConfig(network string) (*StorageMiner, error) {
 		return DefaultCalibrationStorageMiner(), nil
 	case "2k":
 		return Default2kStorageMiner(), nil
-	case "nerpda":
+	case "nerpa":
 		return DefaultNerpdaStorageMiner(), nil
 	default:
 		return nil, errors.New("unsupport network type")
