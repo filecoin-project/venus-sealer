@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/constants"
-	types3 "github.com/ipfs-force-community/venus-messager/types"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 )
@@ -32,11 +31,7 @@ var waitMessagerCmds = &cli.Command{
 			return xerrors.New("must has uuid argument")
 		}
 
-		uidStr := cctx.Args().Get(0)
-		uid, err := types3.ParseUUID(uidStr)
-		if err != nil {
-			return err
-		}
+		uid := cctx.Args().Get(0)
 
 		msg, err := storageAPI.MessagerWaitMessage(cctx.Context, uid, constants.MessageConfidence)
 		if err != nil {
@@ -67,11 +62,7 @@ var searchMessagerCmds = &cli.Command{
 			return xerrors.New("must has uuid argument")
 		}
 
-		uidStr := cctx.Args().Get(0)
-		uid, err := types3.ParseUUID(uidStr)
-		if err != nil {
-			return err
-		}
+		uid := cctx.Args().Get(0)
 
 		msg, err := storageAPI.MessagerGetMessage(cctx.Context, uid)
 		if err != nil {

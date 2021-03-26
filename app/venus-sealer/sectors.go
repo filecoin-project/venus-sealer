@@ -453,7 +453,7 @@ var sectorsTerminateFlushCmd = &cli.Command{
 			return err
 		}
 
-		if mcid == nil {
+		if mcid == "" {
 			return xerrors.New("no sectors were queued for termination")
 		}
 

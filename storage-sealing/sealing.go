@@ -8,7 +8,6 @@ import (
 	"github.com/filecoin-project/venus-sealer/service"
 	types2 "github.com/filecoin-project/venus-sealer/types"
 	"github.com/filecoin-project/venus/app/submodule/chain"
-	types3 "github.com/ipfs-force-community/venus-messager/types"
 	"io"
 	"math"
 	"sync"
@@ -78,9 +77,9 @@ type SealingAPI interface {
 	ChainReadObj(context.Context, cid.Cid) ([]byte, error)
 
 	//for messager
-	MessagerWaitMsg(context.Context, types3.UUID) (types2.MsgLookup, error)
-	MessagerSearchMsg(context.Context, types3.UUID) (*types2.MsgLookup, error)
-	MessagerSendMsg(ctx context.Context, from, to address.Address, method abi.MethodNum, value, maxFee abi.TokenAmount, params []byte) (types3.UUID, error)
+	MessagerWaitMsg(context.Context, string) (types2.MsgLookup, error)
+	MessagerSearchMsg(context.Context, string) (*types2.MsgLookup, error)
+	MessagerSendMsg(ctx context.Context, from, to address.Address, method abi.MethodNum, value, maxFee abi.TokenAmount, params []byte) (string, error)
 }
 
 type SectorStateNotifee func(before, after types2.SectorInfo)
@@ -303,7 +302,7 @@ func (m *Sealing) Terminate(ctx context.Context, sid abi.SectorNumber) error {
 	return m.sectors.Send(uint64(sid), SectorTerminate{})
 }
 
-func (m *Sealing) TerminateFlush(ctx context.Context) (*types3.UUID, error) {
+func (m *Sealing) TerminateFlush(ctx context.Context) (string, error) {
 	return m.terminator.Flush(ctx)
 }
 

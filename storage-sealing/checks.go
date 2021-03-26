@@ -134,7 +134,7 @@ func (m *Sealing) checkCommit(ctx context.Context, si types.SectorInfo, proof []
 		// not much more we can check here, basically try to wait for commit,
 		// and hope that this will work
 
-		if si.CommitMessage != nil {
+		if len(si.CommitMessage) > 0 {
 			return &ErrCommitWaitFailed{err}
 		}
 

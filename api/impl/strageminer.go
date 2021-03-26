@@ -309,7 +309,7 @@ func (sm *StorageMinerAPI) SectorTerminate(ctx context.Context, id abi.SectorNum
 	return sm.Miner.TerminateSector(ctx, id)
 }
 
-func (sm *StorageMinerAPI) SectorTerminateFlush(ctx context.Context) (*types3.UUID, error) {
+func (sm *StorageMinerAPI) SectorTerminateFlush(ctx context.Context) (string, error) {
 	return sm.Miner.TerminateFlush(ctx)
 }
 
@@ -556,7 +556,7 @@ func (sm *StorageMinerAPI) ComputeProof(ctx context.Context, sectorInfo []proof2
 	return sm.Prover.ComputeProof(ctx, sectorInfo, randoness)
 }
 
-func (sm *StorageMinerAPI) MessagerWaitMessage(ctx context.Context, uuid types3.UUID, confidence uint64) (*chain.MsgLookup, error) {
+func (sm *StorageMinerAPI) MessagerWaitMessage(ctx context.Context, uuid string, confidence uint64) (*chain.MsgLookup, error) {
 	msg, err := sm.Messager.WaitMessage(ctx, uuid, confidence)
 	if err != nil {
 		return nil, err
@@ -571,11 +571,11 @@ func (sm *StorageMinerAPI) MessagerWaitMessage(ctx context.Context, uuid types3.
 	}, nil
 }
 
-func (sm *StorageMinerAPI) MessagerPushMessage(ctx context.Context, msg *types.Message, meta *types3.MsgMeta) (types3.UUID, error) {
+func (sm *StorageMinerAPI) MessagerPushMessage(ctx context.Context, msg *types.Message, meta *types3.MsgMeta) (string, error) {
 	return sm.Messager.PushMessage(ctx, msg, meta)
 }
 
-func (sm *StorageMinerAPI) MessagerGetMessage(ctx context.Context, uuid types3.UUID) (*types3.Message, error) {
+func (sm *StorageMinerAPI) MessagerGetMessage(ctx context.Context, uuid string) (*types3.Message, error) {
 	msg, err := sm.Messager.GetMessageByUid(ctx, uuid)
 	if err != nil {
 		return nil, err

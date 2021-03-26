@@ -19,17 +19,17 @@ func (m *Sealing) handleFaulty(ctx statemachine.Context, sector types.SectorInfo
 }
 
 func (m *Sealing) handleFaultReported(ctx statemachine.Context, sector types.SectorInfo) error {
-	if sector.FaultReportMsg == nil {
+	if len(sector.FaultReportMsg) == 0 {
 		return xerrors.Errorf("entered fault reported state without a FaultReportMsg cid")
 	}
 
-	mw, err := m.api.StateWaitMsg(ctx.Context(), *sector.FaultReportMsg)
+	mw, err := m.api.MessagerWaitMsg(ctx.Context(), sector.FaultReportMsg)
 	if err != nil {
 		return xerrors.Errorf("failed to wait for fault declaration: %w", err)
 	}
 
 	if mw.Receipt.ExitCode != 0 {
-		log.Errorf("UNHANDLED: declaring sector fault failed (exit=%d, msg=%s) (id: %d)", mw.Receipt.ExitCode, *sector.FaultReportMsg, sector.SectorNumber)
+		log.Errorf("UNHANDLED: declaring sector fault failed (exit=%d, msg=%s) (id: %d)", mw.Receipt.ExitCode, sector.FaultReportMsg, sector.SectorNumber)
 		return xerrors.Errorf("UNHANDLED: submitting fault declaration failed (exit %d)", mw.Receipt.ExitCode)
 	}
 
@@ -70,18 +70,18 @@ func (m *Sealing) handleTerminating(ctx statemachine.Context, sector types.Secto
 	}
 
 	if terminated {
-		return ctx.Send(SectorTerminating{Message: nil})
+		return ctx.Send(SectorTerminating{Message: ""})
 	}
 
-	return ctx.Send(SectorTerminating{Message: &termCid})
+	return ctx.Send(SectorTerminating{Message: termCid})
 }
 
 func (m *Sealing) handleTerminateWait(ctx statemachine.Context, sector types.SectorInfo) error {
-	if sector.TerminateMessage == nil {
+	if len(sector.TerminateMessage) == 0 {
 		return xerrors.New("entered TerminateWait with nil TerminateMessage")
 	}
 
-	mw, err := m.api.MessagerWaitMsg(ctx.Context(), *sector.TerminateMessage)
+	mw, err := m.api.MessagerWaitMsg(ctx.Context(), sector.TerminateMessage)
 	if err != nil {
 		return ctx.Send(SectorTerminateFailed{xerrors.Errorf("waiting for terminate message to land on chain: %w", err)})
 	}

@@ -8,7 +8,6 @@ import (
 	"github.com/filecoin-project/venus-sealer/models/repo"
 	"github.com/filecoin-project/venus-sealer/types"
 	"github.com/google/uuid"
-	types3 "github.com/ipfs-force-community/venus-messager/types"
 	"github.com/ipfs/go-cid"
 	"gorm.io/gorm"
 	"sync"
@@ -81,18 +80,18 @@ func (sectorInfo *sectorInfo) SectorInfo() (*types.SectorInfo, error) {
 		Proof: sectorInfo.Proof,
 		//PreCommitInfo:    sectorInfo.PreCommitInfo,
 		//	PreCommitDeposit: deposit,
-		//PreCommitMessage: &preCommitMessage,
-		PreCommitTipSet: sectorInfo.PreCommitTipSet,
-		PreCommit2Fails: sectorInfo.PreCommit2Fails,
-		SeedValue:       sectorInfo.SeedValue,
-		SeedEpoch:       abi.ChainEpoch(sectorInfo.SeedEpoch),
-		//	CommitMessage:    &commitMsg,
-		InvalidProofs: sectorInfo.InvalidProofs,
-		//FaultReportMsg:   sectorInfo.FaultReportMsg,
-		Return: types.ReturnState(sectorInfo.Return),
-		//TerminateMessage: sectorInfo.TerminateMessage,
-		TerminatedAt: abi.ChainEpoch(sectorInfo.TerminatedAt),
-		LastErr:      sectorInfo.LastErr,
+		PreCommitMessage: sectorInfo.PreCommitMessage,
+		PreCommitTipSet:  sectorInfo.PreCommitTipSet,
+		PreCommit2Fails:  sectorInfo.PreCommit2Fails,
+		SeedValue:        sectorInfo.SeedValue,
+		SeedEpoch:        abi.ChainEpoch(sectorInfo.SeedEpoch),
+		CommitMessage:    sectorInfo.CommitMessage,
+		InvalidProofs:    sectorInfo.InvalidProofs,
+		FaultReportMsg:   sectorInfo.FaultReportMsg,
+		Return:           types.ReturnState(sectorInfo.Return),
+		TerminateMessage: sectorInfo.TerminateMessage,
+		TerminatedAt:     abi.ChainEpoch(sectorInfo.TerminatedAt),
+		LastErr:          sectorInfo.LastErr,
 	}
 	if len(sectorInfo.Pieces) > 0 {
 		err := json.Unmarshal(sectorInfo.Pieces, &sinfo.Pieces)
@@ -116,43 +115,12 @@ func (sectorInfo *sectorInfo) SectorInfo() (*types.SectorInfo, error) {
 		sinfo.CommR = &commR
 	}
 
-	if len(sectorInfo.PreCommitMessage) > 0 {
-		preCommitMessage, err := types3.ParseUUID(sectorInfo.PreCommitMessage)
-		if err != nil {
-			return nil, err
-		}
-		sinfo.PreCommitMessage = &preCommitMessage
-	}
-	if len(sectorInfo.CommitMessage) > 0 {
-		commitMsg, err := types3.ParseUUID(sectorInfo.CommitMessage)
-		if err != nil {
-			return nil, err
-		}
-		sinfo.CommitMessage = &commitMsg
-	}
-
 	if len(sectorInfo.PreCommitDeposit) > 0 {
 		deposit, err := fbig.FromString(sectorInfo.PreCommitDeposit)
 		if err != nil {
 			return nil, err
 		}
 		sinfo.PreCommitDeposit = deposit
-	}
-
-	if len(sectorInfo.FaultReportMsg) > 0 {
-		faultReportMsg, err := cid.Decode(sectorInfo.FaultReportMsg)
-		if err != nil {
-			return nil, err
-		}
-		sinfo.FaultReportMsg = &faultReportMsg
-	}
-
-	if len(sectorInfo.TerminateMessage) > 0 {
-		terminateMessage, err := types3.ParseUUID(sectorInfo.TerminateMessage)
-		if err != nil {
-			return nil, err
-		}
-		sinfo.TerminateMessage = &terminateMessage
 	}
 
 	if len(sectorInfo.PreCommitInfo.SealedCID) > 0 {
@@ -208,19 +176,19 @@ func FromSectorInfo(sector *types.SectorInfo) (*sectorInfo, error) {
 				ReplaceSectorPartition: 0,
 				ReplaceSectorNumber:    0,
 			},*/
-		//PreCommitDeposit: sector.PreCommitDeposit.String(),
-		//PreCommitMessage: sector.PreCommitMessage.String(),
-		PreCommitTipSet: sector.PreCommitTipSet,
-		PreCommit2Fails: sector.PreCommit2Fails,
-		SeedValue:       sector.SeedValue,
-		SeedEpoch:       int64(sector.SeedEpoch),
-		//CommitMessage:    sector.CommitMessage,
-		InvalidProofs: sector.InvalidProofs,
-		//FaultReportMsg:   sector.FaultReportMsg,
-		Return: string(sector.Return),
-		//TerminateMessage: sector.TerminatedAt,
-		TerminatedAt: int64(sector.TerminatedAt),
-		LastErr:      sector.LastErr,
+		//PreCommitDeposit: sector.PreCommitDeposit,
+		PreCommitMessage: sector.PreCommitMessage,
+		PreCommitTipSet:  sector.PreCommitTipSet,
+		PreCommit2Fails:  sector.PreCommit2Fails,
+		SeedValue:        sector.SeedValue,
+		SeedEpoch:        int64(sector.SeedEpoch),
+		CommitMessage:    sector.CommitMessage,
+		InvalidProofs:    sector.InvalidProofs,
+		FaultReportMsg:   sector.FaultReportMsg,
+		Return:           string(sector.Return),
+		TerminateMessage: sector.TerminateMessage,
+		TerminatedAt:     int64(sector.TerminatedAt),
+		LastErr:          sector.LastErr,
 	}
 
 	if sector.PreCommitDeposit.Int == nil {
@@ -240,20 +208,6 @@ func FromSectorInfo(sector *types.SectorInfo) (*sectorInfo, error) {
 
 	if sector.CommR != nil {
 		sectorInfo.CommR = sector.CommR.String()
-	}
-	if sector.PreCommitMessage != nil {
-		sectorInfo.PreCommitMessage = sector.PreCommitMessage.String()
-	}
-	if sector.CommitMessage != nil {
-		sectorInfo.CommitMessage = sector.CommitMessage.String()
-	}
-
-	if sector.FaultReportMsg != nil {
-		sectorInfo.FaultReportMsg = sector.FaultReportMsg.String()
-	}
-
-	if sector.TerminateMessage != nil {
-		sectorInfo.TerminateMessage = sector.TerminateMessage.String()
 	}
 
 	if sector.PreCommitInfo != nil {

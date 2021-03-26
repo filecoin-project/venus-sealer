@@ -444,9 +444,9 @@ func (s *WindowPoStScheduler) runPost(ctx context.Context, di dline.Info, ts *ty
 			// optionalCid returns the CID of the message, or cid.Undef is the
 			// message is nil. We don't need the argument (could capture the
 			// pointer), but it's clearer and purer like that.
-			optionalUid = func(uidMsg *types3.MessageWithUID) types3.UUID {
+			optionalUid = func(uidMsg *types3.MessageWithUID) string {
 				if uidMsg == nil {
-					return types3.UUID{}
+					return ""
 				}
 				return uidMsg.ID
 			}
