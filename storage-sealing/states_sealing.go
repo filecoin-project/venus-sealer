@@ -104,7 +104,7 @@ func (m *Sealing) handleGetTicket(ctx statemachine.Context, sector types.SectorI
 		}
 
 		if allocated {
-			if sector.CommitMessage != nil {
+			if len(sector.CommitMessage) > 0 {
 				// Some recovery paths with unfortunate timing lead here
 				return ctx.Send(SectorCommitFailed{xerrors.Errorf("sector %s is committed but got into the GetTicket state", sector.SectorNumber)})
 			}
@@ -284,13 +284,13 @@ func (m *Sealing) handlePreCommitting(ctx statemachine.Context, sector types.Sec
 }
 
 func (m *Sealing) handlePreCommitWait(ctx statemachine.Context, sector types.SectorInfo) error {
-	if sector.PreCommitMessage == nil {
+	if len(sector.PreCommitMessage) == 0 {
 		return ctx.Send(SectorChainPreCommitFailed{xerrors.Errorf("precommit message was nil")})
 	}
 
 	// would be ideal to just use the events.Called handler, but it wouldn't be able to handle individual message timeouts
 	log.Info("Sector precommitted: ", sector.SectorNumber)
-	mw, err := m.api.MessagerWaitMsg(ctx.Context(), *sector.PreCommitMessage)
+	mw, err := m.api.MessagerWaitMsg(ctx.Context(), sector.PreCommitMessage)
 	if err != nil {
 		return ctx.Send(SectorChainPreCommitFailed{err})
 	}
@@ -368,12 +368,12 @@ func (m *Sealing) handleWaitSeed(ctx statemachine.Context, sector types.SectorIn
 }
 
 func (m *Sealing) handleCommitting(ctx statemachine.Context, sector types.SectorInfo) error {
-	if sector.CommitMessage != nil {
+	if len(sector.CommitMessage) > 0 {
 		log.Warnf("sector %d entered committing state with a commit message cid", sector.SectorNumber)
 
-		ml, err := m.api.MessagerSearchMsg(ctx.Context(), *sector.CommitMessage)
+		ml, err := m.api.MessagerSearchMsg(ctx.Context(), sector.CommitMessage)
 		if err != nil {
-			log.Warnf("sector %d searching existing commit message %s: %+v", sector.SectorNumber, *sector.CommitMessage, err)
+			log.Warnf("sector %d searching existing commit message %s: %+v", sector.SectorNumber, sector.CommitMessage, err)
 		}
 
 		if ml != nil {
@@ -473,12 +473,12 @@ func (m *Sealing) handleSubmitCommit(ctx statemachine.Context, sector types.Sect
 }
 
 func (m *Sealing) handleCommitWait(ctx statemachine.Context, sector types.SectorInfo) error {
-	if sector.CommitMessage == nil {
+	if len(sector.CommitMessage) == 0 {
 		log.Errorf("sector %d entered commit wait state without a message cid", sector.SectorNumber)
 		return ctx.Send(SectorCommitFailed{xerrors.Errorf("entered commit wait with no commit cid")})
 	}
 
-	mw, err := m.api.MessagerWaitMsg(ctx.Context(), *sector.CommitMessage)
+	mw, err := m.api.MessagerWaitMsg(ctx.Context(), sector.CommitMessage)
 	if err != nil {
 		return ctx.Send(SectorCommitFailed{xerrors.Errorf("failed to wait for porep inclusion: %w", err)})
 	}

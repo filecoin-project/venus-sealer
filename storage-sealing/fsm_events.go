@@ -3,7 +3,6 @@ package sealing
 import (
 	"github.com/filecoin-project/venus-sealer/types"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
-	types3 "github.com/ipfs-force-community/venus-messager/types"
 	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
 
@@ -168,13 +167,13 @@ func (evt SectorChainPreCommitFailed) FormatError(xerrors.Printer) (next error) 
 func (evt SectorChainPreCommitFailed) apply(*types.SectorInfo)                  {}
 
 type SectorPreCommitted struct {
-	Message          types3.UUID
+	Message          string
 	PreCommitDeposit big.Int
 	PreCommitInfo    miner.SectorPreCommitInfo
 }
 
 func (evt SectorPreCommitted) apply(state *types.SectorInfo) {
-	state.PreCommitMessage = &evt.Message
+	state.PreCommitMessage = evt.Message
 	state.PreCommitDeposit = evt.PreCommitDeposit
 	state.PreCommitInfo = &evt.PreCommitInfo
 }
@@ -222,11 +221,11 @@ func (evt SectorCommitted) apply(state *types.SectorInfo) {
 }
 
 type SectorCommitSubmitted struct {
-	Message types3.UUID
+	Message string
 }
 
 func (evt SectorCommitSubmitted) apply(state *types.SectorInfo) {
-	state.CommitMessage = &evt.Message
+	state.CommitMessage = evt.Message
 }
 
 type SectorProving struct{}
@@ -308,10 +307,10 @@ type SectorFaulty struct{}
 
 func (evt SectorFaulty) apply(state *types.SectorInfo) {}
 
-type SectorFaultReported struct{ reportMsg cid.Cid }
+type SectorFaultReported struct{ reportMsg string }
 
 func (evt SectorFaultReported) apply(state *types.SectorInfo) {
-	state.FaultReportMsg = &evt.reportMsg
+	state.FaultReportMsg = evt.reportMsg
 }
 
 type SectorFaultedFinal struct{}
@@ -325,7 +324,7 @@ func (evt SectorTerminate) applyGlobal(state *types.SectorInfo) bool {
 	return true
 }
 
-type SectorTerminating struct{ Message *types3.UUID }
+type SectorTerminating struct{ Message string }
 
 func (evt SectorTerminating) apply(state *types.SectorInfo) {
 	state.TerminateMessage = evt.Message

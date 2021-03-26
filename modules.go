@@ -22,6 +22,7 @@ import (
 	types2 "github.com/filecoin-project/venus-sealer/types"
 	"github.com/filecoin-project/venus/fixtures/asset"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/specactors/policy"
 	"github.com/filecoin-project/venus/pkg/types"
 	"github.com/gbrlsnchs/jwt/v3"
 	"github.com/ipfs-force-community/venus-messager/api/client"
@@ -350,5 +351,11 @@ func HomeDir(path string) func() (config.HomeDir, error) {
 			return "", err
 		}
 		return config.HomeDir(path), nil
+	}
+}
+
+func SetupNetParams(netParams *config.NetParamsConfig) {
+	if netParams.PreCommitChallengeDelay > 0 {
+		policy.SetPreCommitChallengeDelay(netParams.PreCommitChallengeDelay)
 	}
 }

@@ -58,7 +58,7 @@ func TestSectorInfoSerialization(t *testing.T) {
 		SeedValue:        []byte{},
 		SeedEpoch:        0,
 		CommitMessage:    nil,
-		FaultReportMsg:   nil,
+		FaultReportMsg:   "",
 		LastErr:          "hi",
 	}
 

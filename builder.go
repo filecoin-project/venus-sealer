@@ -39,6 +39,7 @@ const (
 
 	// miner
 	AutoMigrateKey
+	SetNetParamsKey
 	GetParamsKey
 	ExtractApiKey
 	// daemon
@@ -139,6 +140,7 @@ func Online(cfg *config.StorageMiner) Option {
 		Override(new(types.NetworkName), StorageNetworkName),
 		Override(GetParamsKey, GetParams),
 		Override(AutoMigrateKey, models.AutoMigrate),
+		Override(SetNetParamsKey, SetupNetParams),
 	)
 }
 

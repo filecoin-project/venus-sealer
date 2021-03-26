@@ -81,8 +81,8 @@ func (m *Sealing) handlePreCommitFailed(ctx statemachine.Context, sector types.S
 		return nil
 	}
 
-	if sector.PreCommitMessage != nil {
-		mw, err := m.api.MessagerSearchMsg(ctx.Context(), *sector.PreCommitMessage)
+	if len(sector.PreCommitMessage) > 0 {
+		mw, err := m.api.MessagerSearchMsg(ctx.Context(), sector.PreCommitMessage)
 		if err != nil {
 			// API error
 			if err := m.failedCooldown(ctx, sector); err != nil {
@@ -141,7 +141,7 @@ func (m *Sealing) handlePreCommitFailed(ctx statemachine.Context, sector types.S
 	}
 
 	if pci, is := m.checkPreCommitted(ctx, sector); is && pci != nil {
-		if sector.PreCommitMessage == nil {
+		if len(sector.PreCommitMessage) > 0 {
 			log.Warnf("sector %d is precommitted on chain, but we don't have precommit message", sector.SectorNumber)
 			return ctx.Send(SectorPreCommitLanded{TipSet: tok})
 		}
@@ -161,7 +161,7 @@ func (m *Sealing) handlePreCommitFailed(ctx statemachine.Context, sector types.S
 		return ctx.Send(SectorRetryWaitSeed{})
 	}
 
-	if sector.PreCommitMessage != nil {
+	if len(sector.PreCommitMessage) > 0 {
 		log.Warn("retrying precommit even though the message failed to apply")
 	}
 
@@ -193,8 +193,8 @@ func (m *Sealing) handleCommitFailed(ctx statemachine.Context, sector types.Sect
 		return nil
 	}
 
-	if sector.CommitMessage != nil {
-		mw, err := m.api.MessagerSearchMsg(ctx.Context(), *sector.CommitMessage)
+	if len(sector.CommitMessage) > 0 {
+		mw, err := m.api.MessagerSearchMsg(ctx.Context(), sector.CommitMessage)
 		if err != nil {
 			// API error
 			if err := m.failedCooldown(ctx, sector); err != nil {

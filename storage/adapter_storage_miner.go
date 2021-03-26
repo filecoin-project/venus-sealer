@@ -359,7 +359,7 @@ func (s SealingAPIAdapter) ChainReadObj(ctx context.Context, ocid cid.Cid) ([]by
 }
 
 //todo MsgLookup use types in venus
-func (s SealingAPIAdapter) MessagerWaitMsg(ctx context.Context, uuid types3.UUID) (types2.MsgLookup, error) {
+func (s SealingAPIAdapter) MessagerWaitMsg(ctx context.Context, uuid string) (types2.MsgLookup, error) {
 	msg, err := s.messager.WaitMessage(ctx, uuid, constants.MessageConfidence)
 	if err != nil {
 		return types2.MsgLookup{}, err
@@ -376,7 +376,7 @@ func (s SealingAPIAdapter) MessagerWaitMsg(ctx context.Context, uuid types3.UUID
 	}, nil
 }
 
-func (s SealingAPIAdapter) MessagerSearchMsg(ctx context.Context, uuid types3.UUID) (*types2.MsgLookup, error) {
+func (s SealingAPIAdapter) MessagerSearchMsg(ctx context.Context, uuid string) (*types2.MsgLookup, error) {
 	msg, err := s.messager.GetMessageByUid(ctx, uuid)
 	if err != nil {
 		return nil, err
@@ -395,7 +395,7 @@ func (s SealingAPIAdapter) MessagerSearchMsg(ctx context.Context, uuid types3.UU
 	}, nil
 }
 
-func (s SealingAPIAdapter) MessagerSendMsg(ctx context.Context, from, to address.Address, method abi.MethodNum, value, maxFee abi.TokenAmount, params []byte) (types3.UUID, error) {
+func (s SealingAPIAdapter) MessagerSendMsg(ctx context.Context, from, to address.Address, method abi.MethodNum, value, maxFee abi.TokenAmount, params []byte) (string, error) {
 	return s.messager.PushMessage(ctx, &types.UnsignedMessage{
 		Version: 0,
 		To:      to,

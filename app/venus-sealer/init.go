@@ -535,10 +535,10 @@ func migratePreSealMeta(ctx context.Context, api api.FullNode, metadata string, 
 			Proof:            nil,
 			TicketValue:      abi.SealRandomness{},
 			TicketEpoch:      0,
-			PreCommitMessage: nil,
+			PreCommitMessage: "",
 			SeedValue:        abi.InteractiveSealRandomness{},
 			SeedEpoch:        0,
-			CommitMessage:    nil,
+			CommitMessage:    "",
 		}
 
 		if err := sectorInfoService.Save(info); err != nil {
