@@ -109,11 +109,20 @@ var initCmd = &cli.Command{
 
 		&cli.StringFlag{
 			Name:  "messager-url",
-			Usage: "messager usrl",
+			Usage: "messager usl",
 		},
 		&cli.StringFlag{
 			Name:  "messager-token",
 			Usage: "messager token",
+		},
+
+		&cli.StringFlag{
+			Name:  "node-url",
+			Usage: "node usl",
+		},
+		&cli.StringFlag{
+			Name:  "node-token",
+			Usage: "node token",
 		},
 	},
 	Action: func(cctx *cli.Context) error {
@@ -181,6 +190,14 @@ var initCmd = &cli.Command{
 
 		if cctx.IsSet("messager-token") {
 			defaultCfg.Messager.Token = cctx.String("messager-token")
+		}
+
+		if cctx.IsSet("node-url") {
+			defaultCfg.Node.Url = cctx.String("node-url")
+		}
+
+		if cctx.IsSet("node-token") {
+			defaultCfg.Node.Token = cctx.String("node-token")
 		}
 
 		exit, err := config.ConfigExist(defaultCfg.DataDir)
