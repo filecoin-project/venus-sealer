@@ -191,7 +191,20 @@ func GetFullNodeAPI(ctx *cli.Context) (FullNode, jsonrpc.ClientCloser, error) {
 	return NewFullNodeRPC(ctx.Context, addr, headers)
 }
 
-// NewFullNodeRPC creates a new http jsonrpc client.
+func GetFullNodeAPIFromFlag(cctx *cli.Context) (FullNode, jsonrpc.ClientCloser, error) {
+	if !cctx.IsSet("node-url") || !cctx.IsSet("node-token") {
+		return nil, nil, xerrors.New("must set url or token")
+	}
+	token := cctx.String("node-token")
+	headers := http.Header{}
+	if len(token) != 0 {
+		headers.Add("Authorization", "Bearer "+string(token))
+	}
+	return NewFullNodeRPC(cctx.Context, cctx.String("node-url"), headers)
+}
+
+// N
+//ewFullNodeRPC creates a new http jsonrpc client.
 func NewFullNodeRPC(ctx context.Context, addr string, requestHeader http.Header) (FullNode, jsonrpc.ClientCloser, error) {
 	var res FullNodeStruct
 	closer, err := jsonrpc.NewMergeClient(ctx, addr, "Filecoin",
