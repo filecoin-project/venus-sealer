@@ -48,7 +48,7 @@ func infoCmdAct(cctx *cli.Context) error {
 	}
 	defer closer()
 
-	nodeAPI, acloser, err := api.GetFullNodeAPI(cctx)
+	nodeAPI, acloser, err := api.GetFullNodeAPIV2(cctx)
 	if err != nil {
 		return err
 	}

@@ -157,7 +157,7 @@ var initCmd = &cli.Command{
 
 		log.Info("Trying to connect to full node RPC")
 
-		fullNode, closer, err := api.GetFullNodeAPIFromFlag(cctx) // TODO: consider storing full node address in config
+		fullNode, closer, err := api.GetFullNodeAPIV2(cctx) // TODO: consider storing full node address in config
 		if err != nil {
 			return err
 		}

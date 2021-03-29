@@ -21,7 +21,7 @@ var infoAllCmd = &cli.Command{
 		}
 		defer closer()
 
-		nodeAPI, acloser, err := api.GetFullNodeAPI(cctx)
+		nodeAPI, acloser, err := api.GetFullNodeAPIV2(cctx)
 		if err != nil {
 			return err
 		}

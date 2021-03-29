@@ -43,7 +43,7 @@ var provingFaultsCmd = &cli.Command{
 		}
 		defer closer()
 
-		nodeAPI, acloser, err := api.GetFullNodeAPI(cctx)
+		nodeAPI, acloser, err := api.GetFullNodeAPIV2(cctx)
 		if err != nil {
 			return err
 		}
@@ -103,7 +103,7 @@ var provingInfoCmd = &cli.Command{
 		}
 		defer closer()
 
-		nodeAPI, acloser, err := api.GetFullNodeAPI(cctx)
+		nodeAPI, acloser, err := api.GetFullNodeAPIV2(cctx)
 		if err != nil {
 			return err
 		}
@@ -220,7 +220,7 @@ var provingDeadlinesCmd = &cli.Command{
 		}
 		defer closer()
 
-		nodeAPI, acloser, err := api.GetFullNodeAPI(cctx)
+		nodeAPI, acloser, err := api.GetFullNodeAPIV2(cctx)
 		if err != nil {
 			return err
 		}
@@ -310,7 +310,7 @@ var provingDeadlineInfoCmd = &cli.Command{
 		}
 		defer closer()
 
-		nodeAPI, acloser, err := api.GetFullNodeAPI(cctx)
+		nodeAPI, acloser, err := api.GetFullNodeAPIV2(cctx)
 		if err != nil {
 			return err
 		}
@@ -404,7 +404,7 @@ var provingCheckProvableCmd = &cli.Command{
 			return xerrors.Errorf("could not parse deadline index: %w", err)
 		}
 
-		nodeAPI, closer, err := api.GetFullNodeAPI(cctx)
+		nodeAPI, closer, err := api.GetFullNodeAPIV2(cctx)
 		if err != nil {
 			return err
 		}

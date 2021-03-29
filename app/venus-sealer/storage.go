@@ -434,7 +434,7 @@ var storageListSectorsCmd = &cli.Command{
 		}
 		defer closer()
 
-		napi, closer2, err := api.GetFullNodeAPI(cctx)
+		napi, closer2, err := api.GetFullNodeAPIV2(cctx)
 		if err != nil {
 			return err
 		}
@@ -593,7 +593,7 @@ var storageCleanupCmd = &cli.Command{
 		}
 		defer closer()
 
-		nodeAPI, closer2, err := api.GetFullNodeAPI(cctx)
+		nodeAPI, closer2, err := api.GetFullNodeAPIV2(cctx)
 		if err != nil {
 			return err
 		}

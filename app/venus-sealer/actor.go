@@ -60,7 +60,7 @@ var actorSetAddrsCmd = &cli.Command{
 		}
 		defer closer()
 
-		nodeAPI, acloser, err := api.GetFullNodeAPI(cctx)
+		nodeAPI, acloser, err := api.GetFullNodeAPIV2(cctx)
 		if err != nil {
 			return err
 		}
@@ -137,7 +137,7 @@ var actorSetPeeridCmd = &cli.Command{
 		}
 		defer closer()
 
-		nodeAPI, acloser, err := api.GetFullNodeAPI(cctx)
+		nodeAPI, acloser, err := api.GetFullNodeAPIV2(cctx)
 		if err != nil {
 			return err
 		}
@@ -196,7 +196,7 @@ var actorWithdrawCmd = &cli.Command{
 		}
 		defer closer()
 
-		nodeAPI, acloser, err := api.GetFullNodeAPI(cctx)
+		nodeAPI, acloser, err := api.GetFullNodeAPIV2(cctx)
 		if err != nil {
 			return err
 		}
@@ -274,7 +274,7 @@ var actorRepayDebtCmd = &cli.Command{
 		}
 		defer closer()
 
-		nodeAPI, acloser, err := api.GetFullNodeAPI(cctx)
+		nodeAPI, acloser, err := api.GetFullNodeAPIV2(cctx)
 		if err != nil {
 			return err
 		}
@@ -386,7 +386,7 @@ var actorControlList = &cli.Command{
 		}
 		defer closer()
 
-		nodeAPI, acloser, err := api.GetFullNodeAPI(cctx)
+		nodeAPI, acloser, err := api.GetFullNodeAPIV2(cctx)
 		if err != nil {
 			return err
 		}
@@ -524,7 +524,7 @@ var actorControlSet = &cli.Command{
 		}
 		defer closer()
 
-		nodeAPI, acloser, err := api.GetFullNodeAPI(cctx)
+		nodeAPI, acloser, err := api.GetFullNodeAPIV2(cctx)
 		if err != nil {
 			return err
 		}
@@ -646,7 +646,7 @@ var actorSetOwnerCmd = &cli.Command{
 		}
 		defer closer()
 
-		nodeAPI, acloser, err := api.GetFullNodeAPI(cctx)
+		nodeAPI, acloser, err := api.GetFullNodeAPIV2(cctx)
 		if err != nil {
 			return err
 		}
@@ -746,7 +746,7 @@ var actorProposeChangeWorker = &cli.Command{
 		}
 		defer closer()
 
-		nodeAPI, acloser, err := api.GetFullNodeAPI(cctx)
+		nodeAPI, acloser, err := api.GetFullNodeAPIV2(cctx)
 		if err != nil {
 			return err
 		}
@@ -861,7 +861,7 @@ var actorConfirmChangeWorker = &cli.Command{
 		}
 		defer closer()
 
-		nodeAPI, acloser, err := api.GetFullNodeAPI(cctx)
+		nodeAPI, acloser, err := api.GetFullNodeAPIV2(cctx)
 		if err != nil {
 			return err
 		}

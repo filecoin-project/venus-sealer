@@ -177,7 +177,7 @@ var sectorsListCmd = &cli.Command{
 		}
 		defer closer()
 
-		fullApi, closer2, err := api.GetFullNodeAPI(cctx) // TODO: consider storing full node address in config
+		fullApi, closer2, err := api.GetFullNodeAPIV2(cctx) // TODO: consider storing full node address in config
 		if err != nil {
 			return err
 		}
@@ -472,7 +472,7 @@ var sectorsTerminatePendingCmd = &cli.Command{
 			return err
 		}
 		defer closer()
-		nodeAPI, nCloser, err := api.GetFullNodeAPI(cctx)
+		nodeAPI, nCloser, err := api.GetFullNodeAPIV2(cctx)
 		if err != nil {
 			return err
 		}
@@ -638,7 +638,7 @@ var sectorsCapacityCollateralCmd = &cli.Command{
 		}
 		defer mCloser()
 
-		nApi, nCloser, err := api.GetFullNodeAPI(cctx)
+		nApi, nCloser, err := api.GetFullNodeAPIV2(cctx)
 		if err != nil {
 			return err
 		}
