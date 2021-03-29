@@ -2,7 +2,6 @@ package storage
 
 import (
 	"context"
-	"errors"
 	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus-sealer/service"
@@ -202,13 +201,14 @@ func (m *Miner) runPreflightChecks(ctx context.Context) error {
 		return xerrors.Errorf("failed to resolve worker key: %w", err)
 	}
 
+	//todo :: check from wallet
 	has, err := m.api.WalletHas(ctx, workerKey)
 	if err != nil {
 		return xerrors.Errorf("failed to check wallet for worker key: %w", err)
 	}
 
 	if !has {
-		return errors.New("key for worker not found in local wallet")
+		log.Warn("key for worker not found in local wallet")
 	}
 
 	log.Infof("starting up miner %s, worker addr %s", m.maddr, workerKey)

@@ -109,7 +109,7 @@ func maybeUseAddress(ctx context.Context, a addrSelectApi, addr address.Address,
 			log.Errorw("getting account key", "error", err)
 			return false
 		}
-
+		//todo :: check from wallet
 		have, err := a.WalletHas(ctx, k)
 		if err != nil {
 			log.Errorw("failed to check control address", "addr", addr, "error", err)
@@ -118,7 +118,7 @@ func maybeUseAddress(ctx context.Context, a addrSelectApi, addr address.Address,
 
 		if !have {
 			log.Errorw("don't have key", "key", k, "address", addr)
-			return false
+			//return false
 		}
 
 		*leastBad = addr

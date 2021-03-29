@@ -191,16 +191,38 @@ func GetFullNodeAPI(ctx *cli.Context) (FullNode, jsonrpc.ClientCloser, error) {
 	return NewFullNodeRPC(ctx.Context, addr, headers)
 }
 
-func GetFullNodeAPIFromFlag(cctx *cli.Context) (FullNode, jsonrpc.ClientCloser, error) {
-	if !cctx.IsSet("node-url") || !cctx.IsSet("node-token") {
-		return nil, nil, xerrors.New("must set url or token")
+func GetFullNodeAPIV2(cctx *cli.Context) (FullNode, jsonrpc.ClientCloser, error) {
+	apiInfo, err := GetFullNodeAPIFromConfig(cctx)
+	if err != nil {
+		if !cctx.IsSet("node-url") || !cctx.IsSet("node-token") {
+			return nil, nil, xerrors.New("must set url or token")
+		}
+
+		apiInfo = APIInfo{
+			Addr:  cctx.String("node-url"),
+			Token: []byte(cctx.String("node-token")),
+		}
 	}
-	token := cctx.String("node-token")
-	headers := http.Header{}
-	if len(token) != 0 {
-		headers.Add("Authorization", "Bearer "+string(token))
+
+	addr, err := apiInfo.DialArgs()
+	if err != nil {
+		return nil, nil, xerrors.Errorf("could not get DialArgs: %w", err)
 	}
-	return NewFullNodeRPC(cctx.Context, cctx.String("node-url"), headers)
+	return NewFullNodeRPC(cctx.Context, addr, apiInfo.AuthHeader())
+}
+
+func GetFullNodeAPIFromConfig(cctx *cli.Context) (APIInfo, error) {
+	cfgPath := cctx.String("config")
+	cfg, err := config.MinerFromFile(cfgPath)
+	if err != nil {
+		return APIInfo{}, err
+	}
+	cfg.ConfigPath = cfgPath
+
+	return APIInfo{
+		Addr:  cfg.Node.Url,
+		Token: []byte(cfg.Node.Token),
+	}, nil
 }
 
 // N

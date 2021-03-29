@@ -81,6 +81,7 @@ func DefaultMainnetStorageMiner() *StorageMiner {
 			UpgradeIgnitionHeight:  94000,
 			ForkLengthThreshold:    policy.ChainFinality,
 			InsecurePoStValidation: false,
+			BlockDelaySecs:         30,
 		},
 		DB: DbConfig{
 			Type: "sqlite",
@@ -154,6 +155,7 @@ func DefaultNerpdaStorageMiner() *StorageMiner {
 			ForkLengthThreshold:     policy.ChainFinality,
 			InsecurePoStValidation:  false,
 			PreCommitChallengeDelay: 10,
+			BlockDelaySecs:          30,
 		},
 		DB: DbConfig{
 			Type: "sqlite",
@@ -226,6 +228,7 @@ func DefaultCalibrationStorageMiner() *StorageMiner {
 			UpgradeIgnitionHeight:  94000,
 			ForkLengthThreshold:    policy.ChainFinality,
 			InsecurePoStValidation: false,
+			BlockDelaySecs:         30,
 		},
 		DB: DbConfig{
 			Type: "sqlite",
@@ -301,6 +304,7 @@ func Default2kStorageMiner() *StorageMiner {
 			UpgradeIgnitionHeight:  -2,
 			ForkLengthThreshold:    policy.ChainFinality,
 			InsecurePoStValidation: false,
+			BlockDelaySecs:         3,
 		},
 		DB: DbConfig{
 			Type: "sqlite",

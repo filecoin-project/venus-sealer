@@ -125,7 +125,6 @@ func GetStorageMinerAPI(ctx *cli.Context, opts ...GetStorageOption) (StorageMine
 }
 
 func GetConfigAPI(cctx *cli.Context, options GetStorageOptions) (string, http.Header, error) {
-
 	var apiInfo APIInfo
 	if len(options.Address) > 0 {
 		apiInfo.Addr = options.Address

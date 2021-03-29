@@ -63,31 +63,10 @@ var runCmd = &cli.Command{
 			}
 		}
 
-		nodeApi, ncloser, err := api.GetFullNodeAPI(cctx)
-		if err != nil {
-			return xerrors.Errorf("getting full node api: %w", err)
-		}
-		defer ncloser()
-		ctx := api.DaemonContext(cctx)
-
-		// Register all metric views
-		if err := view.Register(); err != nil {
-			log.Fatalf("Cannot register the view: %v", err)
-		}
-
-		v, err := nodeApi.Version(ctx)
-		if err != nil {
-			return err
-		}
-
 		if cctx.Bool("manage-fdlimit") {
 			if _, _, err := ulimit.ManageFdLimit(); err != nil {
 				log.Errorf("setting file descriptor limit: %s", err)
 			}
-		}
-
-		if v.APIVersion != constants.FullAPIVersion {
-			return xerrors.Errorf("venus-daemon API version doesn't match: expected: %s", api.Version{APIVersion: constants.FullAPIVersion})
 		}
 
 		//read config
@@ -115,6 +94,27 @@ var runCmd = &cli.Command{
 			return err
 		}
 		defer fl.Unlock()
+
+		nodeApi, ncloser, err := api.GetFullNodeAPIV2(cctx)
+		if err != nil {
+			return xerrors.Errorf("getting full node api: %w", err)
+		}
+		defer ncloser()
+		ctx := api.DaemonContext(cctx)
+
+		// Register all metric views
+		if err := view.Register(); err != nil {
+			log.Fatalf("Cannot register the view: %v", err)
+		}
+
+		v, err := nodeApi.Version(ctx)
+		if err != nil {
+			return err
+		}
+
+		if v.APIVersion != constants.FullAPIVersion {
+			return xerrors.Errorf("venus-daemon API version doesn't match: expected: %s", api.Version{APIVersion: constants.FullAPIVersion})
+		}
 
 		log.Info("Checking full node sync status")
 		if !cctx.Bool("nosync") {
