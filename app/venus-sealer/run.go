@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"regexp"
 	"syscall"
 
 	mux "github.com/gorilla/mux"
@@ -132,7 +133,10 @@ var runCmd = &cli.Command{
 			sealer.Online(cfg),
 			sealer.ApplyIf(func(s *sealer.Settings) bool { return cctx.IsSet("miner-api") },
 				sealer.Override(new(types.APIEndpoint), func() (types.APIEndpoint, error) {
-					return multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/" + cctx.String("miner-api"))
+					regex, _ := regexp.Compile(`tcp/\d*`)
+					newAddr := regex.ReplaceAll([]byte(cfg.API.ListenAddress), []byte("tcp/"+cctx.String("miner-api")))
+					cfg.API.ListenAddress = string(newAddr)
+					return multiaddr.NewMultiaddr(cfg.API.ListenAddress)
 				})),
 			sealer.Override(new(api.FullNode), nodeApi),
 			sealer.Override(new(types.ShutdownChan), shutdownChan),
