@@ -3,7 +3,6 @@ package sqlite
 import (
 	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/models/repo"
-	"github.com/mitchellh/go-homedir"
 	"golang.org/x/xerrors"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -80,17 +79,23 @@ func (d SqlLiteRepo) DbClose() error {
 }
 
 func OpenSqlite(cfg *config.SqliteConfig) (repo.Repo, error) {
-	path, err := homedir.Expand(cfg.Path + "cache=shared&sync=full")
-	if err != nil {
-		return nil, err
-	}
-	db, err := gorm.Open(sqlite.Open(path), &gorm.Config{
-		//Logger: logger.Default.LogMode(logger.Info), // 日志配置
+	//cache=shared&_journal_mode=wal&sync=normal
+	//cache=shared&sync=full
+	db, err := gorm.Open(sqlite.Open(cfg.Path+"?cache=shared&_journal_mode=wal&sync=normal"), &gorm.Config{
+		// Logger: logger.Default.LogMode(logger.Info), // 日志配置
 	})
 	if err != nil {
 		return nil, xerrors.Errorf("fail to connect sqlite: %s %w", cfg.Path, err)
 	}
 	db.Set("gorm:table_options", "CHARSET=utf8mb4")
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+
+	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetMaxIdleConns(1)
 
 	return &SqlLiteRepo{
 		db,
