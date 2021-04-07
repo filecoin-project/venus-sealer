@@ -3,6 +3,7 @@ package sqlite
 import (
 	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/models/repo"
+	"github.com/mitchellh/go-homedir"
 	"golang.org/x/xerrors"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -81,7 +82,12 @@ func (d SqlLiteRepo) DbClose() error {
 func OpenSqlite(cfg *config.SqliteConfig) (repo.Repo, error) {
 	//cache=shared&_journal_mode=wal&sync=normal
 	//cache=shared&sync=full
-	db, err := gorm.Open(sqlite.Open(cfg.Path+"?cache=shared&_journal_mode=wal&sync=normal"), &gorm.Config{
+	path, err := homedir.Expand(cfg.Path)
+	if err != nil {
+		return nil, xerrors.Errorf("expand path error %v", err)
+	}
+
+	db, err := gorm.Open(sqlite.Open(path+"?cache=shared&_journal_mode=wal&sync=normal"), &gorm.Config{
 		// Logger: logger.Default.LogMode(logger.Info), // 日志配置
 	})
 	if err != nil {
