@@ -80,7 +80,7 @@ func (d SqlLiteRepo) DbClose() error {
 }
 
 func OpenSqlite(cfg *config.SqliteConfig) (repo.Repo, error) {
-	path, err := homedir.Expand(cfg.Path)
+	path, err := homedir.Expand(cfg.Path + "cache=shared&sync=full")
 	if err != nil {
 		return nil, err
 	}
