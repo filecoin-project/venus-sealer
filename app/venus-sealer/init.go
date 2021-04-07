@@ -115,10 +115,9 @@ var initCmd = &cli.Command{
 			Name:  "messager-token",
 			Usage: "messager token",
 		},
-
 		&cli.StringFlag{
 			Name:  "node-url",
-			Usage: "node usl",
+			Usage: "node url",
 		},
 		&cli.StringFlag{
 			Name:  "node-token",

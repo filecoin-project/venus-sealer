@@ -80,17 +80,28 @@ func (d SqlLiteRepo) DbClose() error {
 }
 
 func OpenSqlite(cfg *config.SqliteConfig) (repo.Repo, error) {
-	path, err := homedir.Expand(cfg.Path + "cache=shared&sync=full")
+	//cache=shared&_journal_mode=wal&sync=normal
+	//cache=shared&sync=full
+	path, err := homedir.Expand(cfg.Path)
 	if err != nil {
-		return nil, err
+		return nil, xerrors.Errorf("expand path error %v", err)
 	}
-	db, err := gorm.Open(sqlite.Open(path), &gorm.Config{
-		//Logger: logger.Default.LogMode(logger.Info), // 日志配置
+
+	db, err := gorm.Open(sqlite.Open(path+"?cache=shared&_journal_mode=wal&sync=normal"), &gorm.Config{
+		// Logger: logger.Default.LogMode(logger.Info), // 日志配置
 	})
 	if err != nil {
 		return nil, xerrors.Errorf("fail to connect sqlite: %s %w", cfg.Path, err)
 	}
 	db.Set("gorm:table_options", "CHARSET=utf8mb4")
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+
+	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetMaxIdleConns(1)
 
 	return &SqlLiteRepo{
 		db,
