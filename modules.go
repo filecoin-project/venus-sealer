@@ -25,7 +25,6 @@ import (
 	"github.com/filecoin-project/venus/pkg/specactors/policy"
 	"github.com/filecoin-project/venus/pkg/types"
 	"github.com/gbrlsnchs/jwt/v3"
-	"github.com/ipfs-force-community/venus-messager/api/client"
 	"github.com/ipfs/go-datastore"
 	"github.com/mitchellh/go-homedir"
 	"go.uber.org/fx"
@@ -217,7 +216,7 @@ type StorageMinerParams struct {
 	Lifecycle          fx.Lifecycle
 	MetricsCtx         MetricsCtx
 	API                api.FullNode
-	Messager           client.IMessager
+	Messager           api.IMessager
 	MetadataService    *service.MetadataService
 	LogService         *service.LogService
 	SectorInfoService  *service.SectorInfoService

@@ -9,7 +9,6 @@ import (
 	chain2 "github.com/filecoin-project/venus/app/submodule/chain"
 	"github.com/filecoin-project/venus/app/submodule/syncer"
 	"github.com/filecoin-project/venus/pkg/chain"
-	"github.com/ipfs-force-community/venus-messager/api/client"
 	"time"
 
 	"github.com/filecoin-project/go-state-types/network"
@@ -44,7 +43,7 @@ var log = logging.Logger("storageminer")
 
 type Miner struct {
 	api               storageMinerApi
-	messager          client.IMessager
+	messager          api.IMessager
 	feeCfg            config.MinerFeeConfig
 	sealer            sectorstorage.SectorManager
 	metadataService   *service.MetadataService
@@ -120,7 +119,7 @@ type storageMinerApi interface {
 	WalletHas(context.Context, address.Address) (bool, error)
 }
 
-func NewMiner(api storageMinerApi, messager client.IMessager, maddr address.Address, metaService *service.MetadataService, sectorInfoService *service.SectorInfoService, logService *service.LogService, sealer sectorstorage.SectorManager, sc types2.SectorIDCounter, verif ffiwrapper.Verifier, gsd types2.GetSealingConfigFunc, feeCfg config.MinerFeeConfig, journal journal.Journal, as *AddressSelector, networkParams *config.NetParamsConfig) (*Miner, error) {
+func NewMiner(api storageMinerApi, messager api.IMessager, maddr address.Address, metaService *service.MetadataService, sectorInfoService *service.SectorInfoService, logService *service.LogService, sealer sectorstorage.SectorManager, sc types2.SectorIDCounter, verif ffiwrapper.Verifier, gsd types2.GetSealingConfigFunc, feeCfg config.MinerFeeConfig, journal journal.Journal, as *AddressSelector, networkParams *config.NetParamsConfig) (*Miner, error) {
 	m := &Miner{
 		api:               api,
 		messager:          messager,

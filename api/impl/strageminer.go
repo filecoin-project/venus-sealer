@@ -11,7 +11,6 @@ import (
 	types2 "github.com/filecoin-project/venus-sealer/types"
 	chain2 "github.com/filecoin-project/venus/app/submodule/chain"
 	"github.com/filecoin-project/venus/pkg/chain"
-	"github.com/ipfs-force-community/venus-messager/api/client"
 	types3 "github.com/ipfs-force-community/venus-messager/types"
 	"net/http"
 	"strconv"
@@ -46,7 +45,7 @@ type StorageMinerAPI struct {
 	SectorBlocks *sectorblocks.SectorBlocks
 	Miner        *storage.Miner
 	Full         api.FullNode
-	Messager     client.IMessager
+	Messager     api.IMessager
 	StorageMgr   *sectorstorage.Manager `optional:"true"`
 	IStorageMgr  sectorstorage.SectorManager
 	*stores.Index

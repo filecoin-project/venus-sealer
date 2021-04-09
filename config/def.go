@@ -56,8 +56,9 @@ type NodeConfig struct {
 }
 
 type MessagerConfig struct {
-	Url   string
-	Token string
+	Url    string
+	Token  string
+	Wallet string
 }
 
 func (node *NodeConfig) APIEndpoint() (multiaddr.Multiaddr, error) {

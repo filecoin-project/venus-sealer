@@ -15,7 +15,6 @@ import (
 	types2 "github.com/filecoin-project/venus-sealer/types"
 	"github.com/filecoin-project/venus/fixtures/asset"
 	"github.com/filecoin-project/venus/pkg/gen/genesis"
-	"github.com/ipfs-force-community/venus-messager/api/client"
 	types3 "github.com/ipfs-force-community/venus-messager/types"
 	"io/ioutil"
 	"os"
@@ -116,6 +115,10 @@ var initCmd = &cli.Command{
 			Usage: "messager token",
 		},
 		&cli.StringFlag{
+			Name:  "wallet-name",
+			Usage: "use which wallet in messager",
+		},
+		&cli.StringFlag{
 			Name:  "node-url",
 			Usage: "node url",
 		},
@@ -189,6 +192,10 @@ var initCmd = &cli.Command{
 
 		if cctx.IsSet("messager-token") {
 			defaultCfg.Messager.Token = cctx.String("messager-token")
+		}
+
+		if cctx.IsSet("wallet-name") {
+			defaultCfg.Messager.Wallet = cctx.String("wallet-name")
 		}
 
 		if cctx.IsSet("node-url") {
@@ -298,7 +305,7 @@ var initCmd = &cli.Command{
 	},
 }
 
-func storageMinerInit(ctx context.Context, cctx *cli.Context, api api.FullNode, messagerClient client.IMessager, cfg *config.StorageMiner, ssize abi.SectorSize, gasPrice types.BigInt) error {
+func storageMinerInit(ctx context.Context, cctx *cli.Context, api api.FullNode, messagerClient api.IMessager, cfg *config.StorageMiner, ssize abi.SectorSize, gasPrice types.BigInt) error {
 	log.Info("Initializing libp2p identity")
 	repo, err := models.SetDataBase(config.HomeDir(cfg.DataDir), &cfg.DB)
 	if err != nil {
@@ -380,7 +387,7 @@ func storageMinerInit(ctx context.Context, cctx *cli.Context, api api.FullNode, 
 	return nil
 }
 
-func createStorageMiner(ctx context.Context, nodeAPI api.FullNode, messagerClient client.IMessager, peerid peer.ID, gasPrice types.BigInt, cctx *cli.Context) (address.Address, error) {
+func createStorageMiner(ctx context.Context, nodeAPI api.FullNode, messagerClient api.IMessager, peerid peer.ID, gasPrice types.BigInt, cctx *cli.Context) (address.Address, error) {
 	var err error
 	var owner address.Address
 	if cctx.String("owner") != "" {
