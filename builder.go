@@ -18,7 +18,6 @@ import (
 	"github.com/filecoin-project/venus-sealer/storage"
 	"github.com/filecoin-project/venus-sealer/storage/sectorblocks"
 	"github.com/filecoin-project/venus-sealer/types"
-	"github.com/ipfs-force-community/venus-messager/api/client"
 	logging "github.com/ipfs/go-log/v2"
 	metricsi "github.com/ipfs/go-metrics-interface"
 	"github.com/multiformats/go-multiaddr"
@@ -158,7 +157,7 @@ func Repo(cfg *config.StorageMiner) Option {
 			Override(new(*config.MessagerConfig), &cfg.Messager),
 			ConfigAPI(cfg),
 
-			Override(new(client.IMessager), api.NewMessageRPC),
+			Override(new(api.IMessager), api.NewMessageRPC),
 			Override(new(repo.Repo), models.SetDataBase),
 			Providers(
 				service.NewDealRefServiceService,

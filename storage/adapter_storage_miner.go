@@ -8,7 +8,6 @@ import (
 	types2 "github.com/filecoin-project/venus-sealer/types"
 	"github.com/filecoin-project/venus/app/submodule/chain"
 	chain2 "github.com/filecoin-project/venus/pkg/chain"
-	"github.com/ipfs-force-community/venus-messager/api/client"
 	types3 "github.com/ipfs-force-community/venus-messager/types"
 
 	"github.com/ipfs/go-cid"
@@ -35,10 +34,10 @@ var _ sealing.SealingAPI = new(SealingAPIAdapter)
 
 type SealingAPIAdapter struct {
 	delegate storageMinerApi
-	messager client.IMessager
+	messager api.IMessager
 }
 
-func NewSealingAPIAdapter(api storageMinerApi, messager client.IMessager) SealingAPIAdapter {
+func NewSealingAPIAdapter(api storageMinerApi, messager api.IMessager) SealingAPIAdapter {
 	return SealingAPIAdapter{delegate: api, messager: messager}
 }
 
