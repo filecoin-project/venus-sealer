@@ -11,7 +11,7 @@ import (
 
 type Log struct {
 	Id           int64  `gorm:"column:id;types:integer;primary_key;autoIncrement;" json:"id"` // 主键、
-	SectorNumber uint64 `gorm:"column:sector_number;type:unsigned bigint;" json:"sector_number"`
+	SectorNumber uint64 `gorm:"column:sector_number;type:unsigned bigint;index:log_sector_number" json:"sector_number"`
 	Timestamp    uint64 `gorm:"column:timestamp;type:unsigned bigint;" json:"timestamp"`
 	// for errors
 	Trace   string `gorm:"column:trace;type:text;" json:"trace"`
