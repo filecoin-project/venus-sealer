@@ -54,7 +54,7 @@ type WdPoStSchedulerEvt struct {
 type WdPoStProofsProcessedEvt struct {
 	evtCommon
 	Partitions []miner.PoStPartition
-	MessageCID cid.Cid `json:",omitempty"`
+	MessageUID string `json:",omitempty"`
 }
 
 // WdPoStRecoveriesProcessedEvt is the journal event that gets recorded when
