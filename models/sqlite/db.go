@@ -87,7 +87,7 @@ func OpenSqlite(cfg *config.SqliteConfig) (repo.Repo, error) {
 		return nil, xerrors.Errorf("expand path error %v", err)
 	}
 
-	db, err := gorm.Open(sqlite.Open(path+"?cache=shared&_journal_mode=wal&sync=normal"), &gorm.Config{
+	db, err := gorm.Open(sqlite.Open(path+"?cache=shared&_cache_size=204800&_journal_mode=wal&sync=normal"), &gorm.Config{
 		// Logger: logger.Default.LogMode(logger.Info), // 日志配置
 	})
 	if err != nil {

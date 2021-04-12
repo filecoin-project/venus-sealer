@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/venus-sealer/config"
 	types2 "github.com/filecoin-project/venus/pkg/types"
@@ -11,6 +12,7 @@ import (
 )
 
 type IMessager interface {
+	HasWalletAddress(ctx context.Context, addr address.Address) (bool, error)
 	WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error)
 	PushMessage(ctx context.Context, msg *types2.UnsignedMessage, meta *types.MsgMeta) (string, error)
 	PushMessageWithId(ctx context.Context, id string, msg *types2.UnsignedMessage, meta *types.MsgMeta) (string, error)
@@ -30,6 +32,10 @@ func NewMessager(in client.IMessager, walletName string) *Messager {
 
 func (m *Messager) WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error) {
 	return m.in.WaitMessage(ctx, id, confidence)
+}
+
+func (m *Messager) HasWalletAddress(ctx context.Context, addr address.Address) (bool, error) {
+	return m.in.HasWalletAddress(ctx, m.walletName, addr)
 }
 
 func (m *Messager) PushMessage(ctx context.Context, msg *types2.UnsignedMessage, meta *types.MsgMeta) (string, error) {
