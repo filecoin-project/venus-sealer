@@ -11,9 +11,12 @@ import (
 	"github.com/filecoin-project/venus/pkg/types"
 )
 
+type addrMessager interface {
+	HasWalletAddress(ctx context.Context, addr address.Address) (bool, error)
+}
+
 type addrSelectApi interface {
 	WalletBalance(context.Context, address.Address) (types.BigInt, error)
-	WalletHas(context.Context, address.Address) (bool, error)
 
 	StateAccountKey(context.Context, address.Address, types.TipSetKey) (address.Address, error)
 	StateLookupID(context.Context, address.Address, types.TipSetKey) (address.Address, error)
@@ -23,7 +26,7 @@ type AddressSelector struct {
 	api.AddressConfig
 }
 
-func (as *AddressSelector) AddressFor(ctx context.Context, a addrSelectApi, mi miner.MinerInfo, use api.AddrUse, goodFunds, minFunds abi.TokenAmount) (address.Address, abi.TokenAmount, error) {
+func (as *AddressSelector) AddressFor(ctx context.Context, a addrSelectApi, am addrMessager, mi miner.MinerInfo, use api.AddrUse, goodFunds, minFunds abi.TokenAmount) (address.Address, abi.TokenAmount, error) {
 	var addrs []address.Address
 	switch use {
 	case api.PreCommitAddr:
@@ -59,10 +62,10 @@ func (as *AddressSelector) AddressFor(ctx context.Context, a addrSelectApi, mi m
 	}
 	addrs = append(addrs, mi.Owner, mi.Worker)
 
-	return pickAddress(ctx, a, mi, goodFunds, minFunds, addrs)
+	return pickAddress(ctx, a, am, mi, goodFunds, minFunds, addrs)
 }
 
-func pickAddress(ctx context.Context, a addrSelectApi, mi miner.MinerInfo, goodFunds, minFunds abi.TokenAmount, addrs []address.Address) (address.Address, abi.TokenAmount, error) {
+func pickAddress(ctx context.Context, a addrSelectApi, am addrMessager, mi miner.MinerInfo, goodFunds, minFunds abi.TokenAmount, addrs []address.Address) (address.Address, abi.TokenAmount, error) {
 	leastBad := mi.Worker
 	bestAvail := minFunds
 
@@ -86,7 +89,7 @@ func pickAddress(ctx context.Context, a addrSelectApi, mi miner.MinerInfo, goodF
 			continue
 		}
 
-		if maybeUseAddress(ctx, a, addr, goodFunds, &leastBad, &bestAvail) {
+		if maybeUseAddress(ctx, a, am, addr, goodFunds, &leastBad, &bestAvail) {
 			return leastBad, bestAvail, nil
 		}
 	}
@@ -96,7 +99,7 @@ func pickAddress(ctx context.Context, a addrSelectApi, mi miner.MinerInfo, goodF
 	return leastBad, bestAvail, nil
 }
 
-func maybeUseAddress(ctx context.Context, a addrSelectApi, addr address.Address, goodFunds abi.TokenAmount, leastBad *address.Address, bestAvail *abi.TokenAmount) bool {
+func maybeUseAddress(ctx context.Context, a addrSelectApi, am addrMessager, addr address.Address, goodFunds abi.TokenAmount, leastBad *address.Address, bestAvail *abi.TokenAmount) bool {
 	b, err := a.WalletBalance(ctx, addr)
 	if err != nil {
 		log.Errorw("checking control address balance", "addr", addr, "error", err)
@@ -109,8 +112,8 @@ func maybeUseAddress(ctx context.Context, a addrSelectApi, addr address.Address,
 			log.Errorw("getting account key", "error", err)
 			return false
 		}
-		//todo :: check from wallet
-		have, err := a.WalletHas(ctx, k)
+
+		have, err := am.HasWalletAddress(ctx, k)
 		if err != nil {
 			log.Errorw("failed to check control address", "addr", addr, "error", err)
 			return false
@@ -118,7 +121,7 @@ func maybeUseAddress(ctx context.Context, a addrSelectApi, addr address.Address,
 
 		if !have {
 			log.Errorw("don't have key", "key", k, "address", addr)
-			//return false
+			return false
 		}
 
 		*leastBad = addr

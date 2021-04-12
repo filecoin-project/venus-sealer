@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus-sealer/service"
@@ -163,7 +164,7 @@ func (m *Miner) Run(ctx context.Context) error {
 	pcp := sealing.NewBasicPreCommitPolicy(adaptedAPI, policy.GetMaxSectorExpirationExtension()-(md.WPoStProvingPeriod*2), md.PeriodStart%md.WPoStProvingPeriod)
 
 	as := func(ctx context.Context, mi miner.MinerInfo, use api.AddrUse, goodFunds, minFunds abi.TokenAmount) (address.Address, abi.TokenAmount, error) {
-		return m.addrSel.AddressFor(ctx, m.api, mi, use, goodFunds, minFunds)
+		return m.addrSel.AddressFor(ctx, m.api, m.messager, mi, use, goodFunds, minFunds)
 	}
 
 	m.sealing = sealing.New(adaptedAPI, fc, NewEventsAdapter(evts), m.maddr, m.metadataService, m.sectorInfoService, m.logService, m.sealer, m.sc, m.verif, &pcp, types2.GetSealingConfigFunc(m.getSealConfig), m.handleSealingNotifications, as, m.networkParams)
@@ -201,13 +202,13 @@ func (m *Miner) runPreflightChecks(ctx context.Context) error {
 	}
 
 	//todo :: check from wallet
-	has, err := m.api.WalletHas(ctx, workerKey)
+	has, err := m.messager.HasWalletAddress(ctx, workerKey)
 	if err != nil {
 		return xerrors.Errorf("failed to check wallet for worker key: %w", err)
 	}
 
 	if !has {
-		log.Warn("key for worker not found in local wallet")
+		return errors.New("key for worker not found in local wallet")
 	}
 
 	log.Infof("starting up miner %s, worker addr %s", m.maddr, workerKey)
