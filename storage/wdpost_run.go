@@ -17,8 +17,6 @@ import (
 	"github.com/filecoin-project/go-state-types/crypto"
 	"github.com/filecoin-project/go-state-types/dline"
 	"github.com/filecoin-project/go-state-types/network"
-	"github.com/ipfs/go-cid"
-
 	"go.opencensus.io/trace"
 	"golang.org/x/xerrors"
 
@@ -57,12 +55,12 @@ func (s *WindowPoStScheduler) failPost(err error, ts *types.TipSet, deadline *dl
 
 // recordProofsEvent records a successful proofs_processed event in the
 // journal, even if it was a noop (no partitions).
-func (s *WindowPoStScheduler) recordProofsEvent(partitions []miner.PoStPartition, mcid cid.Cid) {
+func (s *WindowPoStScheduler) recordProofsEvent(partitions []miner.PoStPartition, uid string) {
 	s.journal.RecordEvent(s.evtTypes[evtTypeWdPoStProofs], func() interface{} {
 		return &WdPoStProofsProcessedEvt{
 			evtCommon:  s.getEvtCommon(nil),
 			Partitions: partitions,
-			MessageCID: mcid,
+			MessageUID: uid,
 		}
 	})
 }
@@ -108,7 +106,7 @@ func (s *WindowPoStScheduler) runGeneratePoST(
 	}
 
 	if len(posts) == 0 {
-		s.recordProofsEvent(nil, cid.Undef)
+		s.recordProofsEvent(nil, "")
 	}
 
 	return posts, nil
@@ -182,11 +180,11 @@ func (s *WindowPoStScheduler) runSubmitPoST(
 		post.ChainCommitRand = commRand
 
 		// Submit PoST
-		sm, submitErr := s.submitPost(ctx, post)
+		uid, submitErr := s.submitPost(ctx, post)
 		if submitErr != nil {
 			log.Errorf("submit window post failed: %+v", submitErr)
 		} else {
-			s.recordProofsEvent(post.Partitions, sm.Cid())
+			s.recordProofsEvent(post.Partitions, uid)
 		}
 	}
 
@@ -744,15 +742,13 @@ func (s *WindowPoStScheduler) sectorsForProof(ctx context.Context, goodSectors, 
 	return proofSectors, nil
 }
 
-func (s *WindowPoStScheduler) submitPost(ctx context.Context, proof *miner.SubmitWindowedPoStParams) (*types.SignedMessage, error) {
+func (s *WindowPoStScheduler) submitPost(ctx context.Context, proof *miner.SubmitWindowedPoStParams) (string, error) {
 	ctx, span := trace.StartSpan(ctx, "storage.commitPost")
 	defer span.End()
 
-	var sm *types.SignedMessage
-
 	enc, aerr := actors.SerializeParams(proof)
 	if aerr != nil {
-		return nil, xerrors.Errorf("could not serialize submit window post parameters: %w", aerr)
+		return "", xerrors.Errorf("could not serialize submit window post parameters: %w", aerr)
 	}
 
 	msg := &types.Message{
@@ -763,20 +759,20 @@ func (s *WindowPoStScheduler) submitPost(ctx context.Context, proof *miner.Submi
 	}
 	spec := &types.MessageSendSpec{MaxFee: abi.TokenAmount(s.feeCfg.MaxWindowPoStGasFee)}
 	if err := s.setSender(ctx, msg, spec); err != nil {
-		return nil, err
+		return "", err
 	}
 
 	// TODO: consider maybe caring about the output
-	sm, err := s.api.MpoolPushMessage(ctx, msg, spec)
+	uid, err := s.Messager.PushMessage(ctx, msg, &types3.MsgMeta{MaxFee: spec.MaxFee})
 
 	if err != nil {
-		return nil, xerrors.Errorf("pushing message to mpool: %w", err)
+		return "", xerrors.Errorf("pushing message to mpool: %w", err)
 	}
 
-	log.Infof("Submitted window post: %s", sm.Cid())
+	log.Infof("Submitted window post: %s", uid)
 
 	go func() {
-		rec, err := s.api.StateWaitMsg(context.TODO(), sm.Cid(), constants.MessageConfidence)
+		rec, err := s.Messager.WaitMessage(context.TODO(), uid, constants.MessageConfidence)
 		if err != nil {
 			log.Error(err)
 			return
@@ -786,10 +782,10 @@ func (s *WindowPoStScheduler) submitPost(ctx context.Context, proof *miner.Submi
 			return
 		}
 
-		log.Errorf("Submitting window post %s failed: exit %d", sm.Cid(), rec.Receipt.ExitCode)
+		log.Errorf("Submitting window post  uid %s failed: exit %d", uid, rec.Receipt.ExitCode)
 	}()
 
-	return sm, nil
+	return uid, nil
 }
 
 func (s *WindowPoStScheduler) setSender(ctx context.Context, msg *types.Message, spec *types.MessageSendSpec) error {
