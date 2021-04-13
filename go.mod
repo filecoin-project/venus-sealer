@@ -38,7 +38,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/hako/durafmt v0.0.0-20200710122514-c0fb7b4da026
 	github.com/hashicorp/go-multierror v1.1.0
-	github.com/ipfs-force-community/venus-messager v0.0.0-20210409062759-95df389091a3 // indirect
+	github.com/ipfs-force-community/venus-messager v0.0.0-20210413021844-e36c2596dbc1 // indirect
 	github.com/ipfs/go-block-format v0.0.3
 	github.com/ipfs/go-cid v0.0.7
 	github.com/ipfs/go-datastore v0.4.5
