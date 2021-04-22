@@ -190,25 +190,54 @@ var sectorsListCmd = &cli.Command{
 			return err
 		}
 
-		var list []abi.SectorNumber
+		//var list []abi.SectorNumber
+		//
+		//showRemoved := cctx.Bool("show-removed")
+		//states := cctx.String("states")
+		//if len(states) == 0 {
+		//	list, err = storageAPI.SectorsList(ctx)
+		//} else {
+		//	showRemoved = true
+		//	sList := strings.Split(states, ",")
+		//	ss := make([]api.SectorState, len(sList))
+		//	for i := range sList {
+		//		ss[i] = api.SectorState(sList[i])
+		//	}
+		//	list, err = storageAPI.SectorsListInStates(ctx, ss)
+		//}
+		//
+		//if err != nil {
+		//	return err
+		//}
+		//
+		//sort.Slice(list, func(i, j int) bool {
+		//	return list[i] < list[j]
+		//})
+
+		var (
+			list []api.SectorInfo
+			ss   []api.SectorState
+		)
 
 		showRemoved := cctx.Bool("show-removed")
 		states := cctx.String("states")
-		if len(states) == 0 {
-			list, err = storageAPI.SectorsList(ctx)
-		} else {
-			showRemoved = true
+		if len(states) != 0 {
 			sList := strings.Split(states, ",")
-			ss := make([]api.SectorState, len(sList))
+			ss = make([]api.SectorState, len(sList))
 			for i := range sList {
 				ss[i] = api.SectorState(sList[i])
 			}
-			list, err = storageAPI.SectorsListInStates(ctx, ss)
 		}
 
+		fast := cctx.Bool("fast")
+		list, err = storageAPI.SectorsInfoListInStates(ctx, ss, !fast)
 		if err != nil {
 			return err
 		}
+
+		sort.Slice(list, func(i, j int) bool {
+			return list[i].SectorID < list[j].SectorID
+		})
 
 		maddr, err := storageAPI.ActorAddress(ctx)
 		if err != nil {
@@ -238,10 +267,6 @@ var sectorsListCmd = &cli.Command{
 			commitedIDs[info.SectorNumber] = struct{}{}
 		}
 
-		sort.Slice(list, func(i, j int) bool {
-			return list[i] < list[j]
-		})
-
 		tw := tablewriter.New(
 			tablewriter.Col("ID"),
 			tablewriter.Col("State"),
@@ -255,21 +280,19 @@ var sectorsListCmd = &cli.Command{
 			tablewriter.NewLineCol("Error"),
 			tablewriter.NewLineCol("RecoveryTimeout"))
 
-		fast := cctx.Bool("fast")
-
-		for _, s := range list {
-			st, err := storageAPI.SectorsStatus(ctx, s, !fast)
-			if err != nil {
-				tw.Write(map[string]interface{}{
-					"ID":    s,
-					"Error": err,
-				})
-				continue
-			}
+		for _, st := range list {
+			//st, err := storageAPI.SectorsStatus(ctx, s, !fast)
+			//if err != nil {
+			//	tw.Write(map[string]interface{}{
+			//		"ID":    s,
+			//		"Error": err,
+			//	})
+			//	continue
+			//}
 
 			if showRemoved || st.State != api.SectorState(types2.Removed) {
-				_, inSSet := commitedIDs[s]
-				_, inASet := activeIDs[s]
+				_, inSSet := commitedIDs[st.SectorID]
+				_, inASet := activeIDs[st.SectorID]
 
 				dw := .0
 				if st.Expiration-st.Activation > 0 {
@@ -289,7 +312,7 @@ var sectorsListCmd = &cli.Command{
 				}
 
 				m := map[string]interface{}{
-					"ID":      s,
+					"ID":      st.SectorID,
 					"State":   color.New(stateOrder[types2.SectorState(st.State)].col).Sprint(st.State),
 					"OnChain": yesno(inSSet),
 					"Active":  yesno(inASet),

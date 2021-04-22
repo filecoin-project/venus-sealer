@@ -196,6 +196,123 @@ func (sm *StorageMinerAPI) SectorsList(context.Context) ([]abi.SectorNumber, err
 	return out, nil
 }
 
+// List all staged sector's info in particular states
+func (sm *StorageMinerAPI) SectorsInfoListInStates(ctx context.Context, states []api.SectorState, showOnChainInfo bool) ([]api.SectorInfo, error) {
+	sectors, err := sm.Miner.ListSectors()
+	if err != nil {
+		return nil, err
+	}
+
+	var sis []types2.SectorInfo
+	if states != nil && len(states) > 0 {
+		filterStates := make(map[types2.SectorState]struct{})
+		for _, state := range states {
+			st := types2.SectorState(state)
+			if _, ok := types2.ExistSectorStateList[st]; !ok {
+				continue
+			}
+			filterStates[st] = struct{}{}
+		}
+
+		if len(filterStates) > 0 {
+			for i := range sectors {
+				if _, ok := filterStates[sectors[i].State]; ok {
+					sis = append(sis, sectors[i])
+				}
+			}
+		} else {
+			sis = append(sis, sectors...)
+		}
+	} else {
+		sis = append(sis, sectors...)
+	}
+
+	out := make([]api.SectorInfo, len(sis))
+	for i, sector := range sis {
+		deals := make([]abi.DealID, len(sector.Pieces))
+		for i, piece := range sector.Pieces {
+			if piece.DealInfo == nil {
+				continue
+			}
+			deals[i] = piece.DealInfo.DealID
+		}
+
+		logs, err := sm.LogService.List(sector.SectorNumber)
+		if err != nil {
+			return nil, err
+		}
+		log := make([]api.SectorLog, len(logs))
+		for i, l := range logs {
+			log[i] = api.SectorLog{
+				Kind:      l.Kind,
+				Timestamp: l.Timestamp,
+				Trace:     l.Trace,
+				Message:   l.Message,
+			}
+		}
+
+		sInfo := api.SectorInfo{
+			SectorID: sector.SectorNumber,
+			State:    api.SectorState(sector.State),
+			CommD:    sector.CommD,
+			CommR:    sector.CommR,
+			Proof:    sector.Proof,
+			Deals:    deals,
+			Ticket: api.SealTicket{
+				Value: sector.TicketValue,
+				Epoch: sector.TicketEpoch,
+			},
+			Seed: api.SealSeed{
+				Value: sector.SeedValue,
+				Epoch: sector.SeedEpoch,
+			},
+			PreCommitMsg: sector.PreCommitMessage,
+			CommitMsg:    sector.CommitMessage,
+			Retries:      sector.InvalidProofs,
+			ToUpgrade:    sm.Miner.IsMarkedForUpgrade(sector.SectorNumber),
+
+			LastErr: sector.LastErr,
+			Log:     log,
+			// on chain info
+			SealProof:          0,
+			Activation:         0,
+			Expiration:         0,
+			DealWeight:         big.Zero(),
+			VerifiedDealWeight: big.Zero(),
+			InitialPledge:      big.Zero(),
+			OnTime:             0,
+			Early:              0,
+		}
+
+		if showOnChainInfo {
+			onChainInfo, err := sm.Full.StateSectorGetInfo(ctx, sm.Miner.Address(), sector.SectorNumber, types.EmptyTSK)
+			if err != nil {
+				return nil, err
+			}
+			if onChainInfo != nil {
+				sInfo.SealProof = onChainInfo.SealProof
+				sInfo.Activation = onChainInfo.Activation
+				sInfo.Expiration = onChainInfo.Expiration
+				sInfo.DealWeight = onChainInfo.DealWeight
+				sInfo.VerifiedDealWeight = onChainInfo.VerifiedDealWeight
+				sInfo.InitialPledge = onChainInfo.InitialPledge
+
+				ex, err := sm.Full.StateSectorExpiration(ctx, sm.Miner.Address(), sector.SectorNumber, types.EmptyTSK)
+				if err == nil {
+					sInfo.OnTime = ex.OnTime
+					sInfo.Early = ex.Early
+				} else {
+					// TODO The official didn't deal with this
+				}
+			}
+		}
+
+		out[i] = sInfo
+	}
+
+	return out, nil
+}
+
 func (sm *StorageMinerAPI) SectorsListInStates(ctx context.Context, states []api.SectorState) ([]abi.SectorNumber, error) {
 	filterStates := make(map[types2.SectorState]struct{})
 	for _, state := range states {
