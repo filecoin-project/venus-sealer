@@ -15,22 +15,22 @@ require (
 	github.com/filecoin-project/go-address v0.0.5
 	github.com/filecoin-project/go-bitfield v0.2.4
 	github.com/filecoin-project/go-cbor-util v0.0.0-20201016124514-d0bbec7bfcc4
-	github.com/filecoin-project/go-commp-utils v0.0.0-20201119054358-b88f7a96a434
-	github.com/filecoin-project/go-data-transfer v1.2.7
+	github.com/filecoin-project/go-commp-utils v0.1.0
+	github.com/filecoin-project/go-data-transfer v1.4.1
 	github.com/filecoin-project/go-fil-commcid v0.0.0-20201016201715-d41df56b4f6a
-	github.com/filecoin-project/go-fil-markets v1.1.9
+	github.com/filecoin-project/go-fil-markets v1.2.4
 	github.com/filecoin-project/go-jsonrpc v0.1.4-0.20210217175800-45ea43ac2bec
 	github.com/filecoin-project/go-padreader v0.0.0-20201016201355-9c5eb1faedb5
 	github.com/filecoin-project/go-paramfetch v0.0.2-0.20200701152213-3e0f0afdc261
 	github.com/filecoin-project/go-state-types v0.1.0
 	github.com/filecoin-project/go-statemachine v0.0.0-20200925172917-aaed5359be39
-	github.com/filecoin-project/go-statestore v0.1.0
+	github.com/filecoin-project/go-statestore v0.1.1-0.20210311122610-6c7a5aedbdea
 	github.com/filecoin-project/go-storedcounter v0.0.0-20200421200003-1c99c62e8a5b
 	github.com/filecoin-project/specs-actors v0.9.13
-	github.com/filecoin-project/specs-actors/v2 v2.3.4
-	github.com/filecoin-project/specs-actors/v3 v3.0.3
+	github.com/filecoin-project/specs-actors/v2 v2.3.5-0.20210114162132-5b58b773f4fb
+	github.com/filecoin-project/specs-actors/v3 v3.1.0
 	github.com/filecoin-project/specs-storage v0.1.1-0.20201105051918-5188d9774506
-	github.com/filecoin-project/venus v0.9.2-0.20210331052540-ca4ea7bab5fa
+	github.com/filecoin-project/venus v0.9.5-0.20210425021406-0940e5d286f6
 	github.com/gbrlsnchs/jwt/v3 v3.0.0
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/uuid v1.2.0
@@ -51,7 +51,8 @@ require (
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/libp2p/go-buffer-pool v0.0.2
 	github.com/libp2p/go-libp2p-core v0.7.0
-	github.com/libp2p/go-libp2p-pubsub v0.4.1
+	github.com/libp2p/go-libp2p-noise v0.1.2 // indirect
+	github.com/libp2p/go-libp2p-pubsub v0.4.2-0.20210212194758-6c1addf493eb
 	github.com/minio/sha256-simd v1.0.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/multiformats/go-base32 v0.0.3
