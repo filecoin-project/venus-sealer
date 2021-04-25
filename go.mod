@@ -33,12 +33,11 @@ require (
 	github.com/filecoin-project/venus v0.9.2-0.20210331052540-ca4ea7bab5fa
 	github.com/gbrlsnchs/jwt/v3 v3.0.0
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang/snappy v0.0.2-0.20190904063534-ff6b7dc882cf // indirect
 	github.com/google/uuid v1.2.0
 	github.com/gorilla/mux v1.8.0
 	github.com/hako/durafmt v0.0.0-20200710122514-c0fb7b4da026
 	github.com/hashicorp/go-multierror v1.1.0
-	github.com/ipfs-force-community/venus-messager v0.0.0-20210413021844-e36c2596dbc1 // indirect
+	github.com/ipfs-force-community/venus-messager v0.0.0-20210413021844-e36c2596dbc1
 	github.com/ipfs/go-block-format v0.0.3
 	github.com/ipfs/go-cid v0.0.7
 	github.com/ipfs/go-datastore v0.4.5
@@ -50,36 +49,26 @@ require (
 	github.com/ipfs/go-log/v2 v2.1.2
 	github.com/ipfs/go-metrics-interface v0.0.1
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/kr/text v0.2.0 // indirect
 	github.com/libp2p/go-buffer-pool v0.0.2
 	github.com/libp2p/go-libp2p-core v0.7.0
-	github.com/libp2p/go-libp2p-noise v0.1.2 // indirect
 	github.com/libp2p/go-libp2p-pubsub v0.4.1
 	github.com/minio/sha256-simd v1.0.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/multiformats/go-base32 v0.0.3
 	github.com/multiformats/go-multiaddr v0.3.1
-	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/polydawn/refmt v0.0.0-20201211092308-30ac6d18308e
 	github.com/raulk/clock v1.1.0
-	github.com/shopspring/decimal v1.2.0 // indirect
 	github.com/stretchr/testify v1.7.0
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/whyrusleeping/cbor-gen v0.0.0-20210219115102-f37d292932f2
-	github.com/xorcare/golden v0.6.1-0.20191112154924-b87f686d7542 // indirect
 	github.com/zbiljic/go-filelock v0.0.0-20170914061330-1dbf7103ab7d
 	go.opencensus.io v0.22.6
-	go.uber.org/dig v1.10.0 // indirect
 	go.uber.org/fx v1.13.1
 	go.uber.org/multierr v1.6.0
 	go.uber.org/zap v1.16.0
-	golang.org/x/exp v0.0.0-20200513190911-00229845015e // indirect
 	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
 	golang.org/x/sys v0.0.0-20210324051608-47abb6519492
-	golang.org/x/tools v0.1.0 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
-	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gorm.io/driver/mysql v1.0.5
 	gorm.io/driver/sqlite v1.1.4
 	gorm.io/gorm v1.21.3

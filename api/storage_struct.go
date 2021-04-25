@@ -43,6 +43,9 @@ type StorageMiner interface {
 	// List all staged sectors
 	SectorsList(context.Context) ([]abi.SectorNumber, error)
 
+	// List all staged sector's info in particular states
+	SectorsInfoListInStates(ctx context.Context, ss []SectorState, showOnChainInfo bool) ([]SectorInfo, error)
+
 	// Get summary info of sectors
 	SectorsSummary(ctx context.Context) (map[SectorState]int, error)
 
@@ -148,6 +151,7 @@ type StorageMinerStruct struct {
 		SectorsStatus                 func(ctx context.Context, sid abi.SectorNumber, showOnChainInfo bool) (SectorInfo, error) `perm:"read"`
 		SectorsList                   func(context.Context) ([]abi.SectorNumber, error)                                         `perm:"read"`
 		SectorsListInStates           func(context.Context, []SectorState) ([]abi.SectorNumber, error)                          `perm:"read"`
+		SectorsInfoListInStates       func(ctx context.Context, ss []SectorState, showOnChainInfo bool) ([]SectorInfo, error)   `perm:"read"`
 		SectorsSummary                func(ctx context.Context) (map[SectorState]int, error)                                    `perm:"read"`
 		SectorsRefs                   func(context.Context) (map[string][]types.SealedRef, error)                               `perm:"read"`
 		SectorStartSealing            func(context.Context, abi.SectorNumber) error                                             `perm:"write"`
@@ -260,6 +264,11 @@ func (c *StorageMinerStruct) SectorsList(ctx context.Context) ([]abi.SectorNumbe
 
 func (c *StorageMinerStruct) SectorsListInStates(ctx context.Context, states []SectorState) ([]abi.SectorNumber, error) {
 	return c.Internal.SectorsListInStates(ctx, states)
+}
+
+// List all staged sector's info in particular states
+func (c *StorageMinerStruct) SectorsInfoListInStates(ctx context.Context, ss []SectorState, showOnChainInfo bool) ([]SectorInfo, error) {
+	return c.Internal.SectorsInfoListInStates(ctx, ss, showOnChainInfo)
 }
 
 func (c *StorageMinerStruct) SectorsSummary(ctx context.Context) (map[SectorState]int, error) {
