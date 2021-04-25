@@ -8,8 +8,11 @@ import (
 	types2 "github.com/filecoin-project/venus/pkg/types"
 	"github.com/ipfs-force-community/venus-messager/api/client"
 	"github.com/ipfs-force-community/venus-messager/types"
+	"golang.org/x/xerrors"
 	"net/http"
 )
+
+var ErrFailMsg = xerrors.New("Message Fail")
 
 type IMessager interface {
 	HasWalletAddress(ctx context.Context, addr address.Address) (bool, error)
@@ -31,7 +34,14 @@ func NewMessager(in client.IMessager, walletName string) *Messager {
 }
 
 func (m *Messager) WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error) {
-	return m.in.WaitMessage(ctx, id, confidence)
+	msg, err := m.in.WaitMessage(ctx, id, confidence)
+	if err != nil {
+		return nil, err
+	}
+	if msg.State == types.FailedMsg {
+		return nil, ErrFailMsg
+	}
+	return msg, nil
 }
 
 func (m *Messager) HasWalletAddress(ctx context.Context, addr address.Address) (bool, error) {

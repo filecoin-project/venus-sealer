@@ -292,7 +292,11 @@ func (m *Sealing) handlePreCommitWait(ctx statemachine.Context, sector types.Sec
 	log.Info("Sector precommitted: ", sector.SectorNumber)
 	mw, err := m.api.MessagerWaitMsg(ctx.Context(), sector.PreCommitMessage)
 	if err != nil {
-		return ctx.Send(SectorChainPreCommitFailed{err})
+		if xerrors.Is(err, api.ErrFailMsg) {
+			return ctx.Send(SectorRemove{})
+		} else {
+			return ctx.Send(SectorChainPreCommitFailed{err})
+		}
 	}
 
 	switch mw.Receipt.ExitCode {
@@ -480,7 +484,11 @@ func (m *Sealing) handleCommitWait(ctx statemachine.Context, sector types.Sector
 
 	mw, err := m.api.MessagerWaitMsg(ctx.Context(), sector.CommitMessage)
 	if err != nil {
-		return ctx.Send(SectorCommitFailed{xerrors.Errorf("failed to wait for porep inclusion: %w", err)})
+		if xerrors.Is(err, api.ErrFailMsg) {
+			return ctx.Send(SectorRemove{})
+		} else {
+			return ctx.Send(SectorCommitFailed{xerrors.Errorf("failed to wait for porep inclusion: %w", err)})
+		}
 	}
 
 	switch mw.Receipt.ExitCode {
