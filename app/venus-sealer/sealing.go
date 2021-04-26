@@ -29,6 +29,8 @@ var sealingCmd = &cli.Command{
 		sealingWorkersCmd,
 		sealingSchedDiagCmd,
 		sealingAbortCmd,
+		sealingStartCmd,
+		sealingStopCmd,
 	},
 }
 
@@ -303,5 +305,37 @@ var sealingAbortCmd = &cli.Command{
 		fmt.Printf("aborting job %s, task %s, sector %d, running on host %s\n", job.ID.String(), job.Task.Short(), job.Sector.Number, job.Hostname)
 
 		return nodeApi.SealingAbort(ctx, job.ID)
+	},
+}
+
+var sealingStartCmd = &cli.Command{
+	Name:  "start",
+	Usage: "start sealing",
+	Action: func(cctx *cli.Context) error {
+		nodeApi, closer, err := api.GetStorageMinerAPI(cctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+
+		ctx := api.ReqContext(cctx)
+
+		return nodeApi.StartSeal(ctx)
+	},
+}
+
+var sealingStopCmd = &cli.Command{
+	Name:  "stop",
+	Usage: "stop sealing",
+	Action: func(cctx *cli.Context) error {
+		nodeApi, closer, err := api.GetStorageMinerAPI(cctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+
+		ctx := api.ReqContext(cctx)
+
+		return nodeApi.StopSeal(ctx)
 	},
 }
