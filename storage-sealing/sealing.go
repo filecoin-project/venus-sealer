@@ -190,6 +190,16 @@ func (m *Sealing) Run(ctx context.Context) error {
 	return nil
 }
 
+func (m *Sealing) StartSeal(ctx context.Context) error {
+	m.unsealedInfoMap.lk.Lock()
+	if err := m.restartSectors(ctx); err != nil {
+		log.Errorf("%+v", err)
+		return xerrors.Errorf("failed load sector states: %w", err)
+	}
+	m.sealingState = types2.SEALING
+	return nil
+}
+
 func (m *Sealing) StopSeal(ctx context.Context) error {
 	if err := m.sectors.Stop(ctx); err != nil {
 		return err

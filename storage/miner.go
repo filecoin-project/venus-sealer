@@ -194,7 +194,7 @@ func (m *Miner) StartSeal(ctx context.Context) error {
 	if m.sealing.State() == types2.SEALING {
 		return xerrors.Errorf("sealing already running")
 	}
-	go m.sealing.Run(ctx)
+	go m.sealing.StartSeal(ctx)
 	return nil
 }
 
