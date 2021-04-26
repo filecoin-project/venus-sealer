@@ -672,6 +672,14 @@ func (sm *StorageMinerAPI) ComputeProof(ctx context.Context, sectorInfo []proof2
 	return sm.Prover.ComputeProof(ctx, sectorInfo, randoness)
 }
 
+func (sm *StorageMinerAPI) StartSeal(ctx context.Context) error {
+	return sm.Miner.StartSeal(ctx)
+}
+
+func (sm *StorageMinerAPI) StopSeal(ctx context.Context) error {
+	return sm.Miner.StopSeal(ctx)
+}
+
 func (sm *StorageMinerAPI) MessagerWaitMessage(ctx context.Context, uuid string, confidence uint64) (*chain.MsgLookup, error) {
 	msg, err := sm.Messager.WaitMessage(ctx, uuid, confidence)
 	if err != nil {

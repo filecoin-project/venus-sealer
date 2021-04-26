@@ -190,6 +190,21 @@ func (m *Miner) Stop(ctx context.Context) error {
 	return m.sealing.Stop(ctx)
 }
 
+func (m *Miner) StartSeal(ctx context.Context) error {
+	if m.sealing.State() == types2.SEALING {
+		return xerrors.Errorf("sealing already running")
+	}
+	go m.sealing.Run(ctx)
+	return nil
+}
+
+func (m *Miner) StopSeal(ctx context.Context) error {
+	if m.sealing.State() == types2.SEALINGSTOP {
+		return xerrors.Errorf("sealing in stop")
+	}
+	return m.sealing.StopSeal(ctx)
+}
+
 func (m *Miner) runPreflightChecks(ctx context.Context) error {
 	mi, err := m.api.StateMinerInfo(ctx, m.maddr, types.EmptyTSK)
 	if err != nil {

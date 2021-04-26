@@ -25,6 +25,10 @@ import (
 type StorageMiner interface {
 	Common
 
+	StartSeal(ctx context.Context) error
+
+	StopSeal(ctx context.Context) error
+
 	ComputeProof(context.Context, []proof2.SectorInfo, abi.PoStRandomness) ([]proof2.PoStProof, error)
 
 	NetParamsConfig(ctx context.Context) (*config.NetParamsConfig, error)
@@ -139,12 +143,13 @@ type StorageMiner interface {
 type StorageMinerStruct struct {
 	CommonStruct
 	Internal struct {
-		ComputeProof func(context.Context, []proof2.SectorInfo, abi.PoStRandomness) ([]proof2.PoStProof, error) `perm:"read"`
-
-		ActorAddress       func(context.Context) (address.Address, error)                 `perm:"read"`
-		ActorSectorSize    func(context.Context, address.Address) (abi.SectorSize, error) `perm:"read"`
-		ActorAddressConfig func(ctx context.Context) (AddressConfig, error)               `perm:"read"`
-		NetParamsConfig    func(ctx context.Context) (*config.NetParamsConfig, error)     `perm:"read"`
+		ComputeProof       func(context.Context, []proof2.SectorInfo, abi.PoStRandomness) ([]proof2.PoStProof, error) `perm:"read"`
+		StartSeal          func(context.Context) error                                                                `perm:"admin"`
+		StopSeal           func(context.Context) error                                                                `perm:"admin"`
+		ActorAddress       func(context.Context) (address.Address, error)                                             `perm:"read"`
+		ActorSectorSize    func(context.Context, address.Address) (abi.SectorSize, error)                             `perm:"read"`
+		ActorAddressConfig func(ctx context.Context) (AddressConfig, error)                                           `perm:"read"`
+		NetParamsConfig    func(ctx context.Context) (*config.NetParamsConfig, error)                                 `perm:"read"`
 
 		PledgeSector func(context.Context) error `perm:"write"`
 
@@ -529,6 +534,14 @@ func (c *StorageMinerStruct) CheckProvable(ctx context.Context, pp abi.Registere
 
 func (c *StorageMinerStruct) ComputeProof(ctx context.Context, sectorInfos []proof2.SectorInfo, randomness abi.PoStRandomness) ([]proof2.PoStProof, error) {
 	return c.Internal.ComputeProof(ctx, sectorInfos, randomness)
+}
+
+func (c *StorageMinerStruct) StartSeal(ctx context.Context) error {
+	return c.Internal.StartSeal(ctx)
+}
+
+func (c *StorageMinerStruct) StopSeal(ctx context.Context) error {
+	return c.Internal.StopSeal(ctx)
 }
 
 func (c *StorageMinerStruct) MessagerWaitMessage(ctx context.Context, uuid string, confidence uint64) (*chain.MsgLookup, error) {
