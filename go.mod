@@ -4,7 +4,9 @@ go 1.15
 
 require (
 	contrib.go.opencensus.io/exporter/jaeger v0.1.0
+	github.com/2se/dolphin-sdk v0.0.0-20190909053628-ad8df514a35d // indirect
 	github.com/BurntSushi/toml v0.3.1
+	github.com/RussellLuo/timingwheel v0.0.0-20201029015908-64de9d088c74 // indirect
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 	github.com/detailyang/go-fallocate v0.0.0-20180908115635-432fa640bd2e
 	github.com/dgraph-io/badger/v2 v2.2007.2
@@ -30,7 +32,7 @@ require (
 	github.com/filecoin-project/specs-actors/v2 v2.3.5-0.20210114162132-5b58b773f4fb
 	github.com/filecoin-project/specs-actors/v3 v3.1.0
 	github.com/filecoin-project/specs-storage v0.1.1-0.20201105051918-5188d9774506
-	github.com/filecoin-project/venus v0.9.5-0.20210425021406-0940e5d286f6
+	github.com/filecoin-project/venus v0.9.5-0.20210427093038-4d6d1c741f4b
 	github.com/gbrlsnchs/jwt/v3 v3.0.0
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/uuid v1.2.0
