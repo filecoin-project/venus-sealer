@@ -14,10 +14,10 @@ const (
 )
 
 var (
-	FullAPIVersion   = newVer(1, 1, 0)
+	FullAPIVersion   = newVer(1, 2, 0)
 	MinerAPIVersion  = newVer(1, 0, 1)
 	WorkerAPIVersion = newVer(1, 0, 0)
 
-	MinerVersion = newVer(0, 0, 1)
+	MinerVersion = newVer(1, 0, 2)
 )
 var Clock = clock.New()
