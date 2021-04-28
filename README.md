@@ -15,17 +15,17 @@ This project is a mining system supporting venus, is currently under active deve
 
 ### init miner 
 ```shell script
-    # for 2k devnet genesis miner
-    ./venus-sealer init --genesis-miner --actor=f01000 --sector-size=2KiB --pre-sealed-sectors=~/.genesis-sectors --pre-sealed-metadata=~/.genesis-sectors/pre-seal-t01000.json --network 2k --nosync
-    
-    # for calibration common miner
-    ./venus-sealer init --owner xx --worker xx --network calibration --nosync   
-
-    # for mainnet common miner
-    ./venus-sealer init --owner xx --worker xx --network mainnet --nosync
-    
-    # for mainnet common miner, mainnet is default network type
-    ./venus-sealer init --owner xx --worker xx  --nosync                       
+ ./venus-sealer init \
+ --worker <bls address 1> \
+ --owner <bls address 2>  \
+ --sector-size <sector size> \
+ --network <network type> \
+ --node-url /ip4/<IP3>/tcp/3453 \
+ --node-token <auth token sealer> \
+ --messager-url http://<IP4>:39812/rpc/v0 \
+ --no-local-storage \
+ --messager-token <auth token sealer> \
+ --wallet-name testminer                
 ```
 ### run miner
 
