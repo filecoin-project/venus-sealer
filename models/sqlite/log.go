@@ -106,7 +106,7 @@ func (s *logRepo) Append(log *types.Log) error {
 
 func (s *logRepo) List(sectorNumber abi.SectorNumber) ([]*types.Log, error) {
 	var logs []Log
-	err := s.DB.Find(&logs, "sector_number=?", sectorNumber).Error
+	err := s.DB.Table("logs").Find(&logs, "sector_number=?", sectorNumber).Error
 	if err != nil {
 		return nil, err
 	}
