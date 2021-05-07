@@ -64,7 +64,7 @@ func (s *logRepo) Count(sectorNumber abi.SectorNumber) (int64, error) {
 
 func (s *logRepo) Truncate(sectorNumber abi.SectorNumber) error {
 	var ids []int64
-	err := s.DB.Exec("SELECT id FROM logs WHERE id =?", sectorNumber).Scan(ids).Error
+	err := s.DB.Raw("SELECT id FROM logs WHERE id =?", sectorNumber).Scan(ids).Error
 	if err != nil {
 		return err
 	}
