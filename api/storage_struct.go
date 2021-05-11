@@ -7,6 +7,7 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 	"github.com/filecoin-project/specs-storage/storage"
+	types3 "github.com/filecoin-project/venus-messager/types"
 	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/sector-storage/fsutil"
 	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
@@ -16,7 +17,6 @@ import (
 	"github.com/filecoin-project/venus/pkg/chain"
 	types2 "github.com/filecoin-project/venus/pkg/types"
 	"github.com/google/uuid"
-	types3 "github.com/ipfs-force-community/venus-messager/types"
 	"github.com/ipfs/go-cid"
 	"time"
 )
