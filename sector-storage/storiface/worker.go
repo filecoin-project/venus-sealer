@@ -8,6 +8,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/ipfs/go-cid"
 
 	"github.com/filecoin-project/go-state-types/abi"
@@ -61,6 +62,19 @@ type WorkerJob struct {
 
 	Hostname string `json:",omitempty"` // optional, set for ret-wait jobs
 }
+
+type CallID struct {
+	Sector abi.SectorID
+	ID     uuid.UUID
+}
+
+func (c CallID) String() string {
+	return fmt.Sprintf("%d-%d-%s", c.Sector.Miner, c.Sector.Number, c.ID)
+}
+
+var _ fmt.Stringer = &CallID{}
+
+var UndefCall CallID
 
 type WorkerCalls interface {
 	AddPiece(ctx context.Context, sector storage.SectorRef, pieceSizes []abi.UnpaddedPieceSize, newPieceSize abi.UnpaddedPieceSize, pieceData storage.Data) (types.CallID, error)

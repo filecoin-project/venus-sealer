@@ -25,7 +25,8 @@ func TestUnpadReader(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	readered, err := ioutil.ReadAll(r)
+	// using bufio reader to make sure reads are big enough for the padreader - it can't handle small reads right now
+	readered, err := ioutil.ReadAll(bufio.NewReaderSize(r, 512))
 	if err != nil {
 		t.Fatal(err)
 	}

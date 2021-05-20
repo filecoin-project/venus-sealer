@@ -285,6 +285,7 @@ func NewSetSealConfigFunc(r *config.StorageMiner) (types2.SetSealingConfigFunc, 
 				MaxSealingSectors:         cfg.MaxSealingSectors,
 				MaxSealingSectorsForDeals: cfg.MaxSealingSectorsForDeals,
 				WaitDealsDelay:            config.Duration(cfg.WaitDealsDelay),
+				AlwaysKeepUnsealedCopy:    cfg.AlwaysKeepUnsealedCopy,
 			}
 		})
 		return
@@ -299,6 +300,7 @@ func NewGetSealConfigFunc(r *config.StorageMiner) (types2.GetSealingConfigFunc, 
 				MaxSealingSectors:         cfg.Sealing.MaxSealingSectors,
 				MaxSealingSectorsForDeals: cfg.Sealing.MaxSealingSectorsForDeals,
 				WaitDealsDelay:            time.Duration(cfg.Sealing.WaitDealsDelay),
+				AlwaysKeepUnsealedCopy:    cfg.Sealing.AlwaysKeepUnsealedCopy,
 			}
 		})
 		return

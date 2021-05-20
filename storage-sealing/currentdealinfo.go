@@ -3,17 +3,19 @@ package sealing
 import (
 	"bytes"
 	"context"
-	types2 "github.com/filecoin-project/venus-sealer/types"
-	"github.com/filecoin-project/venus/app/submodule/chain"
 
+	types2 "github.com/filecoin-project/venus-sealer/types"
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/exitcode"
 	market2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/market"
-	"github.com/filecoin-project/venus/pkg/types"
+
 	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
+
+	"github.com/filecoin-project/venus/app/submodule/chain"
+	"github.com/filecoin-project/venus/pkg/specactors/builtin/market"
+	"github.com/filecoin-project/venus/pkg/types"
 )
 
 type CurrentDealInfoAPI interface {

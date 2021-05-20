@@ -35,7 +35,7 @@ type StorageMiner interface {
 	ActorAddressConfig(ctx context.Context) (AddressConfig, error)
 
 	// Temp api for testing
-	PledgeSector(context.Context) error
+	PledgeSector(context.Context) (abi.SectorID, error)
 
 	// Get the status of a given sector by ID
 	SectorsStatus(ctx context.Context, sid abi.SectorNumber, showOnChainInfo bool) (SectorInfo, error)
@@ -146,7 +146,7 @@ type StorageMinerStruct struct {
 		ActorAddressConfig func(ctx context.Context) (AddressConfig, error)               `perm:"read"`
 		NetParamsConfig    func(ctx context.Context) (*config.NetParamsConfig, error)     `perm:"read"`
 
-		PledgeSector func(context.Context) error `perm:"write"`
+		PledgeSector func(context.Context) (abi.SectorID, error) `perm:"write"`
 
 		SectorsStatus                 func(ctx context.Context, sid abi.SectorNumber, showOnChainInfo bool) (SectorInfo, error) `perm:"read"`
 		SectorsList                   func(context.Context) ([]abi.SectorNumber, error)                                         `perm:"read"`
@@ -248,7 +248,7 @@ func (c *StorageMinerStruct) ActorAddressConfig(ctx context.Context) (AddressCon
 	return c.Internal.ActorAddressConfig(ctx)
 }
 
-func (c *StorageMinerStruct) PledgeSector(ctx context.Context) error {
+func (c *StorageMinerStruct) PledgeSector(ctx context.Context) (abi.SectorID, error) {
 	return c.Internal.PledgeSector(ctx)
 }
 

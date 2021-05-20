@@ -89,8 +89,30 @@ func (sm *StorageMinerAPI) ActorSectorSize(ctx context.Context, addr address.Add
 	return mi.SectorSize, nil
 }
 
-func (sm *StorageMinerAPI) PledgeSector(ctx context.Context) error {
-	return sm.Miner.PledgeSector()
+func (sm *StorageMinerAPI) PledgeSector(ctx context.Context) (abi.SectorID, error) {
+	sr, err := sm.Miner.PledgeSector(ctx)
+	if err != nil {
+		return abi.SectorID{}, err
+	}
+
+	// wait for the sector to enter the Packing state
+	// TODO: instead of polling implement some pubsub-type thing in storagefsm
+	for {
+		info, err := sm.Miner.GetSectorInfo(sr.ID.Number)
+		if err != nil {
+			return abi.SectorID{}, xerrors.Errorf("getting pledged sector info: %w", err)
+		}
+
+		if info.State != types2.UndefinedSectorState {
+			return sr.ID, nil
+		}
+
+		select {
+		case <-time.After(10 * time.Millisecond):
+		case <-ctx.Done():
+			return abi.SectorID{}, ctx.Err()
+		}
+	}
 }
 
 func (sm *StorageMinerAPI) SectorsStatus(ctx context.Context, sid abi.SectorNumber, showOnChainInfo bool) (api.SectorInfo, error) {

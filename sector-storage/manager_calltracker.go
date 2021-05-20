@@ -2,14 +2,66 @@ package sectorstorage
 
 import (
 	"context"
-	"github.com/filecoin-project/venus-sealer/types"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"os"
 	"time"
 
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
+	"github.com/filecoin-project/venus-sealer/types"
 )
+
+type WorkID struct {
+	Method types.TaskType
+	Params string // json [...params]
+}
+
+func (w WorkID) String() string {
+	return fmt.Sprintf("%s(%s)", w.Method, w.Params)
+}
+
+var _ fmt.Stringer = &WorkID{}
+
+type WorkStatus string
+
+const (
+	wsStarted WorkStatus = "started" // task started, not scheduled/running on a worker yet
+	wsRunning WorkStatus = "running" // task running on a worker, waiting for worker return
+	wsDone    WorkStatus = "done"    // task returned from the worker, results available
+)
+
+type WorkState struct {
+	ID WorkID
+
+	Status WorkStatus
+
+	WorkerCall storiface.CallID // Set when entering wsRunning
+	WorkError  string           // Status = wsDone, set when failed to start work
+
+	WorkerHostname string // hostname of last worker handling this job
+	StartTime      int64  // unix seconds
+}
+
+func newWorkID(method types.TaskType, params ...interface{}) (WorkID, error) {
+	pb, err := json.Marshal(params)
+	if err != nil {
+		return WorkID{}, xerrors.Errorf("marshaling work params: %w", err)
+	}
+
+	if len(pb) > 256 {
+		s := sha256.Sum256(pb)
+		pb = []byte(hex.EncodeToString(s[:]))
+	}
+
+	return WorkID{
+		Method: method,
+		Params: string(pb),
+	}, nil
+}
 
 func (m *Manager) setupWorkTracker() {
 	m.workLk.Lock()
@@ -297,7 +349,7 @@ func (m *Manager) waitCall(ctx context.Context, callID types.CallID) (interface{
 	}
 }
 
-func (m *Manager) returnResult(callID types.CallID, r interface{}, cerr *storiface.CallError) error {
+func (m *Manager) returnResult(ctx context.Context, callID types.CallID, r interface{}, cerr *storiface.CallError) error {
 	res := result{
 		r: r,
 	}
@@ -305,7 +357,7 @@ func (m *Manager) returnResult(callID types.CallID, r interface{}, cerr *storifa
 		res.err = cerr
 	}
 
-	m.sched.workTracker.onDone(callID)
+	m.sched.workTracker.onDone(ctx, callID)
 
 	m.workLk.Lock()
 	defer m.workLk.Unlock()
@@ -361,5 +413,5 @@ func (m *Manager) returnResult(callID types.CallID, r interface{}, cerr *storifa
 
 func (m *Manager) Abort(ctx context.Context, call types.CallID) error {
 	// TODO: Allow temp error
-	return m.returnResult(call, nil, storiface.Err(storiface.ErrUnknown, xerrors.New("task aborted")))
+	return m.returnResult(ctx, call, nil, storiface.Err(storiface.ErrUnknown, xerrors.New("task aborted")))
 }
