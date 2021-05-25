@@ -1,14 +1,18 @@
 package sealing
 
 import (
-	"github.com/filecoin-project/venus-sealer/types"
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
+	"time"
+
 	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/specs-storage/storage"
+
+	"github.com/filecoin-project/venus-sealer/types"
+
+	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
 )
 
 type mutator interface {
@@ -68,22 +72,33 @@ func (evt SectorStart) apply(state *types.SectorInfo) {
 type SectorStartCC struct {
 	ID         abi.SectorNumber
 	SectorType abi.RegisteredSealProof
-	Pieces     []types.Piece
 }
 
 func (evt SectorStartCC) apply(state *types.SectorInfo) {
 	state.SectorNumber = evt.ID
-	state.Pieces = evt.Pieces
 	state.SectorType = evt.SectorType
 }
 
-type SectorAddPiece struct {
-	NewPiece types.Piece
-}
+type SectorAddPiece struct{}
 
 func (evt SectorAddPiece) apply(state *types.SectorInfo) {
-	state.Pieces = append(state.Pieces, evt.NewPiece)
+	if state.CreationTime == 0 {
+		state.CreationTime = time.Now().Unix()
+	}
 }
+
+type SectorPieceAdded struct {
+	NewPieces []types.Piece
+}
+
+func (evt SectorPieceAdded) apply(state *types.SectorInfo) {
+	state.Pieces = append(state.Pieces, evt.NewPieces...)
+}
+
+type SectorAddPieceFailed struct{ error }
+
+func (evt SectorAddPieceFailed) FormatError(xerrors.Printer) (next error) { return evt.error }
+func (evt SectorAddPieceFailed) apply(si *types.SectorInfo)                     {}
 
 type SectorStartPacking struct{}
 

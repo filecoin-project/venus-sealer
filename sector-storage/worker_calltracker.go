@@ -2,6 +2,7 @@ package sectorstorage
 
 import (
 	"github.com/filecoin-project/go-statestore"
+
 	"github.com/filecoin-project/venus-sealer/types"
 )
 

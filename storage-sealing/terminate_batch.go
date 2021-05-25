@@ -85,6 +85,7 @@ func (b *TerminateBatcher) run() {
 			forceRes <- lastMsg
 			forceRes = nil
 		}
+		lastMsg = ""
 
 		var sendAboveMax, sendAboveMin bool
 		select {
@@ -140,6 +141,18 @@ func (b *TerminateBatcher) processBatch(notif, after bool) (string, error) {
 		toTerminate, err := sectors.Copy()
 		if err != nil {
 			log.Warnw("TerminateBatcher: copy sectors bitfield", "deadline", loc.Deadline, "partition", loc.Partition, "error", err)
+			continue
+		}
+
+		ps, err := b.api.StateMinerPartitions(b.mctx, b.maddr, loc.Deadline, nil)
+		if err != nil {
+			log.Warnw("TerminateBatcher: getting miner partitions", "deadline", loc.Deadline, "partition", loc.Partition, "error", err)
+			continue
+		}
+
+		toTerminate, err = bitfield.IntersectBitField(ps[loc.Partition].LiveSectors, toTerminate)
+		if err != nil {
+			log.Warnw("TerminateBatcher: intersecting liveSectors and toTerminate bitfields", "deadline", loc.Deadline, "partition", loc.Partition, "error", err)
 			continue
 		}
 

@@ -17,12 +17,29 @@ import (
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
 )
 
+type schedPrioCtxKey int
+
+var SchedPriorityKey schedPrioCtxKey
+var DefaultSchedPriority = 0
 var SelectorTimeout = 5 * time.Second
 var InitWait = 3 * time.Second
 
 var (
 	SchedWindows = 2
 )
+
+func getPriority(ctx context.Context) int {
+	sp := ctx.Value(SchedPriorityKey)
+	if p, ok := sp.(int); ok {
+		return p
+	}
+
+	return DefaultSchedPriority
+}
+
+func WithPriority(ctx context.Context, priority int) context.Context {
+	return context.WithValue(ctx, SchedPriorityKey, priority)
+}
 
 const mib = 1 << 20
 

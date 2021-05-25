@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"github.com/filecoin-project/specs-storage/storage"
 	"github.com/filecoin-project/venus-sealer/types"
 	"io"
 
@@ -31,8 +32,8 @@ func (m *Miner) GetSectorInfo(sid abi.SectorNumber) (types.SectorInfo, error) {
 	return m.sealing.GetSectorInfo(sid)
 }
 
-func (m *Miner) PledgeSector() error {
-	return m.sealing.PledgeSector()
+func (m *Miner) PledgeSector(ctx context.Context) (storage.SectorRef, error) {
+	return m.sealing.PledgeSector(ctx)
 }
 
 func (m *Miner) ForceSectorState(ctx context.Context, id abi.SectorNumber, state types.SectorState) error {
