@@ -10,6 +10,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/journal"
 	"github.com/filecoin-project/venus-sealer/models"
 	"github.com/filecoin-project/venus-sealer/models/repo"
+	"github.com/filecoin-project/venus-sealer/proof_client"
 	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
 	"github.com/filecoin-project/venus-sealer/sector-storage/ffiwrapper"
 	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
@@ -44,6 +45,8 @@ const (
 	// daemon
 	SetApiEndpointKey
 
+	//proof
+	StartProofEventKey
 	_nInvokes // keep this last
 )
 
@@ -140,6 +143,7 @@ func Online(cfg *config.StorageMiner) Option {
 		Override(GetParamsKey, GetParams),
 		Override(AutoMigrateKey, models.AutoMigrate),
 		Override(SetNetParamsKey, SetupNetParams),
+		Override(StartProofEventKey, proof_client.StartProofEvent),
 	)
 }
 
@@ -155,9 +159,11 @@ func Repo(cfg *config.StorageMiner) Option {
 			Override(new(*config.DbConfig), &cfg.DB),
 			Override(new(*config.StorageMiner), cfg),
 			Override(new(*config.MessagerConfig), &cfg.Messager),
+			Override(new(*config.ProofConfig), &cfg.Proof),
 			ConfigAPI(cfg),
 
 			Override(new(api.IMessager), api.NewMessageRPC),
+			Override(new(proof_client.ProofEventClient), proof_client.NewProofEventClient),
 			Override(new(repo.Repo), models.SetDataBase),
 			Providers(
 				service.NewDealRefServiceService,

@@ -38,6 +38,7 @@ type StorageMiner struct {
 	Node      NodeConfig
 	JWT       JWTConfig
 	Messager  MessagerConfig
+	Proof     ProofConfig
 
 	ConfigPath string `toml:"-"`
 }
@@ -59,6 +60,11 @@ type MessagerConfig struct {
 	Url    string
 	Token  string
 	Wallet string
+}
+
+type ProofConfig struct {
+	Url   string
+	Token string
 }
 
 func (node *NodeConfig) APIEndpoint() (multiaddr.Multiaddr, error) {
