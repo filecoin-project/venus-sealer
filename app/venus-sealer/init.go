@@ -108,16 +108,13 @@ var initCmd = &cli.Command{
 
 		&cli.StringFlag{
 			Name:  "messager-url",
-			Usage: "messager usl",
+			Usage: "messager url",
 		},
 		&cli.StringFlag{
 			Name:  "messager-token",
 			Usage: "messager token",
 		},
-		&cli.StringFlag{
-			Name:  "wallet-name",
-			Usage: "use which wallet in messager",
-		},
+
 		&cli.StringFlag{
 			Name:  "node-url",
 			Usage: "node url",
@@ -125,6 +122,20 @@ var initCmd = &cli.Command{
 		&cli.StringFlag{
 			Name:  "node-token",
 			Usage: "node token",
+		},
+
+		&cli.StringFlag{
+			Name:  "proof-url",
+			Usage: "proof url",
+		},
+		&cli.StringFlag{
+			Name:  "proof-token",
+			Usage: "proof token",
+		},
+
+		&cli.StringFlag{
+			Name:  "auth-token",
+			Usage: "auth token",
 		},
 	},
 	Action: func(cctx *cli.Context) error {
@@ -170,7 +181,7 @@ var initCmd = &cli.Command{
 		if err != nil {
 			return err
 		}
-
+		parserFlag(defaultCfg, cctx)
 		log.Info("Checking full node sync status")
 
 		if !cctx.Bool("genesis-miner") && !cctx.Bool("nosync") {
@@ -182,29 +193,6 @@ var initCmd = &cli.Command{
 		log.Info("Checking if repo exists")
 		cfgPath := cctx.String("config")
 		defaultCfg.ConfigPath = cfgPath
-		if cctx.IsSet("data") {
-			defaultCfg.DataDir = cctx.String("data")
-		}
-
-		if cctx.IsSet("messager-url") {
-			defaultCfg.Messager.Url = cctx.String("messager-url")
-		}
-
-		if cctx.IsSet("messager-token") {
-			defaultCfg.Messager.Token = cctx.String("messager-token")
-		}
-
-		if cctx.IsSet("wallet-name") {
-			defaultCfg.Messager.Wallet = cctx.String("wallet-name")
-		}
-
-		if cctx.IsSet("node-url") {
-			defaultCfg.Node.Url = cctx.String("node-url")
-		}
-
-		if cctx.IsSet("node-token") {
-			defaultCfg.Node.Token = cctx.String("node-token")
-		}
 
 		exit, err := config.ConfigExist(defaultCfg.DataDir)
 		if err != nil {
@@ -305,6 +293,45 @@ var initCmd = &cli.Command{
 	},
 }
 
+func parserFlag(cfg *config.StorageMiner, cctx *cli.Context) {
+	if cctx.IsSet("data") {
+		cfg.DataDir = cctx.String("data")
+	}
+
+	if cctx.IsSet("messager-url") {
+		cfg.Messager.Url = cctx.String("messager-url")
+	}
+
+	if cctx.IsSet("wallet-name") {
+		cfg.Messager.Wallet = cctx.String("wallet-name")
+	}
+
+	if cctx.IsSet("node-url") {
+		cfg.Node.Url = cctx.String("node-url")
+	}
+
+	if cctx.IsSet("proof-url") {
+		cfg.Proof.Url = cctx.String("proof-url")
+	}
+
+	if cctx.IsSet("auth-token") {
+		authToken := cctx.String("auth-token")
+		cfg.Node.Token = authToken
+		cfg.Messager.Token = authToken
+		cfg.Proof.Token = authToken
+	}
+
+	if cctx.IsSet("node-token") {
+		cfg.Node.Token = cctx.String("node-token")
+	}
+
+	if cctx.IsSet("messager-token") {
+		cfg.Messager.Token = cctx.String("messager-token")
+	}
+	if cctx.IsSet("proof-token") {
+		cfg.Proof.Token = cctx.String("proof-token")
+	}
+}
 func storageMinerInit(ctx context.Context, cctx *cli.Context, api api.FullNode, messagerClient api.IMessager, cfg *config.StorageMiner, ssize abi.SectorSize, gasPrice types.BigInt) error {
 	log.Info("Initializing libp2p identity")
 	repo, err := models.SetDataBase(config.HomeDir(cfg.DataDir), &cfg.DB)
