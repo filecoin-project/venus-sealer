@@ -16,7 +16,7 @@ type ProofEventClient struct {
 	ListenProofEvent   func(ctx context.Context, policy *proofevent.ProofRegisterPolicy) (chan *types.RequestEvent, error)
 }
 
-func NewProofEventClient(ctx context.Context, lc fx.Lifecycle, cfg *config.RegisterProofConfig) (*ProofEventClient, error) {
+func NewProofEventClient(lc fx.Lifecycle, cfg *config.RegisterProofConfig) (*ProofEventClient, error) {
 	headers := http.Header{}
 	headers.Add("Authorization", "Bearer "+cfg.Token)
 	pvc := &ProofEventClient{}
@@ -28,7 +28,7 @@ func NewProofEventClient(ctx context.Context, lc fx.Lifecycle, cfg *config.Regis
 	if err != nil {
 		return nil, err
 	}
-	closer, err := jsonrpc.NewMergeClient(ctx, addr, "Filecoin", []interface{}{pvc}, apiInfo.AuthHeader())
+	closer, err := jsonrpc.NewMergeClient(context.Background(), addr, "Filecoin", []interface{}{pvc}, apiInfo.AuthHeader())
 	if err != nil {
 		return nil, err
 	}
