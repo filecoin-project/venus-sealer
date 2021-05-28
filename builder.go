@@ -163,7 +163,7 @@ func Repo(cfg *config.StorageMiner) Option {
 			ConfigAPI(cfg),
 
 			Override(new(api.IMessager), api.NewMessageRPC),
-			Override(new(proof_client.ProofEventClient), proof_client.NewProofEventClient),
+			Override(new(*proof_client.ProofEventClient), proof_client.NewProofEventClient),
 			Override(new(repo.Repo), models.SetDataBase),
 			Providers(
 				service.NewDealRefServiceService,
