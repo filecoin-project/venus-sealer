@@ -6,8 +6,8 @@ import (
 	types2 "github.com/filecoin-project/venus-sealer/types"
 )
 
-func StartProofEvent(ctx context.Context, prover storage.WinningPoStProver, client *ProofEventClient, mAddr types2.MinerAddress) error {
+func StartProofEvent(prover storage.WinningPoStProver, client *ProofEventClient, mAddr types2.MinerAddress) error {
 	proofEvent := &ProofEvent{prover: prover, client: client, mAddr: mAddr}
-	go proofEvent.listenProofRequest(ctx)
+	go proofEvent.listenProofRequest(context.Background())
 	return nil
 }
