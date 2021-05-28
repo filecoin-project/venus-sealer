@@ -4,10 +4,10 @@ import (
 	"context"
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-jsonrpc"
+	"github.com/filecoin-project/venus-messager/api/client"
+	"github.com/filecoin-project/venus-messager/types"
 	"github.com/filecoin-project/venus-sealer/config"
 	types2 "github.com/filecoin-project/venus/pkg/types"
-	"github.com/ipfs-force-community/venus-messager/api/client"
-	"github.com/ipfs-force-community/venus-messager/types"
 	"golang.org/x/xerrors"
 	"net/http"
 )
@@ -15,7 +15,7 @@ import (
 var ErrFailMsg = xerrors.New("Message Fail")
 
 type IMessager interface {
-	HasWalletAddress(ctx context.Context, addr address.Address) (bool, error)
+	HasAddress(ctx context.Context, addr address.Address) (bool, error)
 	WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error)
 	PushMessage(ctx context.Context, msg *types2.UnsignedMessage, meta *types.MsgMeta) (string, error)
 	PushMessageWithId(ctx context.Context, id string, msg *types2.UnsignedMessage, meta *types.MsgMeta) (string, error)
@@ -25,12 +25,11 @@ type IMessager interface {
 var _ IMessager = (*Messager)(nil)
 
 type Messager struct {
-	in         client.IMessager
-	walletName string
+	in client.IMessager
 }
 
-func NewMessager(in client.IMessager, walletName string) *Messager {
-	return &Messager{in: in, walletName: walletName}
+func NewMessager(in client.IMessager) *Messager {
+	return &Messager{in: in}
 }
 
 func (m *Messager) WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error) {
@@ -44,16 +43,16 @@ func (m *Messager) WaitMessage(ctx context.Context, id string, confidence uint64
 	return msg, nil
 }
 
-func (m *Messager) HasWalletAddress(ctx context.Context, addr address.Address) (bool, error) {
-	return m.in.HasWalletAddress(ctx, m.walletName, addr)
+func (m *Messager) HasAddress(ctx context.Context, addr address.Address) (bool, error) {
+	return m.in.HasAddress(ctx, addr)
 }
 
 func (m *Messager) PushMessage(ctx context.Context, msg *types2.UnsignedMessage, meta *types.MsgMeta) (string, error) {
-	return m.in.PushMessage(ctx, msg, meta, m.walletName)
+	return m.in.PushMessage(ctx, msg, meta)
 }
 
 func (m *Messager) PushMessageWithId(ctx context.Context, id string, msg *types2.UnsignedMessage, meta *types.MsgMeta) (string, error) {
-	return m.in.PushMessageWithId(ctx, id, msg, meta, m.walletName)
+	return m.in.PushMessageWithId(ctx, id, msg, meta)
 }
 
 func (m *Messager) GetMessageByUid(ctx context.Context, id string) (*types.Message, error) {
@@ -71,5 +70,5 @@ func NewMessageRPC(messagerCfg *config.MessagerConfig) (IMessager, jsonrpc.Clien
 		return nil, nil, err
 	}
 
-	return NewMessager(client, messagerCfg.Wallet), closer, nil
+	return NewMessager(client), closer, nil
 }

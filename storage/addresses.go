@@ -12,7 +12,7 @@ import (
 )
 
 type addrMessager interface {
-	HasWalletAddress(ctx context.Context, addr address.Address) (bool, error)
+	HasAddress(ctx context.Context, addr address.Address) (bool, error)
 }
 
 type addrSelectApi interface {
@@ -113,7 +113,7 @@ func maybeUseAddress(ctx context.Context, a addrSelectApi, am addrMessager, addr
 			return false
 		}
 
-		have, err := am.HasWalletAddress(ctx, k)
+		have, err := am.HasAddress(ctx, k)
 		if err != nil {
 			log.Errorw("failed to check control address", "addr", addr, "error", err)
 			return false

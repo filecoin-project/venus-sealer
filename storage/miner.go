@@ -202,7 +202,7 @@ func (m *Miner) runPreflightChecks(ctx context.Context) error {
 	}
 
 	//todo :: check from wallet
-	has, err := m.messager.HasWalletAddress(ctx, workerKey)
+	has, err := m.messager.HasAddress(ctx, workerKey)
 	if err != nil {
 		return xerrors.Errorf("failed to check wallet for worker key: %w", err)
 	}

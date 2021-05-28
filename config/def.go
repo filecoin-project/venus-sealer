@@ -57,9 +57,8 @@ type NodeConfig struct {
 }
 
 type MessagerConfig struct {
-	Url    string
-	Token  string
-	Wallet string
+	Url   string
+	Token string
 }
 
 type RegisterProofConfig struct {

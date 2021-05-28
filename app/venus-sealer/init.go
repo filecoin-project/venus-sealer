@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	market2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
+	types3 "github.com/filecoin-project/venus-messager/types"
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/constants"
@@ -15,7 +16,6 @@ import (
 	types2 "github.com/filecoin-project/venus-sealer/types"
 	"github.com/filecoin-project/venus/fixtures/asset"
 	"github.com/filecoin-project/venus/pkg/gen/genesis"
-	types3 "github.com/ipfs-force-community/venus-messager/types"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -300,10 +300,6 @@ func parserFlag(cfg *config.StorageMiner, cctx *cli.Context) {
 
 	if cctx.IsSet("messager-url") {
 		cfg.Messager.Url = cctx.String("messager-url")
-	}
-
-	if cctx.IsSet("wallet-name") {
-		cfg.Messager.Wallet = cctx.String("wallet-name")
 	}
 
 	if cctx.IsSet("node-url") {
