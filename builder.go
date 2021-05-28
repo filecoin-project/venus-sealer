@@ -159,7 +159,7 @@ func Repo(cfg *config.StorageMiner) Option {
 			Override(new(*config.DbConfig), &cfg.DB),
 			Override(new(*config.StorageMiner), cfg),
 			Override(new(*config.MessagerConfig), &cfg.Messager),
-			Override(new(*config.ProofConfig), &cfg.Proof),
+			Override(new(*config.RegisterProofConfig), &cfg.Proof),
 			ConfigAPI(cfg),
 
 			Override(new(api.IMessager), api.NewMessageRPC),

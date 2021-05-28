@@ -7,6 +7,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/storage"
 	types2 "github.com/filecoin-project/venus-sealer/types"
 	"github.com/google/uuid"
+	"github.com/ipfs-force-community/venus-gateway/proofevent"
 	"github.com/ipfs-force-community/venus-gateway/types"
 	logging "github.com/ipfs/go-log/v2"
 	"golang.org/x/xerrors"
@@ -42,8 +43,10 @@ func (e *ProofEvent) listenProofRequest(ctx context.Context) {
 func (e *ProofEvent) listenProofRequestOnce(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-
-	proofEventCh, err := e.client.ListenProofEvent(ctx, address.Address(e.mAddr))
+	policy := &proofevent.ProofRegisterPolicy{
+		MinerAddress: address.Address(e.mAddr),
+	}
+	proofEventCh, err := e.client.ListenProofEvent(ctx, policy)
 	if err != nil {
 		// Retry is handled by caller
 		return xerrors.Errorf("listenHeadChanges ChainNotify call failed: %w", err)

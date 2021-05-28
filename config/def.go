@@ -38,7 +38,7 @@ type StorageMiner struct {
 	Node      NodeConfig
 	JWT       JWTConfig
 	Messager  MessagerConfig
-	Proof     ProofConfig
+	Proof     RegisterProofConfig
 
 	ConfigPath string `toml:"-"`
 }
@@ -62,7 +62,7 @@ type MessagerConfig struct {
 	Wallet string
 }
 
-type ProofConfig struct {
+type RegisterProofConfig struct {
 	Url   string
 	Token string
 }

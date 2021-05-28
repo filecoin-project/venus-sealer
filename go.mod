@@ -37,7 +37,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/hako/durafmt v0.0.0-20200710122514-c0fb7b4da026
 	github.com/hashicorp/go-multierror v1.1.0
-	github.com/ipfs-force-community/venus-gateway v0.0.0-20210525072315-8c87f4d464f8 // indirect
+	github.com/ipfs-force-community/venus-gateway v0.0.0-20210528060921-460ec6185a7d // indirect
 	github.com/ipfs-force-community/venus-messager v0.0.0-20210413021844-e36c2596dbc1
 	github.com/ipfs/go-block-format v0.0.3
 	github.com/ipfs/go-cid v0.0.7
@@ -58,6 +58,7 @@ require (
 	github.com/multiformats/go-base32 v0.0.3
 	github.com/multiformats/go-multiaddr v0.3.1
 	github.com/polydawn/refmt v0.0.0-20201211092308-30ac6d18308e
+	github.com/prometheus/common v0.25.0 // indirect
 	github.com/raulk/clock v1.1.0
 	github.com/stretchr/testify v1.7.0
 	github.com/urfave/cli/v2 v2.3.0
