@@ -7,6 +7,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/ipfs-force-community/venus-gateway/proofevent"
 	"github.com/ipfs-force-community/venus-gateway/types"
+	"go.uber.org/fx"
 	"net/http"
 )
 
@@ -15,7 +16,7 @@ type ProofEventClient struct {
 	ListenProofEvent   func(ctx context.Context, policy *proofevent.ProofRegisterPolicy) (chan *types.RequestEvent, error)
 }
 
-func NewProofEventClient(ctx context.Context, cfg *config.RegisterProofConfig) (*ProofEventClient, jsonrpc.ClientCloser, error) {
+func NewProofEventClient(ctx context.Context, lc fx.Lifecycle, cfg *config.RegisterProofConfig) (*ProofEventClient, error) {
 	headers := http.Header{}
 	headers.Add("Authorization", "Bearer "+cfg.Token)
 	pvc := &ProofEventClient{}
@@ -25,12 +26,17 @@ func NewProofEventClient(ctx context.Context, cfg *config.RegisterProofConfig) (
 	}
 	addr, err := apiInfo.DialArgs()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	closer, err := jsonrpc.NewMergeClient(ctx, addr, "Filecoin", []interface{}{pvc}, apiInfo.AuthHeader())
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-
-	return pvc, closer, nil
+	lc.Append(fx.Hook{
+		OnStop: func(_ context.Context) error {
+			closer()
+			return nil
+		},
+	})
+	return pvc, nil
 }
