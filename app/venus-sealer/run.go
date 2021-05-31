@@ -113,8 +113,8 @@ var runCmd = &cli.Command{
 			return err
 		}
 
-		if v.APIVersion != constants.FullAPIVersion {
-			return xerrors.Errorf("venus-daemon API version doesn't match: expected: %s", api.Version{APIVersion: constants.FullAPIVersion})
+		if err := checkV1ApiSupport(v); err != nil {
+			return err
 		}
 
 		log.Info("Checking full node sync status")
@@ -202,4 +202,18 @@ var runCmd = &cli.Command{
 
 		return srv.Serve(manet.NetListener(lst))
 	},
+}
+
+func checkV1ApiSupport(nodeApi api.FullNode) error {
+	v, err := nodeApi.Version(context.Background())
+
+	if err != nil {
+		return err
+	}
+
+	if !v.APIVersion.EqMajorMinor(constants.FullAPIVersion1) {
+		return xerrors.Errorf("Remote API version didn't match (expected %s, remote %s)", constants.FullAPIVersion0, v.APIVersion)
+	}
+
+	return nil
 }
