@@ -108,12 +108,7 @@ var runCmd = &cli.Command{
 			log.Fatalf("Cannot register the view: %v", err)
 		}
 
-		v, err := nodeApi.Version(ctx)
-		if err != nil {
-			return err
-		}
-
-		if err := checkV1ApiSupport(v); err != nil {
+		if err := checkV1ApiSupport(nodeApi); err != nil {
 			return err
 		}
 
@@ -149,8 +144,6 @@ var runCmd = &cli.Command{
 		if err != nil {
 			return xerrors.Errorf("getting API endpoint: %w", err)
 		}
-
-		log.Infof("Remote version %s", v)
 
 		lst, err := manet.Listen(endpoint)
 		if err != nil {
@@ -215,5 +208,6 @@ func checkV1ApiSupport(nodeApi api.FullNode) error {
 		return xerrors.Errorf("Remote API version didn't match (expected %s, remote %s)", constants.FullAPIVersion0, v.APIVersion)
 	}
 
+	log.Infof("Remote version %s", v)
 	return nil
 }
