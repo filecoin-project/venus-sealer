@@ -208,8 +208,8 @@ var initCmd = &cli.Command{
 			return err
 		}
 
-		if !v.APIVersion.EqMajorMinor(constants.FullAPIVersion1) {
-			return xerrors.Errorf("Remote API version didn't match (expected %s, remote %s)", constants.FullAPIVersion1, v.APIVersion)
+		if !v.APIVersion.EqMajorMinor(constants.FullAPIVersion0) {
+			return xerrors.Errorf("Remote API version didn't match (expected %s, remote %s)", constants.FullAPIVersion0, v.APIVersion)
 		}
 
 		messagerClient, closer, err := api.NewMessageRPC(&defaultCfg.Messager)
