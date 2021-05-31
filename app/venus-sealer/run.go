@@ -204,7 +204,7 @@ func checkV1ApiSupport(nodeApi api.FullNode) error {
 		return err
 	}
 
-	if !v.APIVersion.EqMajorMinor(constants.FullAPIVersion1) {
+	if !v.APIVersion.EqMajorMinor(constants.FullAPIVersion0) {
 		return xerrors.Errorf("Remote API version didn't match (expected %s, remote %s)", constants.FullAPIVersion0, v.APIVersion)
 	}
 
