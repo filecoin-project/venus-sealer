@@ -124,13 +124,13 @@ var initCmd = &cli.Command{
 			Usage: "node token",
 		},
 
-		&cli.StringFlag{
-			Name:  "proof-url",
-			Usage: "proof url",
+		&cli.StringSliceFlag{
+			Name:  "gateway-url",
+			Usage: "gateway url",
 		},
 		&cli.StringFlag{
-			Name:  "proof-token",
-			Usage: "proof token",
+			Name:  "gateway-token",
+			Usage: "gateway token",
 		},
 
 		&cli.StringFlag{
@@ -169,7 +169,7 @@ var initCmd = &cli.Command{
 		}
 
 		log.Info("Trying to connect to full node RPC")
-
+		setAuthToken(cctx)
 		fullNode, closer, err := api.GetFullNodeAPIV2(cctx) // TODO: consider storing full node address in config
 		if err != nil {
 			return err
@@ -293,6 +293,15 @@ var initCmd = &cli.Command{
 	},
 }
 
+func setAuthToken(cctx *cli.Context) {
+	if cctx.IsSet("auth-token") {
+		authToken := cctx.String("auth-token")
+		cctx.Set("node-token", authToken)
+		cctx.Set("messager-token", authToken)
+		cctx.Set("gateway-token", authToken)
+	}
+}
+
 func parserFlag(cfg *config.StorageMiner, cctx *cli.Context) {
 	if cctx.IsSet("data") {
 		cfg.DataDir = cctx.String("data")
@@ -306,15 +315,8 @@ func parserFlag(cfg *config.StorageMiner, cctx *cli.Context) {
 		cfg.Node.Url = cctx.String("node-url")
 	}
 
-	if cctx.IsSet("proof-url") {
-		cfg.Proof.Url = cctx.String("proof-url")
-	}
-
-	if cctx.IsSet("auth-token") {
-		authToken := cctx.String("auth-token")
-		cfg.Node.Token = authToken
-		cfg.Messager.Token = authToken
-		cfg.Proof.Token = authToken
+	if cctx.IsSet("gateway-url") {
+		cfg.RegisterProof.Urls = cctx.StringSlice("gateway-url")
 	}
 
 	if cctx.IsSet("node-token") {
@@ -324,8 +326,8 @@ func parserFlag(cfg *config.StorageMiner, cctx *cli.Context) {
 	if cctx.IsSet("messager-token") {
 		cfg.Messager.Token = cctx.String("messager-token")
 	}
-	if cctx.IsSet("proof-token") {
-		cfg.Proof.Token = cctx.String("proof-token")
+	if cctx.IsSet("gateway-token") {
+		cfg.RegisterProof.Token = cctx.String("gateway-token")
 	}
 }
 func storageMinerInit(ctx context.Context, cctx *cli.Context, api api.FullNode, messagerClient api.IMessager, cfg *config.StorageMiner, ssize abi.SectorSize, gasPrice types.BigInt) error {

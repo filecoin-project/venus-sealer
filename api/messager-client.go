@@ -9,7 +9,6 @@ import (
 	"github.com/filecoin-project/venus-sealer/config"
 	types2 "github.com/filecoin-project/venus/pkg/types"
 	"golang.org/x/xerrors"
-	"net/http"
 )
 
 var ErrFailMsg = xerrors.New("Message Fail")
@@ -60,12 +59,16 @@ func (m *Messager) GetMessageByUid(ctx context.Context, id string) (*types.Messa
 }
 
 func NewMessageRPC(messagerCfg *config.MessagerConfig) (IMessager, jsonrpc.ClientCloser, error) {
-	headers := http.Header{}
-	if len(messagerCfg.Token) != 0 {
-		headers.Add("Authorization", "Bearer "+messagerCfg.Token)
+	apiInfo := APIInfo{
+		Addr:  messagerCfg.Url,
+		Token: []byte(messagerCfg.Token),
 	}
 
-	client, closer, err := client.NewMessageRPC(context.Background(), messagerCfg.Url, headers)
+	addr, err := apiInfo.DialArgs()
+	if err != nil {
+		return nil, nil, err
+	}
+	client, closer, err := client.NewMessageRPC(context.Background(), addr, apiInfo.AuthHeader())
 	if err != nil {
 		return nil, nil, err
 	}
