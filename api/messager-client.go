@@ -14,7 +14,7 @@ import (
 var ErrFailMsg = xerrors.New("Message Fail")
 
 type IMessager interface {
-	HasAddress(ctx context.Context, addr address.Address) (bool, error)
+	WalletHas(ctx context.Context, addr address.Address) (bool, error)
 	WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error)
 	PushMessage(ctx context.Context, msg *types2.UnsignedMessage, meta *types.MsgMeta) (string, error)
 	PushMessageWithId(ctx context.Context, id string, msg *types2.UnsignedMessage, meta *types.MsgMeta) (string, error)
@@ -42,8 +42,8 @@ func (m *Messager) WaitMessage(ctx context.Context, id string, confidence uint64
 	return msg, nil
 }
 
-func (m *Messager) HasAddress(ctx context.Context, addr address.Address) (bool, error) {
-	return m.in.HasAddress(ctx, addr)
+func (m *Messager) WalletHas(ctx context.Context, addr address.Address) (bool, error) {
+	return m.in.WalletHas(ctx, addr)
 }
 
 func (m *Messager) PushMessage(ctx context.Context, msg *types2.UnsignedMessage, meta *types.MsgMeta) (string, error) {
