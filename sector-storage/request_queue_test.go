@@ -2,8 +2,9 @@ package sectorstorage
 
 import (
 	"fmt"
-	"github.com/filecoin-project/venus-sealer/types"
 	"testing"
+
+	"github.com/filecoin-project/venus-sealer/types"
 )
 
 func TestRequestQueue(t *testing.T) {

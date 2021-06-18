@@ -88,6 +88,73 @@ func TestHappyPath(t *testing.T) {
 	}
 }
 
+func TestHappyPathFinalizeEarly(t *testing.T) {
+	var notif []struct{ before, after types.SectorInfo }
+	ma, _ := address.NewIDAddress(55151)
+	m := test{
+		s: &Sealing{
+			maddr: ma,
+			stats: types.SectorStats{
+				BySector: map[abi.SectorID]types.StatSectorState{},
+			},
+			notifee: func(before, after types.SectorInfo) {
+				notif = append(notif, struct{ before, after types.SectorInfo }{before, after})
+			},
+		},
+		t:     t,
+		state: &types.SectorInfo{State: types.Packing},
+	}
+
+	m.planSingle(SectorPacked{})
+	require.Equal(m.t, m.state.State, types.GetTicket)
+
+	m.planSingle(SectorTicket{})
+	require.Equal(m.t, m.state.State, types.PreCommit1)
+
+	m.planSingle(SectorPreCommit1{})
+	require.Equal(m.t, m.state.State, types.PreCommit2)
+
+	m.planSingle(SectorPreCommit2{})
+	require.Equal(m.t, m.state.State, types.PreCommitting)
+
+	m.planSingle(SectorPreCommitted{})
+	require.Equal(m.t, m.state.State, types.PreCommitWait)
+
+	m.planSingle(SectorPreCommitLanded{})
+	require.Equal(m.t, m.state.State, types.WaitSeed)
+
+	m.planSingle(SectorSeedReady{})
+	require.Equal(m.t, m.state.State, types.Committing)
+
+	m.planSingle(SectorProofReady{})
+	require.Equal(m.t, m.state.State, types.CommitFinalize)
+
+	m.planSingle(SectorFinalized{})
+	require.Equal(m.t, m.state.State, types.SubmitCommit)
+
+	m.planSingle(SectorSubmitCommitAggregate{})
+	require.Equal(m.t, m.state.State, types.SubmitCommitAggregate)
+
+	m.planSingle(SectorCommitAggregateSent{})
+	require.Equal(m.t, m.state.State, types.CommitWait)
+
+	m.planSingle(SectorProving{})
+	require.Equal(m.t, m.state.State, types.FinalizeSector)
+
+	m.planSingle(SectorFinalized{})
+	require.Equal(m.t, m.state.State, types.Proving)
+
+	expected := []types.SectorState{types.Packing, types.GetTicket, types.PreCommit1, types.PreCommit2, types.PreCommitting, types.PreCommitWait, types.WaitSeed, types.Committing, types.CommitFinalize, types.SubmitCommit, types.SubmitCommitAggregate, types.CommitWait, types.FinalizeSector, types.Proving}
+	for i, n := range notif {
+		if n.before.State != expected[i] {
+			t.Fatalf("expected before state: %s, got: %s", expected[i], n.before.State)
+		}
+		if n.after.State != expected[i+1] {
+			t.Fatalf("expected after state: %s, got: %s", expected[i+1], n.after.State)
+		}
+	}
+}
+
 func TestSeedRevert(t *testing.T) {
 	ma, _ := address.NewIDAddress(55151)
 	m := test{
@@ -174,5 +241,40 @@ func TestPlannerList(t *testing.T) {
 		}
 		_, ok := types.ExistSectorStateList[state]
 		require.True(t, ok, "state %s", state)
+	}
+}
+
+func TestBrokenState(t *testing.T) {
+	var notif []struct{ before, after types.SectorInfo }
+	ma, _ := address.NewIDAddress(55151)
+	m := test{
+		s: &Sealing{
+			maddr: ma,
+			stats: types.SectorStats{
+				BySector: map[abi.SectorID]types.StatSectorState{},
+			},
+			notifee: func(before, after types.SectorInfo) {
+				notif = append(notif, struct{ before, after types.SectorInfo }{before, after})
+			},
+		},
+		t:     t,
+		state: &types.SectorInfo{State: "not a state"},
+	}
+
+	_, _, err := m.s.plan([]statemachine.Event{{User: SectorPacked{}}}, m.state)
+	require.Error(t, err)
+	require.Equal(m.t, m.state.State, types.SectorState("not a state"))
+
+	m.planSingle(SectorRemove{})
+	require.Equal(m.t, m.state.State, types.Removing)
+
+	expected := []types.SectorState{"not a state", "not a state", types.Removing}
+	for i, n := range notif {
+		if n.before.State != expected[i] {
+			t.Fatalf("expected before state: %s, got: %s", expected[i], n.before.State)
+		}
+		if n.after.State != expected[i+1] {
+			t.Fatalf("expected after state: %s, got: %s", expected[i+1], n.after.State)
+		}
 	}
 }

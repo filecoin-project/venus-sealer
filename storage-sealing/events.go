@@ -2,9 +2,10 @@ package sealing
 
 import (
 	"context"
-	"github.com/filecoin-project/venus-sealer/types"
 
 	"github.com/filecoin-project/go-state-types/abi"
+
+	"github.com/filecoin-project/venus-sealer/types"
 )
 
 // `curH`-`ts.Height` = `confidence`

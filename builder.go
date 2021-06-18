@@ -131,6 +131,7 @@ func Online(cfg *config.StorageMiner) Option {
 		Override(new(types.SectorIDCounter), SectorIDCounter),
 		Override(new(*sectorstorage.Manager), SectorStorage),
 		Override(new(ffiwrapper.Verifier), ffiwrapper.ProofVerifier),
+		Override(new(ffiwrapper.Prover), ffiwrapper.ProofProver),
 		Override(new(storage.WinningPoStProver), storage.NewWinningPoStProver),
 		Override(new(sectorstorage.SectorManager), From(new(*sectorstorage.Manager))),
 		Override(new(storage2.Prover), From(new(sectorstorage.SectorManager))),

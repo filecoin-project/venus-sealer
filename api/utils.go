@@ -3,10 +3,13 @@ package api
 import (
 	"context"
 	"fmt"
-	"github.com/filecoin-project/go-state-types/abi"
-	"github.com/filecoin-project/venus/app/submodule/syncer"
-	"github.com/ipfs/go-cid"
 	"time"
+
+	"github.com/filecoin-project/go-state-types/abi"
+
+	"github.com/ipfs/go-cid"
+
+	"github.com/filecoin-project/venus/app/submodule/apitypes"
 )
 
 func SyncWait(ctx context.Context, napi FullNode, blockDelay uint64, watch bool) error {
@@ -44,10 +47,10 @@ func SyncWait(ctx context.Context, napi FullNode, blockDelay uint64, watch bool)
 		working := -1
 		for i, ss := range state.ActiveSyncs {
 			switch ss.Stage {
-			case syncer.StageSyncComplete:
+			case apitypes.StageSyncComplete:
 			default:
 				working = i
-			case syncer.StageIdle:
+			case apitypes.StageIdle:
 				// not complete, not actively working
 			}
 		}

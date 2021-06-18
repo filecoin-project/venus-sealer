@@ -3,10 +3,6 @@ package storage
 import (
 	"bytes"
 	"context"
-	"github.com/filecoin-project/venus-sealer/constants"
-	chain2 "github.com/filecoin-project/venus/app/submodule/chain"
-	"github.com/filecoin-project/venus/app/submodule/syncer"
-	"github.com/filecoin-project/venus/pkg/chain"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -16,26 +12,35 @@ import (
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-bitfield"
-	"github.com/filecoin-project/specs-storage/storage"
-
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/go-state-types/crypto"
 	"github.com/filecoin-project/go-state-types/dline"
 	"github.com/filecoin-project/go-state-types/network"
+	"github.com/filecoin-project/specs-storage/storage"
+
+	builtin5 "github.com/filecoin-project/specs-actors/v5/actors/builtin"
+	miner5 "github.com/filecoin-project/specs-actors/v5/actors/builtin/miner"
+
 	builtin2 "github.com/filecoin-project/specs-actors/v2/actors/builtin"
 	miner2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/miner"
 	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 	tutils "github.com/filecoin-project/specs-actors/v2/support/testing"
+	proof5 "github.com/filecoin-project/specs-actors/v5/actors/runtime/proof"
 
+	"github.com/filecoin-project/venus/app/submodule/apitypes"
+	"github.com/filecoin-project/venus/pkg/chain"
+	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/specactors/policy"
+	"github.com/filecoin-project/venus/pkg/types"
+
+	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus-sealer/journal"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
-	"github.com/filecoin-project/venus/pkg/types"
 )
 
 type mockStorageMinerAPI struct {
-	partitions     []chain2.Partition
+	partitions     []apitypes.Partition
 	pushedMessages chan *types.Message
 	storageMinerApi
 }
@@ -65,11 +70,11 @@ func (m *mockStorageMinerAPI) ChainGetRandomnessFromBeacon(ctx context.Context, 
 	return abi.Randomness("beacon rand"), nil
 }
 
-func (m *mockStorageMinerAPI) setPartitions(ps []chain2.Partition) {
+func (m *mockStorageMinerAPI) setPartitions(ps []apitypes.Partition) {
 	m.partitions = append(m.partitions, ps...)
 }
 
-func (m *mockStorageMinerAPI) StateMinerPartitions(ctx context.Context, a address.Address, dlIdx uint64, tsk types.TipSetKey) ([]chain2.Partition, error) {
+func (m *mockStorageMinerAPI) StateMinerPartitions(ctx context.Context, a address.Address, dlIdx uint64, tsk types.TipSetKey) ([]apitypes.Partition, error) {
 	return m.partitions, nil
 }
 
@@ -94,8 +99,8 @@ func (m *mockStorageMinerAPI) MpoolPushMessage(ctx context.Context, message *typ
 	}, nil
 }
 
-func (m *mockStorageMinerAPI) StateWaitMsg(ctx context.Context, cid cid.Cid, confidence uint64) (*chain2.MsgLookup, error) {
-	return &chain2.MsgLookup{
+func (m *mockStorageMinerAPI) StateWaitMsg(ctx context.Context, cid cid.Cid, confidence uint64, limit abi.ChainEpoch, allowReplaced bool) (*apitypes.MsgLookup, error) {
+	return &apitypes.MsgLookup{
 		Receipt: types.MessageReceipt{
 			ExitCode: 0,
 		},
@@ -146,6 +151,10 @@ func (m mockVerif) VerifyWindowPoSt(ctx context.Context, info proof2.WindowPoStV
 	return true, nil
 }
 
+func (m mockVerif) VerifyAggregateSeals(aggregate proof5.AggregateSealVerifyProofAndInfos) (bool, error) {
+	panic("implement me")
+}
+
 func (m mockVerif) VerifySeal(proof2.SealVerifyInfo) (bool, error) {
 	panic("implement me")
 }
@@ -174,26 +183,29 @@ func TestWDPostDoPost(t *testing.T) {
 	mockStgMinerAPI := newMockStorageMinerAPI()
 
 	// Get the number of sectors allowed in a partition for this proof type
-	sectorsPerPartition, err := builtin2.PoStProofWindowPoStPartitionSectors(proofType)
+	sectorsPerPartition, err := builtin5.PoStProofWindowPoStPartitionSectors(proofType)
 	require.NoError(t, err)
 	// Work out the number of partitions that can be included in a message
 	// without exceeding the message sector limit
 
+	partitionsPerMsg, err := policy.GetMaxPoStPartitions(network.Version13, proofType)
 	require.NoError(t, err)
-	partitionsPerMsg := int(miner2.AddressedSectorsMax / sectorsPerPartition)
+	if partitionsPerMsg > miner5.AddressedPartitionsMax {
+		partitionsPerMsg = miner5.AddressedPartitionsMax
+	}
 
 	// Enough partitions to fill expectedMsgCount-1 messages
 	partitionCount := (expectedMsgCount - 1) * partitionsPerMsg
 	// Add an extra partition that should be included in the last message
 	partitionCount++
 
-	var partitions []chain2.Partition
+	var partitions []apitypes.Partition
 	for p := 0; p < partitionCount; p++ {
 		sectors := bitfield.New()
 		for s := uint64(0); s < sectorsPerPartition; s++ {
 			sectors.Set(s)
 		}
-		partitions = append(partitions, chain2.Partition{
+		partitions = append(partitions, apitypes.Partition{
 			AllSectors:        sectors,
 			FaultySectors:     bitfield.New(),
 			RecoveringSectors: bitfield.New(),
@@ -216,11 +228,11 @@ func TestWDPostDoPost(t *testing.T) {
 	}
 
 	di := &dline.Info{
-		WPoStPeriodDeadlines:   miner2.WPoStPeriodDeadlines,
-		WPoStProvingPeriod:     miner2.WPoStProvingPeriod,
-		WPoStChallengeWindow:   miner2.WPoStChallengeWindow,
-		WPoStChallengeLookback: miner2.WPoStChallengeLookback,
-		FaultDeclarationCutoff: miner2.FaultDeclarationCutoff,
+		WPoStPeriodDeadlines:   miner5.WPoStPeriodDeadlines,
+		WPoStProvingPeriod:     miner5.WPoStProvingPeriod,
+		WPoStChallengeWindow:   miner5.WPoStChallengeWindow,
+		WPoStChallengeLookback: miner5.WPoStChallengeLookback,
+		FaultDeclarationCutoff: miner5.FaultDeclarationCutoff,
 	}
 	ts := mockTipSet(t)
 
@@ -268,11 +280,11 @@ func mockTipSet(t *testing.T) *types.TipSet {
 // All the mock methods below here are unused
 //
 
-func (m *mockStorageMinerAPI) StateCall(ctx context.Context, message *types.Message, key types.TipSetKey) (*syncer.InvocResult, error) {
+func (m *mockStorageMinerAPI) StateCall(ctx context.Context, message *types.Message, key types.TipSetKey) (*apitypes.InvocResult, error) {
 	panic("implement me")
 }
 
-func (m *mockStorageMinerAPI) StateMinerDeadlines(ctx context.Context, maddr address.Address, tok types.TipSetKey) ([]chain2.Deadline, error) {
+func (m *mockStorageMinerAPI) StateMinerDeadlines(ctx context.Context, maddr address.Address, tok types.TipSetKey) ([]apitypes.Deadline, error) {
 	panic("implement me")
 }
 
@@ -313,7 +325,7 @@ func (m *mockStorageMinerAPI) StateMinerInitialPledgeCollateral(ctx context.Cont
 	panic("implement me")
 }
 
-func (m *mockStorageMinerAPI) StateSearchMsg(ctx context.Context, cid cid.Cid) (*chain2.MsgLookup, error) {
+func (m *mockStorageMinerAPI) StateSearchMsg(ctx context.Context, from types.TipSetKey, msg cid.Cid, limit abi.ChainEpoch, allowReplaced bool) (*apitypes.MsgLookup, error) {
 	panic("implement me")
 }
 
@@ -327,7 +339,7 @@ func (m *mockStorageMinerAPI) StateGetReceipt(ctx context.Context, cid cid.Cid, 
 	panic("implement me")
 }
 
-func (m *mockStorageMinerAPI) StateMarketStorageDeal(ctx context.Context, id abi.DealID, key types.TipSetKey) (*chain2.MarketDeal, error) {
+func (m *mockStorageMinerAPI) StateMarketStorageDeal(ctx context.Context, id abi.DealID, key types.TipSetKey) (*apitypes.MarketDeal, error) {
 	panic("implement me")
 }
 
@@ -352,7 +364,7 @@ func (m *mockStorageMinerAPI) GasEstimateMessageGas(ctx context.Context, message
 }
 
 func (m *mockStorageMinerAPI) ChainHead(ctx context.Context) (*types.TipSet, error) {
-	panic("implement me")
+	return nil, nil
 }
 
 func (m *mockStorageMinerAPI) ChainNotify(ctx context.Context) (<-chan []*chain.HeadChange, error) {
@@ -363,7 +375,7 @@ func (m *mockStorageMinerAPI) ChainGetTipSetByHeight(ctx context.Context, epoch 
 	panic("implement me")
 }
 
-func (m *mockStorageMinerAPI) ChainGetBlockMessages(ctx context.Context, cid cid.Cid) (*chain2.BlockMessages, error) {
+func (m *mockStorageMinerAPI) ChainGetBlockMessages(ctx context.Context, cid cid.Cid) (*apitypes.BlockMessages, error) {
 	panic("implement me")
 }
 

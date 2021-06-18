@@ -1,10 +1,11 @@
 package sealing
 
 import (
-	"github.com/filecoin-project/venus-sealer/types"
 	"math/bits"
 
 	"github.com/filecoin-project/go-state-types/abi"
+
+	"github.com/filecoin-project/venus-sealer/types"
 )
 
 func fillersFromRem(in abi.UnpaddedPieceSize) ([]abi.UnpaddedPieceSize, error) {

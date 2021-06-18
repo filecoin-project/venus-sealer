@@ -4,10 +4,14 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
-	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
+	"time"
+
+	miner5 "github.com/filecoin-project/specs-actors/v5/actors/builtin/miner"
+
 	"github.com/filecoin-project/venus/pkg/specactors/policy"
 	"github.com/filecoin-project/venus/pkg/types"
-	"time"
+
+	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
 )
 
 func GetDefaultWorkerConfig() *StorageWorker {
@@ -53,6 +57,24 @@ func DefaultMainnetStorageMiner() *StorageMiner {
 			MaxSealingSectors:         0,
 			MaxSealingSectorsForDeals: 0,
 			WaitDealsDelay:            Duration(time.Hour * 6),
+			AlwaysKeepUnsealedCopy:    true,
+			FinalizeEarly:             false,
+
+			BatchPreCommits:     true,
+			MinPreCommitBatch:   1,                                  // we must have at least one precommit to batch
+			MaxPreCommitBatch:   miner5.PreCommitSectorBatchMaxSize, // up to 256 sectors
+			PreCommitBatchWait:  Duration(24 * time.Hour),           // this should be less than 31.5 hours, which is the expiration of a precommit ticket
+			PreCommitBatchSlack: Duration(3 * time.Hour),            // time buffer for forceful batch submission before sectors/deals in batch would start expiring, higher value will lower the chances for message fail due to expiration
+
+			AggregateCommits: true,
+			MinCommitBatch:   miner5.MinAggregatedSectors, // per FIP13, we must have at least four proofs to aggregate, where 4 is the cross over point where aggregation wins out on single provecommit gas costs
+			MaxCommitBatch:   miner5.MaxAggregatedSectors, // maximum 819 sectors, this is the maximum aggregation per FIP13
+			CommitBatchWait:  Duration(24 * time.Hour),    // this can be up to 30 days
+			CommitBatchSlack: Duration(1 * time.Hour),     // time buffer for forceful batch submission before sectors/deals in batch would start expiring, higher value will lower the chances for message fail due to expiration
+
+			TerminateBatchMin:  1,
+			TerminateBatchMax:  100,
+			TerminateBatchWait: Duration(5 * time.Minute),
 		},
 		Storage: sectorstorage.SealerConfig{
 			AllowAddPiece:   true,
@@ -66,8 +88,18 @@ func DefaultMainnetStorageMiner() *StorageMiner {
 			ParallelFetchLimit: 10,
 		},
 		Fees: MinerFeeConfig{
-			MaxPreCommitGasFee:     types.MustParseFIL("0.025"),
-			MaxCommitGasFee:        types.MustParseFIL("0.05"),
+			MaxPreCommitGasFee: types.MustParseFIL("0.025"),
+			MaxCommitGasFee:    types.MustParseFIL("0.05"),
+
+			MaxPreCommitBatchGasFee: BatchFeeConfig{
+				Base:      types.MustParseFIL("0.025"), // TODO: update before v1.10.0
+				PerSector: types.MustParseFIL("0.025"), // TODO: update before v1.10.0
+			},
+			MaxCommitBatchGasFee: BatchFeeConfig{
+				Base:      types.MustParseFIL("0.05"), // TODO: update before v1.10.0
+				PerSector: types.MustParseFIL("0.05"), // TODO: update before v1.10.0
+			},
+
 			MaxTerminateGasFee:     types.MustParseFIL("0.5"),
 			MaxWindowPoStGasFee:    types.MustParseFIL("5"),
 			MaxPublishDealsFee:     types.MustParseFIL("0.05"),
@@ -126,6 +158,24 @@ func DefaultNerpdaStorageMiner() *StorageMiner {
 			MaxSealingSectors:         0,
 			MaxSealingSectorsForDeals: 0,
 			WaitDealsDelay:            Duration(time.Hour * 6),
+			AlwaysKeepUnsealedCopy:    true,
+			FinalizeEarly:             false,
+
+			BatchPreCommits:     true,
+			MinPreCommitBatch:   1,                                  // we must have at least one precommit to batch
+			MaxPreCommitBatch:   miner5.PreCommitSectorBatchMaxSize, // up to 256 sectors
+			PreCommitBatchWait:  Duration(24 * time.Hour),           // this should be less than 31.5 hours, which is the expiration of a precommit ticket
+			PreCommitBatchSlack: Duration(3 * time.Hour),            // time buffer for forceful batch submission before sectors/deals in batch would start expiring, higher value will lower the chances for message fail due to expiration
+
+			AggregateCommits: true,
+			MinCommitBatch:   miner5.MinAggregatedSectors, // per FIP13, we must have at least four proofs to aggregate, where 4 is the cross over point where aggregation wins out on single provecommit gas costs
+			MaxCommitBatch:   miner5.MaxAggregatedSectors, // maximum 819 sectors, this is the maximum aggregation per FIP13
+			CommitBatchWait:  Duration(24 * time.Hour),    // this can be up to 30 days
+			CommitBatchSlack: Duration(1 * time.Hour),     // time buffer for forceful batch submission before sectors/deals in batch would start expiring, higher value will lower the chances for message fail due to expiration
+
+			TerminateBatchMin:  1,
+			TerminateBatchMax:  100,
+			TerminateBatchWait: Duration(5 * time.Minute),
 		},
 		Storage: sectorstorage.SealerConfig{
 			AllowAddPiece:   true,
@@ -139,8 +189,18 @@ func DefaultNerpdaStorageMiner() *StorageMiner {
 			ParallelFetchLimit: 10,
 		},
 		Fees: MinerFeeConfig{
-			MaxPreCommitGasFee:     types.MustParseFIL("0.025"),
-			MaxCommitGasFee:        types.MustParseFIL("0.05"),
+			MaxPreCommitGasFee: types.MustParseFIL("0.025"),
+			MaxCommitGasFee:    types.MustParseFIL("0.05"),
+
+			MaxPreCommitBatchGasFee: BatchFeeConfig{
+				Base:      types.MustParseFIL("0.025"), // TODO: update before v1.10.0
+				PerSector: types.MustParseFIL("0.025"), // TODO: update before v1.10.0
+			},
+			MaxCommitBatchGasFee: BatchFeeConfig{
+				Base:      types.MustParseFIL("0.05"), // TODO: update before v1.10.0
+				PerSector: types.MustParseFIL("0.05"), // TODO: update before v1.10.0
+			},
+
 			MaxTerminateGasFee:     types.MustParseFIL("0.5"),
 			MaxWindowPoStGasFee:    types.MustParseFIL("5"),
 			MaxPublishDealsFee:     types.MustParseFIL("0.05"),
@@ -200,6 +260,24 @@ func DefaultCalibrationStorageMiner() *StorageMiner {
 			MaxSealingSectors:         0,
 			MaxSealingSectorsForDeals: 0,
 			WaitDealsDelay:            Duration(time.Hour * 6),
+			AlwaysKeepUnsealedCopy:    true,
+			FinalizeEarly:             false,
+
+			BatchPreCommits:     true,
+			MinPreCommitBatch:   1,                                  // we must have at least one precommit to batch
+			MaxPreCommitBatch:   miner5.PreCommitSectorBatchMaxSize, // up to 256 sectors
+			PreCommitBatchWait:  Duration(24 * time.Hour),           // this should be less than 31.5 hours, which is the expiration of a precommit ticket
+			PreCommitBatchSlack: Duration(3 * time.Hour),            // time buffer for forceful batch submission before sectors/deals in batch would start expiring, higher value will lower the chances for message fail due to expiration
+
+			AggregateCommits: true,
+			MinCommitBatch:   miner5.MinAggregatedSectors, // per FIP13, we must have at least four proofs to aggregate, where 4 is the cross over point where aggregation wins out on single provecommit gas costs
+			MaxCommitBatch:   miner5.MaxAggregatedSectors, // maximum 819 sectors, this is the maximum aggregation per FIP13
+			CommitBatchWait:  Duration(24 * time.Hour),    // this can be up to 30 days
+			CommitBatchSlack: Duration(1 * time.Hour),     // time buffer for forceful batch submission before sectors/deals in batch would start expiring, higher value will lower the chances for message fail due to expiration
+
+			TerminateBatchMin:  1,
+			TerminateBatchMax:  100,
+			TerminateBatchWait: Duration(5 * time.Minute),
 		},
 		Storage: sectorstorage.SealerConfig{
 			AllowAddPiece:   true,
@@ -213,8 +291,18 @@ func DefaultCalibrationStorageMiner() *StorageMiner {
 			ParallelFetchLimit: 10,
 		},
 		Fees: MinerFeeConfig{
-			MaxPreCommitGasFee:     types.MustParseFIL("0.025"),
-			MaxCommitGasFee:        types.MustParseFIL("0.05"),
+			MaxPreCommitGasFee: types.MustParseFIL("0.025"),
+			MaxCommitGasFee:    types.MustParseFIL("0.05"),
+
+			MaxPreCommitBatchGasFee: BatchFeeConfig{
+				Base:      types.MustParseFIL("0.025"), // TODO: update before v1.10.0
+				PerSector: types.MustParseFIL("0.025"), // TODO: update before v1.10.0
+			},
+			MaxCommitBatchGasFee: BatchFeeConfig{
+				Base:      types.MustParseFIL("0.05"), // TODO: update before v1.10.0
+				PerSector: types.MustParseFIL("0.05"), // TODO: update before v1.10.0
+			},
+
 			MaxTerminateGasFee:     types.MustParseFIL("0.5"),
 			MaxWindowPoStGasFee:    types.MustParseFIL("5"),
 			MaxPublishDealsFee:     types.MustParseFIL("0.05"),
@@ -273,6 +361,24 @@ func Default2kStorageMiner() *StorageMiner {
 			MaxSealingSectors:         0,
 			MaxSealingSectorsForDeals: 0,
 			WaitDealsDelay:            Duration(time.Hour * 6),
+			AlwaysKeepUnsealedCopy:    true,
+			FinalizeEarly:             false,
+
+			BatchPreCommits:     true,
+			MinPreCommitBatch:   1,                                  // we must have at least one precommit to batch
+			MaxPreCommitBatch:   miner5.PreCommitSectorBatchMaxSize, // up to 256 sectors
+			PreCommitBatchWait:  Duration(24 * time.Hour),           // this should be less than 31.5 hours, which is the expiration of a precommit ticket
+			PreCommitBatchSlack: Duration(3 * time.Hour),            // time buffer for forceful batch submission before sectors/deals in batch would start expiring, higher value will lower the chances for message fail due to expiration
+
+			AggregateCommits: true,
+			MinCommitBatch:   miner5.MinAggregatedSectors, // per FIP13, we must have at least four proofs to aggregate, where 4 is the cross over point where aggregation wins out on single provecommit gas costs
+			MaxCommitBatch:   miner5.MaxAggregatedSectors, // maximum 819 sectors, this is the maximum aggregation per FIP13
+			CommitBatchWait:  Duration(24 * time.Hour),    // this can be up to 30 days
+			CommitBatchSlack: Duration(1 * time.Hour),     // time buffer for forceful batch submission before sectors/deals in batch would start expiring, higher value will lower the chances for message fail due to expiration
+
+			TerminateBatchMin:  1,
+			TerminateBatchMax:  100,
+			TerminateBatchWait: Duration(5 * time.Minute),
 		},
 
 		Storage: sectorstorage.SealerConfig{
@@ -288,8 +394,18 @@ func Default2kStorageMiner() *StorageMiner {
 		},
 
 		Fees: MinerFeeConfig{
-			MaxPreCommitGasFee:     types.MustParseFIL("0.025"),
-			MaxCommitGasFee:        types.MustParseFIL("0.05"),
+			MaxPreCommitGasFee: types.MustParseFIL("0.025"),
+			MaxCommitGasFee:    types.MustParseFIL("0.05"),
+
+			MaxPreCommitBatchGasFee: BatchFeeConfig{
+				Base:      types.MustParseFIL("0.025"), // TODO: update before v1.10.0
+				PerSector: types.MustParseFIL("0.025"), // TODO: update before v1.10.0
+			},
+			MaxCommitBatchGasFee: BatchFeeConfig{
+				Base:      types.MustParseFIL("0.05"), // TODO: update before v1.10.0
+				PerSector: types.MustParseFIL("0.05"), // TODO: update before v1.10.0
+			},
+
 			MaxTerminateGasFee:     types.MustParseFIL("0.5"),
 			MaxWindowPoStGasFee:    types.MustParseFIL("5"),
 			MaxPublishDealsFee:     types.MustParseFIL("0.05"),

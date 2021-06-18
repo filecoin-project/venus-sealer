@@ -3,8 +3,6 @@ package sealing
 import (
 	"bytes"
 	"context"
-	"github.com/filecoin-project/venus-sealer/types"
-	"github.com/filecoin-project/venus/app/submodule/chain"
 	"sort"
 	"sync"
 	"time"
@@ -18,8 +16,12 @@ import (
 	"github.com/filecoin-project/go-state-types/dline"
 	miner2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/miner"
 
-	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus/app/submodule/apitypes"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
+
+	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus-sealer/config"
+	"github.com/filecoin-project/venus-sealer/types"
 )
 
 var (
@@ -35,7 +37,7 @@ type TerminateBatcherApi interface {
 	MessagerSendMsg(ctx context.Context, from, to address.Address, method abi.MethodNum, value, maxFee abi.TokenAmount, params []byte) (string, error)
 	StateMinerInfo(context.Context, address.Address, types.TipSetToken) (miner.MinerInfo, error)
 	StateMinerProvingDeadline(context.Context, address.Address, types.TipSetToken) (*dline.Info, error)
-	StateMinerPartitions(ctx context.Context, m address.Address, dlIdx uint64, tok types.TipSetToken) ([]chain.Partition, error)
+	StateMinerPartitions(ctx context.Context, m address.Address, dlIdx uint64, tok types.TipSetToken) ([]apitypes.Partition, error)
 }
 
 type TerminateBatcher struct {
@@ -43,7 +45,7 @@ type TerminateBatcher struct {
 	maddr   address.Address
 	mctx    context.Context
 	addrSel AddrSel
-	feeCfg  FeeConfig
+	feeCfg  config.MinerFeeConfig
 
 	todo map[SectorLocation]*bitfield.BitField // MinerSectorLocation -> BitField
 
@@ -54,7 +56,7 @@ type TerminateBatcher struct {
 	lk                    sync.Mutex
 }
 
-func NewTerminationBatcher(mctx context.Context, maddr address.Address, api TerminateBatcherApi, addrSel AddrSel, feeCfg FeeConfig) *TerminateBatcher {
+func NewTerminationBatcher(mctx context.Context, maddr address.Address, api TerminateBatcherApi, addrSel AddrSel, feeCfg config.MinerFeeConfig) *TerminateBatcher {
 	b := &TerminateBatcher{
 		api:     api,
 		maddr:   maddr,
@@ -181,7 +183,7 @@ func (b *TerminateBatcher) processBatch(notif, after bool) (string, error) {
 			Sectors:   toTerminate,
 		})
 
-		if total >= uint64(miner.AddressedSectorsMax) {
+		if total >= uint64(miner.AddressedSectorsMax) || total >= TerminateBatchMax {
 			break
 		}
 
@@ -212,12 +214,12 @@ func (b *TerminateBatcher) processBatch(notif, after bool) (string, error) {
 		return "", xerrors.Errorf("couldn't get miner info: %w", err)
 	}
 
-	from, _, err := b.addrSel(b.mctx, mi, api.TerminateSectorsAddr, b.feeCfg.MaxTerminateGasFee, b.feeCfg.MaxTerminateGasFee)
+	from, _, err := b.addrSel(b.mctx, mi, api.TerminateSectorsAddr, big.Int(b.feeCfg.MaxTerminateGasFee), big.Int(b.feeCfg.MaxTerminateGasFee))
 	if err != nil {
 		return "", xerrors.Errorf("no good address found: %w", err)
 	}
 
-	mcid, err := b.api.MessagerSendMsg(b.mctx, from, b.maddr, miner.Methods.TerminateSectors, big.Zero(), b.feeCfg.MaxTerminateGasFee, enc.Bytes())
+	mcid, err := b.api.MessagerSendMsg(b.mctx, from, b.maddr, miner.Methods.TerminateSectors, big.Zero(), big.Int(b.feeCfg.MaxTerminateGasFee), enc.Bytes())
 	if err != nil {
 		return "", xerrors.Errorf("sending message failed: %w", err)
 	}

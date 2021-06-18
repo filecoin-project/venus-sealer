@@ -3,7 +3,6 @@ package sectorstorage
 import (
 	"context"
 	"encoding/json"
-	"github.com/filecoin-project/venus-sealer/types"
 	"io"
 	"os"
 	"reflect"
@@ -26,6 +25,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/sector-storage/ffiwrapper"
 	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
+	"github.com/filecoin-project/venus-sealer/types"
 )
 
 var pathTypes = []storiface.SectorFileType{storiface.FTUnsealed, storiface.FTSealed, storiface.FTCache}

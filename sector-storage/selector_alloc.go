@@ -2,7 +2,6 @@ package sectorstorage
 
 import (
 	"context"
-	"github.com/filecoin-project/venus-sealer/types"
 
 	"golang.org/x/xerrors"
 
@@ -10,6 +9,7 @@ import (
 
 	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
+	"github.com/filecoin-project/venus-sealer/types"
 )
 
 type allocSelector struct {

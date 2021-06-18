@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/filecoin-project/venus-sealer/types"
 	"os"
 
 	gen "github.com/whyrusleeping/cbor-gen"
+
+	"github.com/filecoin-project/venus-sealer/types"
 )
 
 func main() {

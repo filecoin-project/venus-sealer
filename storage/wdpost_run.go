@@ -3,27 +3,29 @@ package storage
 import (
 	"bytes"
 	"context"
-	types3 "github.com/filecoin-project/venus-messager/types"
-	"github.com/filecoin-project/venus-sealer/constants"
-	"github.com/filecoin-project/venus/app/submodule/chain"
 	"time"
 
-	"github.com/filecoin-project/go-bitfield"
-	"github.com/filecoin-project/specs-storage/storage"
-
 	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/go-bitfield"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/go-state-types/crypto"
 	"github.com/filecoin-project/go-state-types/dline"
 	"github.com/filecoin-project/go-state-types/network"
-	"go.opencensus.io/trace"
-	"golang.org/x/xerrors"
+	"github.com/filecoin-project/specs-storage/storage"
 
 	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 	"github.com/filecoin-project/specs-actors/v3/actors/runtime/proof"
 
+	"go.opencensus.io/trace"
+	"golang.org/x/xerrors"
+
 	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus-sealer/constants"
+
+	types3 "github.com/filecoin-project/venus-messager/types"
+
+	"github.com/filecoin-project/venus/app/submodule/apitypes"
 	"github.com/filecoin-project/venus/pkg/messagepool"
 	actors "github.com/filecoin-project/venus/pkg/specactors"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
@@ -233,7 +235,7 @@ func (s *WindowPoStScheduler) checkSectors(ctx context.Context, check bitfield.B
 	return sbf, nil
 }
 
-func (s *WindowPoStScheduler) checkNextRecoveries(ctx context.Context, dlIdx uint64, partitions []chain.Partition, tsk types.TipSetKey) ([]miner.RecoveryDeclaration, *types3.MessageWithUID, error) {
+func (s *WindowPoStScheduler) checkNextRecoveries(ctx context.Context, dlIdx uint64, partitions []apitypes.Partition, tsk types.TipSetKey) ([]miner.RecoveryDeclaration, *types3.MessageWithUID, error) {
 	ctx, span := trace.StartSpan(ctx, "storage.checkNextRecoveries")
 	defer span.End()
 
@@ -329,7 +331,7 @@ func (s *WindowPoStScheduler) checkNextRecoveries(ctx context.Context, dlIdx uin
 	return recoveries, sm, nil
 }
 
-func (s *WindowPoStScheduler) checkNextFaults(ctx context.Context, dlIdx uint64, partitions []chain.Partition, tsk types.TipSetKey) ([]miner.FaultDeclaration, *types3.MessageWithUID, error) {
+func (s *WindowPoStScheduler) checkNextFaults(ctx context.Context, dlIdx uint64, partitions []apitypes.Partition, tsk types.TipSetKey) ([]miner.FaultDeclaration, *types3.MessageWithUID, error) {
 	ctx, span := trace.StartSpan(ctx, "storage.checkNextFaults")
 	defer span.End()
 
@@ -488,7 +490,12 @@ func (s *WindowPoStScheduler) runPost(ctx context.Context, di dline.Info, ts *ty
 		return nil, xerrors.Errorf("failed to marshal address to cbor: %w", err)
 	}
 
-	rand, err := s.api.ChainGetRandomnessFromBeacon(ctx, ts.Key(), crypto.DomainSeparationTag_WindowedPoStChallengeSeed, di.Challenge, buf.Bytes())
+	headTs, err := s.api.ChainHead(ctx)
+	if err != nil {
+		return nil, xerrors.Errorf("getting current head: %w", err)
+	}
+
+	rand, err := s.api.ChainGetRandomnessFromBeacon(ctx, headTs.Key(), crypto.DomainSeparationTag_WindowedPoStChallengeSeed, di.Challenge, buf.Bytes())
 	if err != nil {
 		return nil, xerrors.Errorf("failed to get chain randomness from beacon for window post (ts=%d; deadline=%d): %w", ts.Height(), di, err)
 	}
@@ -499,9 +506,14 @@ func (s *WindowPoStScheduler) runPost(ctx context.Context, di dline.Info, ts *ty
 		return nil, xerrors.Errorf("getting partitions: %w", err)
 	}
 
+	nv, err := s.api.StateNetworkVersion(ctx, ts.Key())
+	if err != nil {
+		return nil, xerrors.Errorf("getting network version: %w", err)
+	}
+
 	// Split partitions into batches, so as not to exceed the number of sectors
 	// allowed in a single message
-	partitionBatches, err := s.batchPartitions(partitions)
+	partitionBatches, err := s.batchPartitions(partitions, nv)
 	if err != nil {
 		return nil, err
 	}
@@ -596,7 +608,7 @@ func (s *WindowPoStScheduler) runPost(ctx context.Context, di dline.Info, ts *ty
 				return nil, err
 			}
 
-			postOut, ps, err := s.prover.GenerateWindowPoSt(ctx, abi.ActorID(mid), sinfos, abi.PoStRandomness(rand))
+			postOut, ps, err := s.prover.GenerateWindowPoSt(ctx, abi.ActorID(mid), sinfos, append(abi.PoStRandomness{}, rand...))
 			elapsed := time.Since(tsStart)
 
 			log.Infow("computing window post", "batch", batchIdx, "elapsed", elapsed)
@@ -607,9 +619,24 @@ func (s *WindowPoStScheduler) runPost(ctx context.Context, di dline.Info, ts *ty
 					return nil, xerrors.Errorf("received no proofs back from generate window post")
 				}
 
+				headTs, err := s.api.ChainHead(ctx)
+				if err != nil {
+					return nil, xerrors.Errorf("getting current head: %w", err)
+				}
+
+				checkRand, err := s.api.ChainGetRandomnessFromBeacon(ctx, headTs.Key(), crypto.DomainSeparationTag_WindowedPoStChallengeSeed, di.Challenge, buf.Bytes())
+				if err != nil {
+					return nil, xerrors.Errorf("failed to get chain randomness from beacon for window post (ts=%d; deadline=%d): %w", ts.Height(), di, err)
+				}
+
+				if !bytes.Equal(checkRand, rand) {
+					log.Warnw("windowpost randomness changed", "old", rand, "new", checkRand, "ts-height", ts.Height(), "challenge-height", di.Challenge, "tsk", ts.Key())
+					continue
+				}
+
 				// If we generated an incorrect proof, try again.
 				if correct, err := s.verifier.VerifyWindowPoSt(ctx, proof.WindowPoStVerifyInfo{
-					Randomness:        abi.PoStRandomness(rand),
+					Randomness:        abi.PoStRandomness(checkRand),
 					Proofs:            postOut,
 					ChallengedSectors: sinfos,
 					Prover:            abi.ActorID(mid),
@@ -666,7 +693,7 @@ func (s *WindowPoStScheduler) runPost(ctx context.Context, di dline.Info, ts *ty
 	return posts, nil
 }
 
-func (s *WindowPoStScheduler) batchPartitions(partitions []chain.Partition) ([][]chain.Partition, error) {
+func (s *WindowPoStScheduler) batchPartitions(partitions []apitypes.Partition, nv network.Version) ([][]apitypes.Partition, error) {
 	// We don't want to exceed the number of sectors allowed in a message.
 	// So given the number of sectors in a partition, work out the number of
 	// partitions that can be in a message without exceeding sectors per
@@ -677,9 +704,14 @@ func (s *WindowPoStScheduler) batchPartitions(partitions []chain.Partition) ([][
 	// sectors per partition    3:  ooo
 	// partitions per message   2:  oooOOO
 	//                              <1><2> (3rd doesn't fit)
-	partitionsPerMsg, err := policy.GetMaxPoStPartitions(s.proofType)
+	partitionsPerMsg, err := policy.GetMaxPoStPartitions(nv, s.proofType)
 	if err != nil {
 		return nil, xerrors.Errorf("getting sectors per partition: %w", err)
+	}
+
+	// Also respect the AddressedPartitionsMax (which is the same as DeclarationsMax (which is all really just MaxPartitionsPerDeadline))
+	if partitionsPerMsg > policy.GetDeclarationsMax(nv) {
+		partitionsPerMsg = policy.GetDeclarationsMax(nv)
 	}
 
 	// The number of messages will be:
@@ -690,7 +722,7 @@ func (s *WindowPoStScheduler) batchPartitions(partitions []chain.Partition) ([][
 	}
 
 	// Split the partitions into batches
-	batches := make([][]chain.Partition, 0, batchCount)
+	batches := make([][]apitypes.Partition, 0, batchCount)
 	for i := 0; i < len(partitions); i += partitionsPerMsg {
 		end := i + partitionsPerMsg
 		if end > len(partitions) {

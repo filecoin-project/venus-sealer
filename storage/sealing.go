@@ -2,12 +2,14 @@ package storage
 
 import (
 	"context"
-	"github.com/filecoin-project/specs-storage/storage"
-	"github.com/filecoin-project/venus-sealer/types"
 	"io"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/specs-storage/storage"
+
+	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
+	"github.com/filecoin-project/venus-sealer/types"
 )
 
 // TODO: refactor this to be direct somehow
@@ -54,6 +56,22 @@ func (m *Miner) TerminateFlush(ctx context.Context) (string, error) {
 
 func (m *Miner) TerminatePending(ctx context.Context) ([]abi.SectorID, error) {
 	return m.sealing.TerminatePending(ctx)
+}
+
+func (m *Miner) SectorPreCommitFlush(ctx context.Context) ([]sealiface.PreCommitBatchRes, error) {
+	return m.sealing.SectorPreCommitFlush(ctx)
+}
+
+func (m *Miner) SectorPreCommitPending(ctx context.Context) ([]abi.SectorID, error) {
+	return m.sealing.SectorPreCommitPending(ctx)
+}
+
+func (m *Miner) CommitFlush(ctx context.Context) ([]sealiface.CommitBatchRes, error) {
+	return m.sealing.CommitFlush(ctx)
+}
+
+func (m *Miner) CommitPending(ctx context.Context) ([]abi.SectorID, error) {
+	return m.sealing.CommitPending(ctx)
 }
 
 func (m *Miner) MarkForUpgrade(id abi.SectorNumber) error {
