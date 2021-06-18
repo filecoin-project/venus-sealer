@@ -2,13 +2,11 @@ package sealing
 
 import (
 	"context"
-	"github.com/filecoin-project/venus-sealer/types"
 	"sort"
 	"time"
 
-	"golang.org/x/xerrors"
-
 	"github.com/ipfs/go-cid"
+	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/go-padreader"
 	"github.com/filecoin-project/go-state-types/abi"
@@ -17,6 +15,8 @@ import (
 
 	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
 	"github.com/filecoin-project/venus-sealer/sector-storage/ffiwrapper"
+	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
+	"github.com/filecoin-project/venus-sealer/types"
 )
 
 func (m *Sealing) handleWaitDeals(ctx statemachine.Context, sector types.SectorInfo) error {
@@ -376,6 +376,8 @@ func (m *Sealing) updateInput(ctx context.Context, sp abi.RegisteredSealProof) e
 }
 
 func (m *Sealing) tryCreateDealSector(ctx context.Context, sp abi.RegisteredSealProof) error {
+	m.startupWait.Wait()
+
 	cfg, err := m.getConfig()
 	if err != nil {
 		return xerrors.Errorf("getting storage config: %w", err)
@@ -389,16 +391,9 @@ func (m *Sealing) tryCreateDealSector(ctx context.Context, sp abi.RegisteredSeal
 		return nil
 	}
 
-	// Now actually create a new sector
-
-	sid, err := m.sc.Next()
+	sid, err := m.createSector(ctx, cfg, sp)
 	if err != nil {
-		return xerrors.Errorf("getting sector number: %w", err)
-	}
-
-	err = m.sealer.NewSector(ctx, m.minerSector(sp, sid))
-	if err != nil {
-		return xerrors.Errorf("initializing sector: %w", err)
+		return err
 	}
 
 	log.Infow("Creating sector", "number", sid, "type", "deal", "proofType", sp)
@@ -408,7 +403,29 @@ func (m *Sealing) tryCreateDealSector(ctx context.Context, sp abi.RegisteredSeal
 	})
 }
 
+// call with m.inputLk
+func (m *Sealing) createSector(ctx context.Context, cfg sealiface.Config, sp abi.RegisteredSealProof) (abi.SectorNumber, error) {
+	// Now actually create a new sector
+
+	sid, err := m.sc.Next()
+	if err != nil {
+		return 0, xerrors.Errorf("getting sector number: %w", err)
+	}
+
+	err = m.sealer.NewSector(ctx, m.minerSector(sp, sid))
+	if err != nil {
+		return 0, xerrors.Errorf("initializing sector: %w", err)
+	}
+
+	// update stats early, fsm planner would do that async
+	m.stats.UpdateSector(cfg, m.minerSectorID(sid), types.UndefinedSectorState)
+
+	return sid, nil
+}
+
 func (m *Sealing) StartPacking(sid abi.SectorNumber) error {
+	m.startupWait.Wait()
+
 	return m.sectors.Send(uint64(sid), SectorStartPacking{})
 }
 

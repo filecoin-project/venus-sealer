@@ -2,7 +2,6 @@ package sectorstorage
 
 import (
 	"context"
-	"github.com/filecoin-project/venus-sealer/types"
 	"sync"
 
 	"github.com/filecoin-project/go-state-types/abi"
@@ -12,6 +11,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/sector-storage/mock"
 	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
+	"github.com/filecoin-project/venus-sealer/types"
 )
 
 type testWorker struct {

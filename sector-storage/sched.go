@@ -2,7 +2,6 @@ package sectorstorage
 
 import (
 	"context"
-	"github.com/filecoin-project/venus-sealer/types"
 	"math/rand"
 	"sort"
 	"sync"
@@ -15,6 +14,7 @@ import (
 	"github.com/filecoin-project/specs-storage/storage"
 
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
+	"github.com/filecoin-project/venus-sealer/types"
 )
 
 type schedPrioCtxKey int

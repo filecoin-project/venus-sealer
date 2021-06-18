@@ -2,11 +2,9 @@ package storage
 
 import (
 	"context"
-	"github.com/filecoin-project/venus-sealer/api"
-	"github.com/filecoin-project/venus-sealer/constants"
-	"github.com/filecoin-project/venus/pkg/chain"
 	"time"
 
+	"go.opencensus.io/trace"
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/go-address"
@@ -14,18 +12,22 @@ import (
 	"github.com/filecoin-project/go-state-types/dline"
 	"github.com/filecoin-project/specs-storage/storage"
 
+	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/config"
+	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus-sealer/journal"
 	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
 	"github.com/filecoin-project/venus-sealer/sector-storage/ffiwrapper"
-	"github.com/filecoin-project/venus/pkg/types"
 
-	"go.opencensus.io/trace"
+	"github.com/filecoin-project/venus/pkg/chain"
+	"github.com/filecoin-project/venus/pkg/types"
 )
 
 type WindowPoStScheduler struct {
+	Messager      api.IMessager
+	networkParams *config.NetParamsConfig
+
 	api              storageMinerApi
-	Messager         api.IMessager
 	feeCfg           config.MinerFeeConfig
 	addrSel          *AddressSelector
 	prover           storage.Prover
@@ -34,8 +36,8 @@ type WindowPoStScheduler struct {
 	proofType        abi.RegisteredPoStProof
 	partitionSectors uint64
 	ch               *changeHandler
-	networkParams    *config.NetParamsConfig
-	actor            address.Address
+
+	actor address.Address
 
 	evtTypes [4]journal.EventType
 	journal  journal.Journal
@@ -51,8 +53,10 @@ func NewWindowedPoStScheduler(api storageMinerApi, messager api.IMessager, fc co
 	}
 
 	return &WindowPoStScheduler{
+		Messager:      messager,
+		networkParams: networkParams,
+
 		api:              api,
-		Messager:         messager,
 		feeCfg:           fc,
 		addrSel:          as,
 		prover:           sb,
@@ -60,8 +64,8 @@ func NewWindowedPoStScheduler(api storageMinerApi, messager api.IMessager, fc co
 		faultTracker:     ft,
 		proofType:        mi.WindowPoStProofType,
 		partitionSectors: mi.WindowPoStPartitionSectors,
-		networkParams:    networkParams,
-		actor:            actor,
+
+		actor: actor,
 		evtTypes: [...]journal.EventType{
 			evtTypeWdPoStScheduler:  j.RegisterEventType("wdpost", "scheduler"),
 			evtTypeWdPoStProofs:     j.RegisterEventType("wdpost", "proofs_processed"),

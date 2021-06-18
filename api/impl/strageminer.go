@@ -3,38 +3,40 @@ package impl
 import (
 	"context"
 	"encoding/json"
-	"github.com/filecoin-project/go-fil-markets/piecestore"
-	"github.com/filecoin-project/go-fil-markets/retrievalmarket"
-	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
-	"github.com/filecoin-project/venus-sealer/config"
-	"github.com/filecoin-project/venus-sealer/service"
-	types2 "github.com/filecoin-project/venus-sealer/types"
-	chain2 "github.com/filecoin-project/venus/app/submodule/chain"
-	"github.com/filecoin-project/venus/pkg/chain"
-	types3 "github.com/ipfs-force-community/venus-messager/types"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/ipfs/go-cid"
+	logging "github.com/ipfs/go-log/v2"
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/go-fil-markets/piecestore"
+	"github.com/filecoin-project/go-fil-markets/retrievalmarket"
 	"github.com/filecoin-project/go-jsonrpc/auth"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
-
+	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 	sto "github.com/filecoin-project/specs-storage/storage"
+
+	"github.com/filecoin-project/venus/app/submodule/apitypes"
+	"github.com/filecoin-project/venus/pkg/chain"
+	"github.com/filecoin-project/venus/pkg/types"
+
+	types3 "github.com/ipfs-force-community/venus-messager/types"
+
 	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus-sealer/config"
 	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
 	"github.com/filecoin-project/venus-sealer/sector-storage/fsutil"
 	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
+	"github.com/filecoin-project/venus-sealer/service"
 	"github.com/filecoin-project/venus-sealer/storage"
 	"github.com/filecoin-project/venus-sealer/storage/sectorblocks"
-	"github.com/filecoin-project/venus/pkg/types"
-	logging "github.com/ipfs/go-log/v2"
+	types2 "github.com/filecoin-project/venus-sealer/types"
 )
 
 var log = logging.Logger("sealer")
@@ -489,7 +491,7 @@ func (sm *StorageMinerAPI) MarketImportDealData(ctx context.Context, propCid cid
 	panic("not impl")
 }
 
-func (sm *StorageMinerAPI) listDeals(ctx context.Context) ([]chain2.MarketDeal, error) {
+func (sm *StorageMinerAPI) listDeals(ctx context.Context) ([]apitypes.MarketDeal, error) {
 	ts, err := sm.Full.ChainHead(ctx)
 	if err != nil {
 		return nil, err
@@ -500,7 +502,7 @@ func (sm *StorageMinerAPI) listDeals(ctx context.Context) ([]chain2.MarketDeal, 
 		return nil, err
 	}
 
-	var out []chain2.MarketDeal
+	var out []apitypes.MarketDeal
 
 	for _, deal := range allDeals {
 		if deal.Proposal.Provider == sm.Miner.Address() {
@@ -511,7 +513,7 @@ func (sm *StorageMinerAPI) listDeals(ctx context.Context) ([]chain2.MarketDeal, 
 	return out, nil
 }
 
-func (sm *StorageMinerAPI) DealsList(ctx context.Context) ([]chain2.MarketDeal, error) {
+func (sm *StorageMinerAPI) DealsList(ctx context.Context) ([]apitypes.MarketDeal, error) {
 	return sm.listDeals(ctx)
 }
 

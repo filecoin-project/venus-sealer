@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 
-	types2 "github.com/filecoin-project/venus-sealer/types"
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/exitcode"
@@ -13,21 +12,24 @@ import (
 	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
 
-	"github.com/filecoin-project/venus/app/submodule/chain"
+	"github.com/filecoin-project/venus/app/submodule/apitypes"
+	"github.com/filecoin-project/venus/pkg/constants"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/market"
 	"github.com/filecoin-project/venus/pkg/types"
+
+	types2 "github.com/filecoin-project/venus-sealer/types"
 )
 
 type CurrentDealInfoAPI interface {
 	ChainGetMessage(context.Context, cid.Cid) (*types.Message, error)
 	StateLookupID(context.Context, address.Address, types2.TipSetToken) (address.Address, error)
-	StateMarketStorageDeal(context.Context, abi.DealID, types2.TipSetToken) (*chain.MarketDeal, error)
+	StateMarketStorageDeal(context.Context, abi.DealID, types2.TipSetToken) (*apitypes.MarketDeal, error)
 	StateSearchMsg(context.Context, cid.Cid) (*types2.MsgLookup, error)
 }
 
 type CurrentDealInfo struct {
 	DealID           abi.DealID
-	MarketDeal       *chain.MarketDeal
+	MarketDeal       *apitypes.MarketDeal
 	PublishMsgTipSet types2.TipSetToken
 }
 
@@ -162,8 +164,8 @@ func (mgr *CurrentDealInfoManager) CheckDealEquality(ctx context.Context, tok ty
 type CurrentDealInfoTskAPI interface {
 	ChainGetMessage(ctx context.Context, mc cid.Cid) (*types.Message, error)
 	StateLookupID(context.Context, address.Address, types.TipSetKey) (address.Address, error)
-	StateMarketStorageDeal(context.Context, abi.DealID, types.TipSetKey) (*chain.MarketDeal, error)
-	StateSearchMsg(context.Context, cid.Cid) (*chain.MsgLookup, error)
+	StateMarketStorageDeal(context.Context, abi.DealID, types.TipSetKey) (*apitypes.MarketDeal, error)
+	StateSearchMsg(ctx context.Context, from types.TipSetKey, msg cid.Cid, limit abi.ChainEpoch, allowReplaced bool) (*apitypes.MsgLookup, error)
 }
 
 type CurrentDealInfoAPIAdapter struct {
@@ -179,7 +181,7 @@ func (c *CurrentDealInfoAPIAdapter) StateLookupID(ctx context.Context, a address
 	return c.CurrentDealInfoTskAPI.StateLookupID(ctx, a, tsk)
 }
 
-func (c *CurrentDealInfoAPIAdapter) StateMarketStorageDeal(ctx context.Context, dealID abi.DealID, tok types2.TipSetToken) (*chain.MarketDeal, error) {
+func (c *CurrentDealInfoAPIAdapter) StateMarketStorageDeal(ctx context.Context, dealID abi.DealID, tok types2.TipSetToken) (*apitypes.MarketDeal, error) {
 	tsk, err := types.TipSetKeyFromBytes(tok)
 	if err != nil {
 		return nil, xerrors.Errorf("failed to unmarshal TipSetToken to TipSetKey: %w", err)
@@ -189,7 +191,7 @@ func (c *CurrentDealInfoAPIAdapter) StateMarketStorageDeal(ctx context.Context, 
 }
 
 func (c *CurrentDealInfoAPIAdapter) StateSearchMsg(ctx context.Context, k cid.Cid) (*types2.MsgLookup, error) {
-	wmsg, err := c.CurrentDealInfoTskAPI.StateSearchMsg(ctx, k)
+	wmsg, err := c.CurrentDealInfoTskAPI.StateSearchMsg(ctx, types.EmptyTSK, k, constants.LookbackNoLimit, true)
 	if err != nil {
 		return nil, err
 	}

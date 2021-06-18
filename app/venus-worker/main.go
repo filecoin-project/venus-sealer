@@ -260,7 +260,13 @@ var runCmd = &cli.Command{
 			if err != nil {
 				return err
 			}
-			if err := paramfetch.GetParams(ctx, ps, uint64(ssize)); err != nil {
+
+			srs, err := asset.Asset("fixtures/_assets/proof-params/srs-inner-product.json")
+			if err != nil {
+				return err
+			}
+
+			if err := paramfetch.GetParams(ctx, ps, srs, uint64(ssize)); err != nil {
 				return xerrors.Errorf("get params: %w", err)
 			}
 		}

@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/filecoin-project/venus-sealer/types"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -27,6 +26,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/sector-storage/ffiwrapper"
 	"github.com/filecoin-project/venus-sealer/sector-storage/fsutil"
 	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
+	"github.com/filecoin-project/venus-sealer/types"
 )
 
 func init() {

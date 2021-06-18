@@ -73,12 +73,26 @@ var fsmPlanners = map[types.SectorState]func(events []statemachine.Event, state 
 		on(SectorSealPreCommit1Failed{}, types.SealPreCommit1Failed),
 	),
 	types.PreCommitting: planOne(
-		on(SectorSealPreCommit1Failed{}, types.SealPreCommit1Failed),
+		on(SectorPreCommitBatch{}, types.SubmitPreCommitBatch),
 		on(SectorPreCommitted{}, types.PreCommitWait),
+		on(SectorSealPreCommit1Failed{}, types.SealPreCommit1Failed),
 		on(SectorChainPreCommitFailed{}, types.PreCommitFailed),
 		on(SectorPreCommitLanded{}, types.WaitSeed),
 		on(SectorDealsExpired{}, types.DealsExpired),
 		on(SectorInvalidDealIDs{}, types.RecoverDealIDs),
+	),
+	types.SubmitPreCommitBatch: planOne(
+		on(SectorPreCommitBatchSent{}, types.PreCommitBatchWait),
+		on(SectorSealPreCommit1Failed{}, types.SealPreCommit1Failed),
+		on(SectorChainPreCommitFailed{}, types.PreCommitFailed),
+		on(SectorPreCommitLanded{}, types.WaitSeed),
+		on(SectorDealsExpired{}, types.DealsExpired),
+		on(SectorInvalidDealIDs{}, types.RecoverDealIDs),
+	),
+	types.PreCommitBatchWait: planOne(
+		on(SectorChainPreCommitFailed{}, types.PreCommitFailed),
+		on(SectorPreCommitLanded{}, types.WaitSeed),
+		on(SectorRetryPreCommit{}, types.PreCommitting),
 	),
 	types.PreCommitWait: planOne(
 		on(SectorChainPreCommitFailed{}, types.PreCommitFailed),
@@ -90,11 +104,25 @@ var fsmPlanners = map[types.SectorState]func(events []statemachine.Event, state 
 		on(SectorChainPreCommitFailed{}, types.PreCommitFailed),
 	),
 	types.Committing: planCommitting,
+	types.CommitFinalize: planOne(
+		on(SectorFinalized{}, types.SubmitCommit),
+		on(SectorFinalizeFailed{}, types.CommitFinalizeFailed),
+	),
 	types.SubmitCommit: planOne(
 		on(SectorCommitSubmitted{}, types.CommitWait),
+		on(SectorSubmitCommitAggregate{}, types.SubmitCommitAggregate),
+		on(SectorCommitFailed{}, types.CommitFailed),
+	),
+	types.SubmitCommitAggregate: planOne(
+		on(SectorCommitAggregateSent{}, types.CommitWait),
 		on(SectorCommitFailed{}, types.CommitFailed),
 	),
 	types.CommitWait: planOne(
+		on(SectorProving{}, types.FinalizeSector),
+		on(SectorCommitFailed{}, types.CommitFailed),
+		on(SectorRetrySubmitCommit{}, types.SubmitCommit),
+	),
+	types.CommitAggregateWait: planOne(
 		on(SectorProving{}, types.FinalizeSector),
 		on(SectorCommitFailed{}, types.CommitFailed),
 		on(SectorRetrySubmitCommit{}, types.SubmitCommit),
@@ -127,6 +155,9 @@ var fsmPlanners = map[types.SectorState]func(events []statemachine.Event, state 
 	types.ComputeProofFailed: planOne(
 		on(SectorRetryComputeProof{}, types.Committing),
 		on(SectorSealPreCommit1Failed{}, types.SealPreCommit1Failed),
+	),
+	types.CommitFinalizeFailed: planOne(
+		on(SectorRetryFinalize{}, types.CommitFinalizeFailed),
 	),
 	types.CommitFailed: planOne(
 		on(SectorSealPreCommit1Failed{}, types.SealPreCommit1Failed),
@@ -259,7 +290,15 @@ func (m *Sealing) plan(events []statemachine.Event, state *types.SectorInfo) (fu
 
 	p := fsmPlanners[state.State]
 	if p == nil {
-		return nil, 0, xerrors.Errorf("planner for state %s not found", state.State)
+		if len(events) == 1 {
+			if _, ok := events[0].User.(globalMutator); ok {
+				p = planOne() // in case we're in a really weird state, allow restart / update state / remove
+			}
+		}
+
+		if p == nil {
+			return nil, 0, xerrors.Errorf("planner for state %s not found", state.State)
+		}
 	}
 
 	processed, err := p(events, state)
@@ -317,7 +356,9 @@ func (m *Sealing) plan(events []statemachine.Event, state *types.SectorInfo) (fu
 
 	*/
 
-	m.stats.UpdateSector(m.minerSectorID(state.SectorNumber), state.State)
+	if err := m.onUpdateSector(context.TODO(), state); err != nil {
+		log.Errorw("update sector stats", "error", err)
+	}
 
 	switch state.State {
 	// Happy path
@@ -337,6 +378,10 @@ func (m *Sealing) plan(events []statemachine.Event, state *types.SectorInfo) (fu
 		return m.handlePreCommit2, processed, nil
 	case types.PreCommitting:
 		return m.handlePreCommitting, processed, nil
+	case types.SubmitPreCommitBatch:
+		return m.handleSubmitPreCommitBatch, processed, nil
+	case types.PreCommitBatchWait:
+		fallthrough
 	case types.PreCommitWait:
 		return m.handlePreCommitWait, processed, nil
 	case types.WaitSeed:
@@ -345,8 +390,14 @@ func (m *Sealing) plan(events []statemachine.Event, state *types.SectorInfo) (fu
 		return m.handleCommitting, processed, nil
 	case types.SubmitCommit:
 		return m.handleSubmitCommit, processed, nil
+	case types.SubmitCommitAggregate:
+		return m.handleSubmitCommitAggregate, processed, nil
+	case types.CommitAggregateWait:
+		fallthrough
 	case types.CommitWait:
 		return m.handleCommitWait, processed, nil
+	case types.CommitFinalize:
+		fallthrough
 	case types.FinalizeSector:
 		return m.handleFinalizeSector, processed, nil
 
@@ -361,6 +412,8 @@ func (m *Sealing) plan(events []statemachine.Event, state *types.SectorInfo) (fu
 		return m.handleComputeProofFailed, processed, nil
 	case types.CommitFailed:
 		return m.handleCommitFailed, processed, nil
+	case types.CommitFinalizeFailed:
+		fallthrough
 	case types.FinalizeFailed:
 		return m.handleFinalizeFailed, processed, nil
 	case types.PackingFailed: // DEPRECATED: remove this for the next reset
@@ -408,6 +461,37 @@ func (m *Sealing) plan(events []statemachine.Event, state *types.SectorInfo) (fu
 	return nil, processed, nil
 }
 
+func (m *Sealing) onUpdateSector(ctx context.Context, state *types.SectorInfo) error {
+	if m.getConfig == nil {
+		return nil // tests
+	}
+
+	cfg, err := m.getConfig()
+	if err != nil {
+		return xerrors.Errorf("getting config: %w", err)
+	}
+	sp, err := m.currentSealProof(ctx)
+	if err != nil {
+		return xerrors.Errorf("getting seal proof type: %w", err)
+	}
+
+	shouldUpdateInput := m.stats.UpdateSector(cfg, m.minerSectorID(state.SectorNumber), state.State)
+
+	// trigger more input processing when we've dipped below max sealing limits
+	if shouldUpdateInput {
+		go func() {
+			m.inputLk.Lock()
+			defer m.inputLk.Unlock()
+
+			if err := m.updateInput(ctx, sp); err != nil {
+				log.Errorf("%+v", err)
+			}
+		}()
+	}
+
+	return nil
+}
+
 func planCommitting(events []statemachine.Event, state *types.SectorInfo) (uint64, error) {
 	for i, event := range events {
 		switch e := event.User.(type) {
@@ -418,6 +502,9 @@ func planCommitting(events []statemachine.Event, state *types.SectorInfo) (uint6
 		case SectorCommitted: // the normal case
 			e.apply(state)
 			state.State = types.SubmitCommit
+		case SectorProofReady: // early finalize
+			e.apply(state)
+			state.State = types.CommitFinalize
 		case SectorSeedReady: // seed changed :/
 			if e.SeedEpoch == state.SeedEpoch && bytes.Equal(e.SeedValue, state.SeedValue) {
 				log.Warnf("planCommitting: got SectorSeedReady, but the seed didn't change")
@@ -444,6 +531,8 @@ func planCommitting(events []statemachine.Event, state *types.SectorInfo) (uint6
 }
 
 func (m *Sealing) restartSectors(ctx context.Context) error {
+	defer m.startupWait.Done()
+
 	trackedSectors, err := m.ListSectors()
 	if err != nil {
 		log.Errorf("loading sector list: %+v", err)
@@ -461,6 +550,7 @@ func (m *Sealing) restartSectors(ctx context.Context) error {
 }
 
 func (m *Sealing) ForceSectorState(ctx context.Context, id abi.SectorNumber, state types.SectorState) error {
+	m.startupWait.Wait()
 	return m.sectors.Send(id, SectorForceState{state})
 }
 

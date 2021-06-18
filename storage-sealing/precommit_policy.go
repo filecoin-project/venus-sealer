@@ -2,13 +2,13 @@ package sealing
 
 import (
 	"context"
-	"github.com/filecoin-project/venus-sealer/types"
 
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
 
+	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/network"
 
-	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/venus-sealer/types"
 )
 
 type PreCommitPolicy interface {
