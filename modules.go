@@ -4,11 +4,22 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"net/http"
+	"time"
+
+	"github.com/gbrlsnchs/jwt/v3"
+	"github.com/ipfs/go-datastore"
+	"github.com/mitchellh/go-homedir"
+	"go.uber.org/fx"
+	"go.uber.org/multierr"
+	"golang.org/x/xerrors"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-jsonrpc/auth"
 	paramfetch "github.com/filecoin-project/go-paramfetch"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-storedcounter"
+
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/journal"
@@ -24,14 +35,6 @@ import (
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
 	"github.com/filecoin-project/venus/pkg/specactors/policy"
 	"github.com/filecoin-project/venus/pkg/types"
-	"github.com/gbrlsnchs/jwt/v3"
-	"github.com/ipfs/go-datastore"
-	"github.com/mitchellh/go-homedir"
-	"go.uber.org/fx"
-	"go.uber.org/multierr"
-	"golang.org/x/xerrors"
-	"net/http"
-	"time"
 )
 
 func OpenFilesystemJournal(homeDir config.HomeDir, lc fx.Lifecycle, disabled journal.DisabledEvents) (journal.Journal, error) {
@@ -168,8 +171,14 @@ func GetParams(mctx MetricsCtx, spt abi.RegisteredSealProof) error {
 	if err != nil {
 		return err
 	}
-	if err := paramfetch.GetParams(mctx, ps, uint64(ssize)); err != nil {
-		return xerrors.Errorf("fetching proof parameters: %w", err)
+
+	srs, err := asset.Asset("fixtures/_assets/proof-params/srs-inner-product.json")
+	if err != nil {
+		return err
+	}
+
+	if err := paramfetch.GetParams(mctx, ps, srs, uint64(ssize)); err != nil {
+		return xerrors.Errorf("get params: %w", err)
 	}
 	return nil
 }
@@ -223,6 +232,7 @@ type StorageMinerParams struct {
 	Sealer             sectorstorage.SectorManager
 	SectorIDCounter    types2.SectorIDCounter
 	Verifier           ffiwrapper.Verifier
+	Prover             ffiwrapper.Prover
 	GetSealingConfigFn types2.GetSealingConfigFunc
 	Journal            journal.Journal
 	AddrSel            *storage.AddressSelector
@@ -242,6 +252,7 @@ func StorageMiner(fc config.MinerFeeConfig) func(params StorageMinerParams) (*st
 			sealer            = params.Sealer
 			sc                = params.SectorIDCounter
 			verif             = params.Verifier
+			prover            = params.Prover
 			gsd               = params.GetSealingConfigFn
 			j                 = params.Journal
 			as                = params.AddrSel
@@ -260,7 +271,7 @@ func StorageMiner(fc config.MinerFeeConfig) func(params StorageMinerParams) (*st
 			return nil, err
 		}
 
-		sm, err := storage.NewMiner(api, messager, maddr, metadataService, sectorinfoService, logService, sealer, sc, verif, gsd, fc, j, as, np)
+		sm, err := storage.NewMiner(api, messager, maddr, metadataService, sectorinfoService, logService, sealer, sc, verif, prover, gsd, fc, j, as, np)
 		if err != nil {
 			return nil, err
 		}
@@ -286,6 +297,23 @@ func NewSetSealConfigFunc(r *config.StorageMiner) (types2.SetSealingConfigFunc, 
 				MaxSealingSectorsForDeals: cfg.MaxSealingSectorsForDeals,
 				WaitDealsDelay:            config.Duration(cfg.WaitDealsDelay),
 				AlwaysKeepUnsealedCopy:    cfg.AlwaysKeepUnsealedCopy,
+				FinalizeEarly:             cfg.FinalizeEarly,
+
+				BatchPreCommits:     cfg.BatchPreCommits,
+				MinPreCommitBatch:   cfg.MinPreCommitBatch,
+				MaxPreCommitBatch:   cfg.MaxPreCommitBatch,
+				PreCommitBatchWait:  config.Duration(cfg.PreCommitBatchWait),
+				PreCommitBatchSlack: config.Duration(cfg.PreCommitBatchSlack),
+
+				AggregateCommits: cfg.AggregateCommits,
+				MinCommitBatch:   cfg.MinCommitBatch,
+				MaxCommitBatch:   cfg.MaxCommitBatch,
+				CommitBatchWait:  config.Duration(cfg.CommitBatchWait),
+				CommitBatchSlack: config.Duration(cfg.CommitBatchSlack),
+
+				TerminateBatchMax:  cfg.TerminateBatchMax,
+				TerminateBatchMin:  cfg.TerminateBatchMin,
+				TerminateBatchWait: config.Duration(cfg.TerminateBatchWait),
 			}
 		})
 		return
@@ -301,6 +329,23 @@ func NewGetSealConfigFunc(r *config.StorageMiner) (types2.GetSealingConfigFunc, 
 				MaxSealingSectorsForDeals: cfg.Sealing.MaxSealingSectorsForDeals,
 				WaitDealsDelay:            time.Duration(cfg.Sealing.WaitDealsDelay),
 				AlwaysKeepUnsealedCopy:    cfg.Sealing.AlwaysKeepUnsealedCopy,
+				FinalizeEarly:             cfg.Sealing.FinalizeEarly,
+
+				BatchPreCommits:     cfg.Sealing.BatchPreCommits,
+				MinPreCommitBatch:   cfg.Sealing.MinPreCommitBatch,
+				MaxPreCommitBatch:   cfg.Sealing.MaxPreCommitBatch,
+				PreCommitBatchWait:  time.Duration(cfg.Sealing.PreCommitBatchWait),
+				PreCommitBatchSlack: time.Duration(cfg.Sealing.PreCommitBatchSlack),
+
+				AggregateCommits: cfg.Sealing.AggregateCommits,
+				MinCommitBatch:   cfg.Sealing.MinCommitBatch,
+				MaxCommitBatch:   cfg.Sealing.MaxCommitBatch,
+				CommitBatchWait:  time.Duration(cfg.Sealing.CommitBatchWait),
+				CommitBatchSlack: time.Duration(cfg.Sealing.CommitBatchSlack),
+
+				TerminateBatchMax:  cfg.Sealing.TerminateBatchMax,
+				TerminateBatchMin:  cfg.Sealing.TerminateBatchMin,
+				TerminateBatchWait: time.Duration(cfg.Sealing.TerminateBatchWait),
 			}
 		})
 		return

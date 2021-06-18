@@ -1,6 +1,7 @@
 package fr32_test
 
 import (
+	"bufio"
 	"bytes"
 	"io/ioutil"
 	"testing"

@@ -3,7 +3,7 @@ package types
 import (
 	"bytes"
 	"context"
-	builtin0 "github.com/filecoin-project/specs-actors/actors/builtin"
+
 	"github.com/ipfs/go-cid"
 
 	"github.com/filecoin-project/go-state-types/abi"
@@ -12,12 +12,15 @@ import (
 	"github.com/filecoin-project/specs-storage/storage"
 
 	"github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
-	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
+
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/specactors/policy"
+
+	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 )
 
 var DealSectorPriority = 1024
-var MaxTicketAge = abi.ChainEpoch(builtin0.EpochsInDay * 2)
+var MaxTicketAge = policy.MaxPreCommitRandomnessLookback
 
 // Piece is a tuple of piece and deal info
 type PieceWithDealInfo struct {

@@ -2,11 +2,7 @@ package sealing_test
 
 import (
 	"context"
-	"github.com/filecoin-project/venus-sealer/constants"
-	"github.com/filecoin-project/venus-sealer/types"
 	"testing"
-
-	"github.com/filecoin-project/go-state-types/network"
 
 	"github.com/ipfs/go-cid"
 	"github.com/stretchr/testify/assert"
@@ -14,8 +10,11 @@ import (
 
 	commcid "github.com/filecoin-project/go-fil-commcid"
 	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/go-state-types/network"
 
+	"github.com/filecoin-project/venus-sealer/constants"
 	sealing "github.com/filecoin-project/venus-sealer/storage-sealing"
+	"github.com/filecoin-project/venus-sealer/types"
 )
 
 type fakeChain struct {

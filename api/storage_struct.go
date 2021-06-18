@@ -2,23 +2,28 @@ package api
 
 import (
 	"context"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/ipfs/go-cid"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-fil-markets/piecestore"
 	"github.com/filecoin-project/go-state-types/abi"
 	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 	"github.com/filecoin-project/specs-storage/storage"
+
+	"github.com/filecoin-project/venus/app/submodule/apitypes"
+	"github.com/filecoin-project/venus/pkg/chain"
+	types2 "github.com/filecoin-project/venus/pkg/types"
+
+	types3 "github.com/ipfs-force-community/venus-messager/types"
+
 	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/sector-storage/fsutil"
 	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
 	"github.com/filecoin-project/venus-sealer/types"
-	chain2 "github.com/filecoin-project/venus/app/submodule/chain"
-	"github.com/filecoin-project/venus/pkg/chain"
-	types2 "github.com/filecoin-project/venus/pkg/types"
-	"github.com/google/uuid"
-	types3 "github.com/ipfs-force-community/venus-messager/types"
-	"github.com/ipfs/go-cid"
-	"time"
 )
 
 // StorageMiner is a low-level interface to the Filecoin network storage miner node
@@ -98,7 +103,7 @@ type StorageMiner interface {
 	stores.SectorIndex
 
 	DealsImportData(ctx context.Context, dealPropCid cid.Cid, file string) error
-	DealsList(ctx context.Context) ([]chain2.MarketDeal, error)
+	DealsList(ctx context.Context) ([]apitypes.MarketDeal, error)
 	DealsConsiderOnlineStorageDeals(context.Context) (bool, error)
 	DealsSetConsiderOnlineStorageDeals(context.Context, bool) error
 	DealsConsiderOnlineRetrievalDeals(context.Context) (bool, error)
@@ -199,7 +204,7 @@ type StorageMinerStruct struct {
 		StorageTryLock       func(ctx context.Context, sector abi.SectorID, read storiface.SectorFileType, write storiface.SectorFileType) (bool, error)                  `perm:"admin"`
 
 		DealsImportData                        func(ctx context.Context, dealPropCid cid.Cid, file string) error `perm:"write"`
-		DealsList                              func(ctx context.Context) ([]chain2.MarketDeal, error)            `perm:"read"`
+		DealsList                              func(ctx context.Context) ([]apitypes.MarketDeal, error)          `perm:"read"`
 		DealsConsiderOnlineStorageDeals        func(context.Context) (bool, error)                               `perm:"read"`
 		DealsSetConsiderOnlineStorageDeals     func(context.Context, bool) error                                 `perm:"admin"`
 		DealsConsiderOnlineRetrievalDeals      func(context.Context) (bool, error)                               `perm:"read"`
@@ -439,7 +444,7 @@ func (c *StorageMinerStruct) DealsImportData(ctx context.Context, dealPropCid ci
 	return c.Internal.DealsImportData(ctx, dealPropCid, file)
 }
 
-func (c *StorageMinerStruct) DealsList(ctx context.Context) ([]chain2.MarketDeal, error) {
+func (c *StorageMinerStruct) DealsList(ctx context.Context) ([]apitypes.MarketDeal, error) {
 	return c.Internal.DealsList(ctx)
 }
 

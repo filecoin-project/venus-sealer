@@ -2,7 +2,6 @@ package sealing
 
 import (
 	"context"
-	"github.com/filecoin-project/venus-sealer/types"
 
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
 
@@ -10,6 +9,8 @@ import (
 
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
+
+	"github.com/filecoin-project/venus-sealer/types"
 )
 
 func (m *Sealing) IsMarkedForUpgrade(id abi.SectorNumber) bool {
