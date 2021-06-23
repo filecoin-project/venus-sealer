@@ -27,17 +27,18 @@ func (cfg StorageWorker) LocalStorage() *LocalStorage {
 
 // StorageMiner is a miner config
 type StorageMiner struct {
-	DataDir   string
-	API       API
-	Sealing   SealingConfig
-	Storage   sectorstorage.SealerConfig
-	Fees      MinerFeeConfig
-	Addresses MinerAddressConfig
-	NetParams NetParamsConfig
-	DB        DbConfig
-	Node      NodeConfig
-	JWT       JWTConfig
-	Messager  MessagerConfig
+	DataDir       string
+	API           API
+	Sealing       SealingConfig
+	Storage       sectorstorage.SealerConfig
+	Fees          MinerFeeConfig
+	Addresses     MinerAddressConfig
+	NetParams     NetParamsConfig
+	DB            DbConfig
+	Node          NodeConfig
+	JWT           JWTConfig
+	Messager      MessagerConfig
+	RegisterProof RegisterProofConfig
 
 	ConfigPath string `toml:"-"`
 }
@@ -56,9 +57,13 @@ type NodeConfig struct {
 }
 
 type MessagerConfig struct {
-	Url    string
-	Token  string
-	Wallet string
+	Url   string
+	Token string
+}
+
+type RegisterProofConfig struct {
+	Urls  []string
+	Token string
 }
 
 func (node *NodeConfig) APIEndpoint() (multiaddr.Multiaddr, error) {

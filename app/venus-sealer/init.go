@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	market2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
+	types3 "github.com/filecoin-project/venus-messager/types"
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/constants"
@@ -15,7 +16,6 @@ import (
 	types2 "github.com/filecoin-project/venus-sealer/types"
 	"github.com/filecoin-project/venus/fixtures/asset"
 	"github.com/filecoin-project/venus/pkg/gen/genesis"
-	types3 "github.com/ipfs-force-community/venus-messager/types"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -108,16 +108,13 @@ var initCmd = &cli.Command{
 
 		&cli.StringFlag{
 			Name:  "messager-url",
-			Usage: "messager usl",
+			Usage: "messager url",
 		},
 		&cli.StringFlag{
 			Name:  "messager-token",
 			Usage: "messager token",
 		},
-		&cli.StringFlag{
-			Name:  "wallet-name",
-			Usage: "use which wallet in messager",
-		},
+
 		&cli.StringFlag{
 			Name:  "node-url",
 			Usage: "node url",
@@ -125,6 +122,20 @@ var initCmd = &cli.Command{
 		&cli.StringFlag{
 			Name:  "node-token",
 			Usage: "node token",
+		},
+
+		&cli.StringSliceFlag{
+			Name:  "gateway-url",
+			Usage: "gateway url",
+		},
+		&cli.StringFlag{
+			Name:  "gateway-token",
+			Usage: "gateway token",
+		},
+
+		&cli.StringFlag{
+			Name:  "auth-token",
+			Usage: "auth token",
 		},
 	},
 	Action: func(cctx *cli.Context) error {
@@ -158,7 +169,7 @@ var initCmd = &cli.Command{
 		}
 
 		log.Info("Trying to connect to full node RPC")
-
+		setAuthToken(cctx)
 		fullNode, closer, err := api.GetFullNodeAPIV2(cctx) // TODO: consider storing full node address in config
 		if err != nil {
 			return err
@@ -170,7 +181,7 @@ var initCmd = &cli.Command{
 		if err != nil {
 			return err
 		}
-
+		parserFlag(defaultCfg, cctx)
 		log.Info("Checking full node sync status")
 
 		if !cctx.Bool("genesis-miner") && !cctx.Bool("nosync") {
@@ -182,29 +193,6 @@ var initCmd = &cli.Command{
 		log.Info("Checking if repo exists")
 		cfgPath := cctx.String("config")
 		defaultCfg.ConfigPath = cfgPath
-		if cctx.IsSet("data") {
-			defaultCfg.DataDir = cctx.String("data")
-		}
-
-		if cctx.IsSet("messager-url") {
-			defaultCfg.Messager.Url = cctx.String("messager-url")
-		}
-
-		if cctx.IsSet("messager-token") {
-			defaultCfg.Messager.Token = cctx.String("messager-token")
-		}
-
-		if cctx.IsSet("wallet-name") {
-			defaultCfg.Messager.Wallet = cctx.String("wallet-name")
-		}
-
-		if cctx.IsSet("node-url") {
-			defaultCfg.Node.Url = cctx.String("node-url")
-		}
-
-		if cctx.IsSet("node-token") {
-			defaultCfg.Node.Token = cctx.String("node-token")
-		}
 
 		exit, err := config.ConfigExist(defaultCfg.DataDir)
 		if err != nil {
@@ -220,8 +208,8 @@ var initCmd = &cli.Command{
 			return err
 		}
 
-		if !v.APIVersion.EqMajorMinor(constants.FullAPIVersion) {
-			return xerrors.Errorf("Remote API version didn't match (expected %s, remote %s)", constants.FullAPIVersion, v.APIVersion)
+		if !v.APIVersion.EqMajorMinor(constants.FullAPIVersion0) {
+			return xerrors.Errorf("Remote API version didn't match (expected %s, remote %s)", constants.FullAPIVersion0, v.APIVersion)
 		}
 
 		messagerClient, closer, err := api.NewMessageRPC(&defaultCfg.Messager)
@@ -305,6 +293,43 @@ var initCmd = &cli.Command{
 	},
 }
 
+func setAuthToken(cctx *cli.Context) {
+	if cctx.IsSet("auth-token") {
+		authToken := cctx.String("auth-token")
+		cctx.Set("node-token", authToken)
+		cctx.Set("messager-token", authToken)
+		cctx.Set("gateway-token", authToken)
+	}
+}
+
+func parserFlag(cfg *config.StorageMiner, cctx *cli.Context) {
+	if cctx.IsSet("data") {
+		cfg.DataDir = cctx.String("data")
+	}
+
+	if cctx.IsSet("messager-url") {
+		cfg.Messager.Url = cctx.String("messager-url")
+	}
+
+	if cctx.IsSet("node-url") {
+		cfg.Node.Url = cctx.String("node-url")
+	}
+
+	if cctx.IsSet("gateway-url") {
+		cfg.RegisterProof.Urls = cctx.StringSlice("gateway-url")
+	}
+
+	if cctx.IsSet("node-token") {
+		cfg.Node.Token = cctx.String("node-token")
+	}
+
+	if cctx.IsSet("messager-token") {
+		cfg.Messager.Token = cctx.String("messager-token")
+	}
+	if cctx.IsSet("gateway-token") {
+		cfg.RegisterProof.Token = cctx.String("gateway-token")
+	}
+}
 func storageMinerInit(ctx context.Context, cctx *cli.Context, api api.FullNode, messagerClient api.IMessager, cfg *config.StorageMiner, ssize abi.SectorSize, gasPrice types.BigInt) error {
 	log.Info("Initializing libp2p identity")
 	repo, err := models.SetDataBase(config.HomeDir(cfg.DataDir), &cfg.DB)

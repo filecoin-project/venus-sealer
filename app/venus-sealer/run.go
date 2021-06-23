@@ -108,13 +108,8 @@ var runCmd = &cli.Command{
 			log.Fatalf("Cannot register the view: %v", err)
 		}
 
-		v, err := nodeApi.Version(ctx)
-		if err != nil {
+		if err := checkV1ApiSupport(nodeApi); err != nil {
 			return err
-		}
-
-		if v.APIVersion != constants.FullAPIVersion {
-			return xerrors.Errorf("venus-daemon API version doesn't match: expected: %s", api.Version{APIVersion: constants.FullAPIVersion})
 		}
 
 		log.Info("Checking full node sync status")
@@ -149,8 +144,6 @@ var runCmd = &cli.Command{
 		if err != nil {
 			return xerrors.Errorf("getting API endpoint: %w", err)
 		}
-
-		log.Infof("Remote version %s", v)
 
 		lst, err := manet.Listen(endpoint)
 		if err != nil {
@@ -202,4 +195,19 @@ var runCmd = &cli.Command{
 
 		return srv.Serve(manet.NetListener(lst))
 	},
+}
+
+func checkV1ApiSupport(nodeApi api.FullNode) error {
+	v, err := nodeApi.Version(context.Background())
+
+	if err != nil {
+		return err
+	}
+
+	if !v.APIVersion.EqMajorMinor(constants.FullAPIVersion0) {
+		return xerrors.Errorf("Remote API version didn't match (expected %s, remote %s)", constants.FullAPIVersion0, v.APIVersion)
+	}
+
+	log.Infof("Remote version %s", v)
+	return nil
 }
