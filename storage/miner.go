@@ -3,59 +3,61 @@ package storage
 import (
 	"context"
 	"errors"
-	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
-	"github.com/filecoin-project/venus-sealer/constants"
-	"github.com/filecoin-project/venus-sealer/service"
-	types2 "github.com/filecoin-project/venus-sealer/types"
-	chain2 "github.com/filecoin-project/venus/app/submodule/chain"
-	"github.com/filecoin-project/venus/app/submodule/syncer"
-	"github.com/filecoin-project/venus/pkg/chain"
 	"time"
-
-	"github.com/filecoin-project/go-state-types/network"
-
-	"github.com/filecoin-project/go-state-types/dline"
-
-	"github.com/filecoin-project/go-bitfield"
 
 	"github.com/ipfs/go-cid"
 	logging "github.com/ipfs/go-log/v2"
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/go-bitfield"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/crypto"
+	"github.com/filecoin-project/go-state-types/dline"
+	"github.com/filecoin-project/go-state-types/network"
 	"github.com/filecoin-project/specs-storage/storage"
-	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
-	"github.com/filecoin-project/venus-sealer/sector-storage/ffiwrapper"
 
-	"github.com/filecoin-project/venus-sealer/api"
-	"github.com/filecoin-project/venus-sealer/config"
-	"github.com/filecoin-project/venus-sealer/journal"
-	sealing "github.com/filecoin-project/venus-sealer/storage-sealing"
+	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
+
+	"github.com/filecoin-project/venus/app/submodule/apitypes"
+	"github.com/filecoin-project/venus/pkg/chain"
 	"github.com/filecoin-project/venus/pkg/events"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
 	"github.com/filecoin-project/venus/pkg/specactors/policy"
 	"github.com/filecoin-project/venus/pkg/types"
+
+	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus-sealer/config"
+	"github.com/filecoin-project/venus-sealer/constants"
+	"github.com/filecoin-project/venus-sealer/journal"
+	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
+	"github.com/filecoin-project/venus-sealer/sector-storage/ffiwrapper"
+	"github.com/filecoin-project/venus-sealer/service"
+	sealing "github.com/filecoin-project/venus-sealer/storage-sealing"
+	types2 "github.com/filecoin-project/venus-sealer/types"
 )
 
 var log = logging.Logger("storageminer")
 
 type Miner struct {
-	api               storageMinerApi
 	messager          api.IMessager
-	feeCfg            config.MinerFeeConfig
-	sealer            sectorstorage.SectorManager
 	metadataService   *service.MetadataService
 	sectorInfoService *service.SectorInfoService
 	logService        *service.LogService
-	sc                types2.SectorIDCounter
-	verif             ffiwrapper.Verifier
-	addrSel           *AddressSelector
+	networkParams     *config.NetParamsConfig
 
-	maddr         address.Address
-	networkParams *config.NetParamsConfig
+	api    storageMinerApi
+	feeCfg config.MinerFeeConfig
+	sealer sectorstorage.SectorManager
+
+	sc      types2.SectorIDCounter
+	verif   ffiwrapper.Verifier
+	prover  ffiwrapper.Prover
+	addrSel *AddressSelector
+
+	maddr address.Address
+
 	getSealConfig types2.GetSealingConfigFunc
 	sealing       *sealing.Sealing
 
@@ -75,28 +77,29 @@ type SealingStateEvt struct {
 
 type storageMinerApi interface {
 	// Call a read only method on actors (no interaction with the chain required)
-	StateCall(context.Context, *types.Message, types.TipSetKey) (*syncer.InvocResult, error)
+	StateCall(context.Context, *types.Message, types.TipSetKey) (*apitypes.InvocResult, error)
 	StateMinerSectors(context.Context, address.Address, *bitfield.BitField, types.TipSetKey) ([]*miner.SectorOnChainInfo, error)
 	StateSectorPreCommitInfo(context.Context, address.Address, abi.SectorNumber, types.TipSetKey) (miner.SectorPreCommitOnChainInfo, error)
 	StateSectorGetInfo(context.Context, address.Address, abi.SectorNumber, types.TipSetKey) (*miner.SectorOnChainInfo, error)
 	StateSectorPartition(ctx context.Context, maddr address.Address, sectorNumber abi.SectorNumber, tok types.TipSetKey) (*miner.SectorLocation, error)
 	StateMinerInfo(context.Context, address.Address, types.TipSetKey) (miner.MinerInfo, error)
-	StateMinerDeadlines(context.Context, address.Address, types.TipSetKey) ([]chain2.Deadline, error)
-	StateMinerPartitions(context.Context, address.Address, uint64, types.TipSetKey) ([]chain2.Partition, error)
+	StateMinerDeadlines(context.Context, address.Address, types.TipSetKey) ([]apitypes.Deadline, error)
+	StateMinerPartitions(context.Context, address.Address, uint64, types.TipSetKey) ([]apitypes.Partition, error)
 	StateMinerProvingDeadline(context.Context, address.Address, types.TipSetKey) (*dline.Info, error)
 	StateMinerPreCommitDepositForPower(context.Context, address.Address, miner.SectorPreCommitInfo, types.TipSetKey) (types.BigInt, error)
 	StateMinerInitialPledgeCollateral(context.Context, address.Address, miner.SectorPreCommitInfo, types.TipSetKey) (types.BigInt, error)
 	StateMinerSectorAllocated(context.Context, address.Address, abi.SectorNumber, types.TipSetKey) (bool, error)
-	StateSearchMsg(context.Context, cid.Cid) (*chain2.MsgLookup, error)
-	StateWaitMsg(ctx context.Context, cid cid.Cid, confidence uint64) (*chain2.MsgLookup, error) // TODO: removeme eventually
+	StateSearchMsg(ctx context.Context, from types.TipSetKey, msg cid.Cid, limit abi.ChainEpoch, allowReplaced bool) (*apitypes.MsgLookup, error)
+	StateWaitMsg(ctx context.Context, cid cid.Cid, confidence uint64, limit abi.ChainEpoch, allowReplaced bool) (*apitypes.MsgLookup, error)
 	StateGetActor(ctx context.Context, actor address.Address, ts types.TipSetKey) (*types.Actor, error)
-	StateGetReceipt(context.Context, cid.Cid, types.TipSetKey) (*types.MessageReceipt, error)
-	StateMarketStorageDeal(context.Context, abi.DealID, types.TipSetKey) (*chain2.MarketDeal, error)
+	StateMarketStorageDeal(context.Context, abi.DealID, types.TipSetKey) (*apitypes.MarketDeal, error)
 	StateMinerFaults(context.Context, address.Address, types.TipSetKey) (bitfield.BitField, error)
 	StateMinerRecoveries(context.Context, address.Address, types.TipSetKey) (bitfield.BitField, error)
 	StateAccountKey(context.Context, address.Address, types.TipSetKey) (address.Address, error)
 	StateNetworkVersion(context.Context, types.TipSetKey) (network.Version, error)
 	StateLookupID(context.Context, address.Address, types.TipSetKey) (address.Address, error)
+
+	StateGetReceipt(context.Context, cid.Cid, types.TipSetKey) (*types.MessageReceipt, error)
 
 	MpoolPushMessage(context.Context, *types.Message, *types.MessageSendSpec) (*types.SignedMessage, error)
 
@@ -109,7 +112,7 @@ type storageMinerApi interface {
 	ChainGetRandomnessFromTickets(ctx context.Context, tsk types.TipSetKey, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte) (abi.Randomness, error)
 	ChainGetRandomnessFromBeacon(ctx context.Context, tsk types.TipSetKey, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte) (abi.Randomness, error)
 	ChainGetTipSetByHeight(context.Context, abi.ChainEpoch, types.TipSetKey) (*types.TipSet, error)
-	ChainGetBlockMessages(context.Context, cid.Cid) (*chain2.BlockMessages, error)
+	ChainGetBlockMessages(context.Context, cid.Cid) (*apitypes.BlockMessages, error)
 	ChainGetMessage(ctx context.Context, mc cid.Cid) (*types.Message, error)
 	ChainReadObj(context.Context, cid.Cid) ([]byte, error)
 	ChainHasObj(context.Context, cid.Cid) (bool, error)
@@ -120,7 +123,7 @@ type storageMinerApi interface {
 	WalletHas(context.Context, address.Address) (bool, error)
 }
 
-func NewMiner(api storageMinerApi, messager api.IMessager, maddr address.Address, metaService *service.MetadataService, sectorInfoService *service.SectorInfoService, logService *service.LogService, sealer sectorstorage.SectorManager, sc types2.SectorIDCounter, verif ffiwrapper.Verifier, gsd types2.GetSealingConfigFunc, feeCfg config.MinerFeeConfig, journal journal.Journal, as *AddressSelector, networkParams *config.NetParamsConfig) (*Miner, error) {
+func NewMiner(api storageMinerApi, messager api.IMessager, maddr address.Address, metaService *service.MetadataService, sectorInfoService *service.SectorInfoService, logService *service.LogService, sealer sectorstorage.SectorManager, sc types2.SectorIDCounter, verif ffiwrapper.Verifier, prover ffiwrapper.Prover, gsd types2.GetSealingConfigFunc, feeCfg config.MinerFeeConfig, journal journal.Journal, as *AddressSelector, networkParams *config.NetParamsConfig) (*Miner, error) {
 	m := &Miner{
 		api:               api,
 		messager:          messager,
@@ -130,6 +133,7 @@ func NewMiner(api storageMinerApi, messager api.IMessager, maddr address.Address
 		sectorInfoService: sectorInfoService,
 		sc:                sc,
 		verif:             verif,
+		prover:            prover,
 		addrSel:           as,
 		networkParams:     networkParams,
 		maddr:             maddr,
@@ -152,12 +156,6 @@ func (m *Miner) Run(ctx context.Context) error {
 		return xerrors.Errorf("getting miner info: %w", err)
 	}
 
-	fc := sealing.FeeConfig{
-		MaxPreCommitGasFee: abi.TokenAmount(m.feeCfg.MaxPreCommitGasFee),
-		MaxCommitGasFee:    abi.TokenAmount(m.feeCfg.MaxCommitGasFee),
-		MaxTerminateGasFee: abi.TokenAmount(m.feeCfg.MaxTerminateGasFee),
-	}
-
 	evts := events.NewEvents(ctx, m.api)
 	adaptedAPI := NewSealingAPIAdapter(m.api, m.messager)
 	// TODO: Maybe we update this policy after actor upgrades?
@@ -167,7 +165,8 @@ func (m *Miner) Run(ctx context.Context) error {
 		return m.addrSel.AddressFor(ctx, m.api, m.messager, mi, use, goodFunds, minFunds)
 	}
 
-	m.sealing = sealing.New(adaptedAPI, fc, NewEventsAdapter(evts), m.maddr, m.metadataService, m.sectorInfoService, m.logService, m.sealer, m.sc, m.verif, &pcp, types2.GetSealingConfigFunc(m.getSealConfig), m.handleSealingNotifications, as, m.networkParams)
+	m.sealing = sealing.New(ctx, adaptedAPI, m.feeCfg, NewEventsAdapter(evts), m.maddr, m.metadataService, m.sectorInfoService, m.logService, m.sealer, m.sc, m.verif, m.prover,
+		&pcp, types2.GetSealingConfigFunc(m.getSealConfig), m.handleSealingNotifications, as, m.networkParams)
 
 	go m.sealing.Run(ctx) //nolint:errcheck // logged intside the function
 

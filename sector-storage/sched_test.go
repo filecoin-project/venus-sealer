@@ -3,7 +3,6 @@ package sectorstorage
 import (
 	"context"
 	"fmt"
-	"github.com/filecoin-project/venus-sealer/types"
 	"io"
 	"runtime"
 	"sort"
@@ -22,6 +21,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/sector-storage/fsutil"
 	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
+	"github.com/filecoin-project/venus-sealer/types"
 )
 
 func init() {

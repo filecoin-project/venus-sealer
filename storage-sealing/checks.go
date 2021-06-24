@@ -3,10 +3,6 @@ package sealing
 import (
 	"bytes"
 	"context"
-	"github.com/filecoin-project/venus-sealer/types"
-
-	actors "github.com/filecoin-project/venus/pkg/specactors"
-	"github.com/filecoin-project/venus/pkg/specactors/policy"
 
 	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 
@@ -16,6 +12,10 @@ import (
 	"github.com/filecoin-project/go-commp-utils/zerocomm"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/crypto"
+
+	"github.com/filecoin-project/venus/pkg/specactors/policy"
+	
+	"github.com/filecoin-project/venus-sealer/types"
 )
 
 // TODO: For now we handle this by halting state execution, when we get jsonrpc reconnecting
@@ -95,14 +95,9 @@ func checkPrecommit(ctx context.Context, maddr address.Address, si types.SectorI
 		return &ErrBadCommD{xerrors.Errorf("on chain CommD differs from sector: %s != %s", commD, si.CommD)}
 	}
 
-	nv, err := api.StateNetworkVersion(ctx, tok)
-	if err != nil {
-		return &ErrApi{xerrors.Errorf("calling StateNetworkVersion: %w", err)}
-	}
+	ticketEarliest := height - policy.MaxPreCommitRandomnessLookback
 
-	msd := policy.GetMaxProveCommitDuration(actors.VersionForNetwork(nv), si.SectorType)
-
-	if height-(si.TicketEpoch+policy.SealRandomnessLookback) > msd {
+	if si.TicketEpoch < ticketEarliest {
 		return &ErrExpiredTicket{xerrors.Errorf("ticket expired: seal height: %d, head: %d", si.TicketEpoch+policy.SealRandomnessLookback, height)}
 	}
 

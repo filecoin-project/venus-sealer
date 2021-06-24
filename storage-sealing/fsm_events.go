@@ -152,6 +152,18 @@ func (evt SectorPreCommit2) apply(state *types.SectorInfo) {
 	state.CommR = &commr
 }
 
+type SectorPreCommitBatch struct{}
+
+func (evt SectorPreCommitBatch) apply(*types.SectorInfo) {}
+
+type SectorPreCommitBatchSent struct {
+	Message string
+}
+
+func (evt SectorPreCommitBatchSent) apply(state *types.SectorInfo) {
+	state.PreCommitMessage = evt.Message
+}
+
 type SectorPreCommitLanded struct {
 	TipSet types.TipSetToken
 }
@@ -235,11 +247,32 @@ func (evt SectorCommitted) apply(state *types.SectorInfo) {
 	state.Proof = evt.Proof
 }
 
+// like SectorCommitted, but finalizes before sending the proof to the chain
+type SectorProofReady struct {
+	Proof []byte
+}
+
+func (evt SectorProofReady) apply(state *types.SectorInfo) {
+	state.Proof = evt.Proof
+}
+
+type SectorSubmitCommitAggregate struct{}
+
+func (evt SectorSubmitCommitAggregate) apply(*types.SectorInfo) {}
+
 type SectorCommitSubmitted struct {
 	Message string
 }
 
 func (evt SectorCommitSubmitted) apply(state *types.SectorInfo) {
+	state.CommitMessage = evt.Message
+}
+
+type SectorCommitAggregateSent struct {
+	Message string
+}
+
+func (evt SectorCommitAggregateSent) apply(state *types.SectorInfo) {
 	state.CommitMessage = evt.Message
 }
 

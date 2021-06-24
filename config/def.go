@@ -2,14 +2,17 @@ package config
 
 import (
 	"encoding"
-	"github.com/filecoin-project/go-state-types/abi"
-	"github.com/multiformats/go-multiaddr"
 	"net/http"
 	"strings"
 	"time"
 
-	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
+	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/go-state-types/big"
+	"github.com/multiformats/go-multiaddr"
+
 	"github.com/filecoin-project/venus/pkg/types"
+
+	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
 )
 
 type HomeDir string
@@ -135,15 +138,56 @@ type SealingConfig struct {
 
 	AlwaysKeepUnsealedCopy bool
 
+	// Run sector finalization before submitting sector proof to the chain
+	FinalizeEarly bool
+
+	// enable / disable precommit batching (takes effect after nv13)
+	BatchPreCommits bool
+	// maximum precommit batch size - batches will be sent immediately above this size
+	MaxPreCommitBatch int
+	MinPreCommitBatch int
+	// how long to wait before submitting a batch after crossing the minimum batch size
+	PreCommitBatchWait Duration
+	// time buffer for forceful batch submission before sectors/deal in batch would start expiring
+	PreCommitBatchSlack Duration
+
+	// enable / disable commit aggregation (takes effect after nv13)
+	AggregateCommits bool
+	// maximum batched commit size - batches will be sent immediately above this size
+	MinCommitBatch int
+	MaxCommitBatch int
+	// how long to wait before submitting a batch after crossing the minimum batch size
+	CommitBatchWait Duration
+	// time buffer for forceful batch submission before sectors/deals in batch would start expiring
+	CommitBatchSlack Duration
+
+	TerminateBatchMax  uint64
+	TerminateBatchMin  uint64
+	TerminateBatchWait Duration
+
 	// Keep this many sectors in sealing pipeline, start CC if needed
 	// todo TargetSealingSectors uint64
 
 	// todo TargetSectors - stop auto-pleding new sectors after this many sectors are sealed, default CC upgrade for deals sectors if above
 }
 
+type BatchFeeConfig struct {
+	Base      types.FIL
+	PerSector types.FIL
+}
+
+func (b *BatchFeeConfig) FeeForSectors(nSectors int) abi.TokenAmount {
+	return big.Add(big.Int(b.Base), big.Mul(big.NewInt(int64(nSectors)), big.Int(b.PerSector)))
+}
+
 type MinerFeeConfig struct {
-	MaxPreCommitGasFee     types.FIL
-	MaxCommitGasFee        types.FIL
+	MaxPreCommitGasFee types.FIL
+	MaxCommitGasFee    types.FIL
+
+	// maxBatchFee = maxBase + maxPerSector * nSectors
+	MaxPreCommitBatchGasFee BatchFeeConfig
+	MaxCommitBatchGasFee    BatchFeeConfig
+
 	MaxTerminateGasFee     types.FIL
 	MaxWindowPoStGasFee    types.FIL
 	MaxPublishDealsFee     types.FIL
@@ -153,6 +197,16 @@ type MinerFeeConfig struct {
 type MinerAddressConfig struct {
 	PreCommitControl []string
 	CommitControl    []string
+	TerminateControl []string
+
+	// DisableOwnerFallback disables usage of the owner address for messages
+	// sent automatically
+	DisableOwnerFallback bool
+	// DisableWorkerFallback disables usage of the worker address for messages
+	// sent automatically, if control addresses are configured.
+	// A control address that doesn't have enough funds will still be chosen
+	// over the worker address if this flag is set.
+	DisableWorkerFallback bool
 }
 
 // API contains configs for API endpoint

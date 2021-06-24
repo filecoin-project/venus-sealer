@@ -43,7 +43,11 @@ func (as *AddressSelector) AddressFor(ctx context.Context, a addrSelectApi, am a
 		delete(defaultCtl, mi.Owner)
 		delete(defaultCtl, mi.Worker)
 
-		for _, addr := range append(append([]address.Address{}, as.PreCommitControl...), as.CommitControl...) {
+		configCtl := append([]address.Address{}, as.PreCommitControl...)
+		configCtl = append(configCtl, as.CommitControl...)
+		configCtl = append(configCtl, as.TerminateControl...)
+
+		for _, addr := range configCtl {
 			if addr.Protocol() != address.ID {
 				var err error
 				addr, err = a.StateLookupID(ctx, addr, types.EmptyTSK)

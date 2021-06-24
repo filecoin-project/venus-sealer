@@ -1,12 +1,12 @@
 package sectorstorage
 
 import (
-	"github.com/filecoin-project/venus-sealer/types"
 	"time"
 
 	"github.com/google/uuid"
 
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
+	"github.com/filecoin-project/venus-sealer/types"
 )
 
 func (m *Manager) WorkerStats() map[uuid.UUID]storiface.WorkerStats {
