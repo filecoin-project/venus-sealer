@@ -380,7 +380,7 @@ func (m *Sealing) handleSubmitPreCommitBatch(ctx statemachine.Context, sector ty
 }
 
 func (m *Sealing) handlePreCommitWait(ctx statemachine.Context, sector types.SectorInfo) error {
-	if len(sector.PreCommitMessage) > 0 {
+	if len(sector.PreCommitMessage) == 0 {
 		return ctx.Send(SectorChainPreCommitFailed{xerrors.Errorf("precommit message was nil")})
 	}
 
