@@ -331,7 +331,6 @@ func NewGetSealConfigFunc(r *config.StorageMiner) (types2.GetSealingConfigFunc, 
 				FinalizeEarly:             cfg.Sealing.FinalizeEarly,
 
 				BatchPreCommits:     cfg.Sealing.BatchPreCommits,
-				MinPreCommitBatch:   cfg.Sealing.MinPreCommitBatch,
 				MaxPreCommitBatch:   cfg.Sealing.MaxPreCommitBatch,
 				PreCommitBatchWait:  time.Duration(cfg.Sealing.PreCommitBatchWait),
 				PreCommitBatchSlack: time.Duration(cfg.Sealing.PreCommitBatchSlack),
