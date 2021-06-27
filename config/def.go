@@ -145,7 +145,6 @@ type SealingConfig struct {
 	BatchPreCommits bool
 	// maximum precommit batch size - batches will be sent immediately above this size
 	MaxPreCommitBatch int
-	MinPreCommitBatch int
 	// how long to wait before submitting a batch after crossing the minimum batch size
 	PreCommitBatchWait Duration
 	// time buffer for forceful batch submission before sectors/deal in batch would start expiring

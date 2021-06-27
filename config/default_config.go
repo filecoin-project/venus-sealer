@@ -61,7 +61,6 @@ func DefaultMainnetStorageMiner() *StorageMiner {
 			FinalizeEarly:             false,
 
 			BatchPreCommits:     true,
-			MinPreCommitBatch:   1,                                  // we must have at least one precommit to batch
 			MaxPreCommitBatch:   miner5.PreCommitSectorBatchMaxSize, // up to 256 sectors
 			PreCommitBatchWait:  Duration(24 * time.Hour),           // this should be less than 31.5 hours, which is the expiration of a precommit ticket
 			PreCommitBatchSlack: Duration(3 * time.Hour),            // time buffer for forceful batch submission before sectors/deals in batch would start expiring, higher value will lower the chances for message fail due to expiration
@@ -162,7 +161,6 @@ func DefaultNerpdaStorageMiner() *StorageMiner {
 			FinalizeEarly:             false,
 
 			BatchPreCommits:     true,
-			MinPreCommitBatch:   1,                                  // we must have at least one precommit to batch
 			MaxPreCommitBatch:   miner5.PreCommitSectorBatchMaxSize, // up to 256 sectors
 			PreCommitBatchWait:  Duration(24 * time.Hour),           // this should be less than 31.5 hours, which is the expiration of a precommit ticket
 			PreCommitBatchSlack: Duration(3 * time.Hour),            // time buffer for forceful batch submission before sectors/deals in batch would start expiring, higher value will lower the chances for message fail due to expiration
@@ -264,7 +262,6 @@ func DefaultCalibrationStorageMiner() *StorageMiner {
 			FinalizeEarly:             false,
 
 			BatchPreCommits:     true,
-			MinPreCommitBatch:   1,                                  // we must have at least one precommit to batch
 			MaxPreCommitBatch:   miner5.PreCommitSectorBatchMaxSize, // up to 256 sectors
 			PreCommitBatchWait:  Duration(24 * time.Hour),           // this should be less than 31.5 hours, which is the expiration of a precommit ticket
 			PreCommitBatchSlack: Duration(3 * time.Hour),            // time buffer for forceful batch submission before sectors/deals in batch would start expiring, higher value will lower the chances for message fail due to expiration
@@ -365,7 +362,6 @@ func Default2kStorageMiner() *StorageMiner {
 			FinalizeEarly:             false,
 
 			BatchPreCommits:     true,
-			MinPreCommitBatch:   1,                                  // we must have at least one precommit to batch
 			MaxPreCommitBatch:   miner5.PreCommitSectorBatchMaxSize, // up to 256 sectors
 			PreCommitBatchWait:  Duration(24 * time.Hour),           // this should be less than 31.5 hours, which is the expiration of a precommit ticket
 			PreCommitBatchSlack: Duration(3 * time.Hour),            // time buffer for forceful batch submission before sectors/deals in batch would start expiring, higher value will lower the chances for message fail due to expiration
