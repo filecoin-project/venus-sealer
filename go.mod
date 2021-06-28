@@ -32,14 +32,14 @@ require (
 	github.com/filecoin-project/specs-actors/v5 v5.0.1
 	github.com/filecoin-project/specs-storage v0.1.1-0.20201105051918-5188d9774506
 	github.com/filecoin-project/venus v0.9.7
-	github.com/filecoin-project/venus-messager v1.1.0-rc1
+	github.com/filecoin-project/venus-messager v1.1.0
 	github.com/gbrlsnchs/jwt/v3 v3.0.0
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/uuid v1.2.0
 	github.com/gorilla/mux v1.8.0
 	github.com/hako/durafmt v0.0.0-20200710122514-c0fb7b4da026
 	github.com/hashicorp/go-multierror v1.1.0
-	github.com/ipfs-force-community/venus-gateway v0.0.0-20210528060921-460ec6185a7d
+	github.com/ipfs-force-community/venus-gateway v1.1.0
 	github.com/ipfs/go-block-format v0.0.3
 	github.com/ipfs/go-cid v0.0.7
 	github.com/ipfs/go-datastore v0.4.5
