@@ -143,7 +143,7 @@ func (m *Sealing) handlePreCommitFailed(ctx statemachine.Context, sector types.S
 	}
 
 	if pci, is := m.checkPreCommitted(ctx, sector); is && pci != nil {
-		if len(sector.PreCommitMessage) > 0 {
+		if len(sector.PreCommitMessage) == 0 {
 			log.Warnf("sector %d is precommitted on chain, but we don't have precommit message", sector.SectorNumber)
 			return ctx.Send(SectorPreCommitLanded{TipSet: tok})
 		}
