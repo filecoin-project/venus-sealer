@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+
 	"time"
 
 	"github.com/google/uuid"
@@ -23,6 +24,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/sector-storage/fsutil"
 	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
+	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 	"github.com/filecoin-project/venus-sealer/types"
 )
 
@@ -85,6 +87,16 @@ type StorageMiner interface {
 	// SectorTerminatePending returns a list of pending sector terminations to be sent in the next batch message
 	SectorTerminatePending(ctx context.Context) ([]abi.SectorID, error)
 	SectorMarkForUpgrade(ctx context.Context, id abi.SectorNumber) error
+	// SectorPreCommitFlush immediately sends a PreCommit message with sectors batched for PreCommit.
+	// Returns null if message wasn't sent
+	SectorPreCommitFlush(ctx context.Context) ([]sealiface.PreCommitBatchRes, error) //perm:admin
+	// SectorPreCommitPending returns a list of pending PreCommit sectors to be sent in the next batch message
+	SectorPreCommitPending(ctx context.Context) ([]abi.SectorID, error) //perm:admin
+	// SectorCommitFlush immediately sends a Commit message with sectors aggregated for Commit.
+	// Returns null if message wasn't sent
+	SectorCommitFlush(ctx context.Context) ([]sealiface.CommitBatchRes, error) //perm:admin
+	// SectorCommitPending returns a list of pending Commit sectors to be sent in the next aggregate message
+	SectorCommitPending(ctx context.Context) ([]abi.SectorID, error) //perm:admin
 
 	StorageList(ctx context.Context) (map[stores.ID][]stores.Decl, error)
 	StorageLocal(ctx context.Context) (map[stores.ID]string, error)
@@ -170,6 +182,10 @@ type StorageMinerStruct struct {
 		SectorTerminateFlush          func(ctx context.Context) (string, error)                                                 `perm:"admin"`
 		SectorTerminatePending        func(ctx context.Context) ([]abi.SectorID, error)                                         `perm:"admin"`
 		SectorMarkForUpgrade          func(ctx context.Context, id abi.SectorNumber) error                                      `perm:"admin"`
+		SectorPreCommitFlush          func(ctx context.Context) ([]sealiface.PreCommitBatchRes, error)                          `perm:"admin"`
+		SectorPreCommitPending        func(ctx context.Context) ([]abi.SectorID, error)                                         `perm:"admin"`
+		SectorCommitFlush             func(ctx context.Context) ([]sealiface.CommitBatchRes, error)                             `perm:"admin"`
+		SectorCommitPending           func(ctx context.Context) ([]abi.SectorID, error)                                         `perm:"admin"`
 
 		WorkerConnect func(context.Context, string) error                                `perm:"admin" retry:"true"` // TODO: worker perm
 		WorkerStats   func(context.Context) (map[uuid.UUID]storiface.WorkerStats, error) `perm:"admin"`
@@ -326,6 +342,22 @@ func (c *StorageMinerStruct) SectorTerminatePending(ctx context.Context) ([]abi.
 
 func (c *StorageMinerStruct) SectorMarkForUpgrade(ctx context.Context, number abi.SectorNumber) error {
 	return c.Internal.SectorMarkForUpgrade(ctx, number)
+}
+
+func (c *StorageMinerStruct) SectorPreCommitFlush(ctx context.Context) ([]sealiface.PreCommitBatchRes, error) {
+	return c.Internal.SectorPreCommitFlush(ctx)
+}
+
+func (c *StorageMinerStruct) SectorPreCommitPending(ctx context.Context) ([]abi.SectorID, error) {
+	return c.Internal.SectorPreCommitPending(ctx)
+}
+
+func (c *StorageMinerStruct) SectorCommitFlush(ctx context.Context) ([]sealiface.CommitBatchRes, error) {
+	return c.Internal.SectorCommitFlush(ctx)
+}
+
+func (c *StorageMinerStruct) SectorCommitPending(ctx context.Context) ([]abi.SectorID, error) {
+	return c.Internal.SectorCommitPending(ctx)
 }
 
 func (c *StorageMinerStruct) WorkerConnect(ctx context.Context, url string) error {
