@@ -314,9 +314,6 @@ github.com/filecoin-project/go-hamt-ipld/v2 v2.0.0/go.mod h1:7aWZdaQ1b16BVoQUYR+
 github.com/filecoin-project/go-hamt-ipld/v3 v3.0.1/go.mod h1:gXpNmr3oQx8l3o7qkGyDjJjYSRX7hp/FGOStdqrWyDI=
 github.com/filecoin-project/go-hamt-ipld/v3 v3.1.0 h1:rVVNq0x6RGQIzCo1iiJlGFm9AGIZzeifggxtKMU7zmI=
 github.com/filecoin-project/go-hamt-ipld/v3 v3.1.0/go.mod h1:bxmzgT8tmeVQA1/gvBwFmYdT8SOFUwB3ovSUfG1Ux0g=
-github.com/filecoin-project/go-jsonrpc v0.1.2/go.mod h1:XBBpuKIMaXIIzeqzO1iucq4GvbF8CxmXRFoezRh+Cx4=
-github.com/filecoin-project/go-jsonrpc v0.1.4-0.20210217175800-45ea43ac2bec h1:rGI5I7fdU4viManxmDdbk5deZO7afe6L1Wc04dAmlOM=
-github.com/filecoin-project/go-jsonrpc v0.1.4-0.20210217175800-45ea43ac2bec/go.mod h1:XBBpuKIMaXIIzeqzO1iucq4GvbF8CxmXRFoezRh+Cx4=
 github.com/filecoin-project/go-leb128 v0.0.0-20190212224330-8d79a5489543/go.mod h1:mjrHv1cDGJWDlGmC0eDc1E5VJr8DmL9XMUcaFwiuKg8=
 github.com/filecoin-project/go-multistore v0.0.3 h1:vaRBY4YiA2UZFPK57RNuewypB8u0DzzQwqsL0XarpnI=
 github.com/filecoin-project/go-multistore v0.0.3/go.mod h1:kaNqCC4IhU4B1uyr7YWFHd23TL4KM32aChS0jNkyUvQ=
@@ -668,6 +665,8 @@ github.com/influxdata/influxdb-client-go/v2 v2.2.2/go.mod h1:fa/d1lAdUHxuc1jedx3
 github.com/influxdata/influxdb1-client v0.0.0-20191209144304-8bf82d3c094d/go.mod h1:qj24IKcXYK6Iy9ceXlo3Tc+vtHo9lIhSX5JddghvEPo=
 github.com/influxdata/line-protocol v0.0.0-20200327222509-2487e7298839 h1:W9WBk7wlPfJLvMCdtV4zPulc4uCPrlywQOmbFOhgQNU=
 github.com/influxdata/line-protocol v0.0.0-20200327222509-2487e7298839/go.mod h1:xaLFMmpvUxqXtVkUJfg9QmT88cDaCJ3ZKgdZ78oO8Qo=
+github.com/ipfs-force-community/go-jsonrpc v0.1.4-0.20210701070712-40aabf8d4192 h1:/bZUVzgRt3rLoqb77kbmZm4Wwj6VGOkoJk1UBSA4fTo=
+github.com/ipfs-force-community/go-jsonrpc v0.1.4-0.20210701070712-40aabf8d4192/go.mod h1:XBBpuKIMaXIIzeqzO1iucq4GvbF8CxmXRFoezRh+Cx4=
 github.com/ipfs-force-community/venus-gateway v0.0.0-20210528060921-460ec6185a7d/go.mod h1:m1gMbwD/mEw3jxIkaTWx/TCWQ3e4V6ccJ2Vw7q/lvVQ=
 github.com/ipfs-force-community/venus-gateway v1.1.0 h1:5WTA0+nlPlRHHrPu4uSmcRB4ADLJGNYu5wkSi9/+S8I=
 github.com/ipfs-force-community/venus-gateway v1.1.0/go.mod h1:Xwmj2l5w6qeOXER4qCeT48zDFmvHetmBN1swHEeqnOQ=
