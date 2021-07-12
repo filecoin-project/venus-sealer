@@ -84,4 +84,4 @@ replace github.com/filecoin-project/go-statemachine => github.com/hunjixin/go-st
 
 replace github.com/filecoin-project/go-statestore => github.com/hunjixin/go-statestore v0.1.1-0.20210309025204-01c69afffbd7
 
-replace github.com/filecoin-project/go-jsonrpc => github.com/ipfs-force-community/go-jsonrpc v0.1.4-0.20210701070712-40aabf8d4192
+replace github.com/filecoin-project/go-jsonrpc => github.com/ipfs-force-community/go-jsonrpc v0.1.4-0.20210705020212-6dba7d87d791
