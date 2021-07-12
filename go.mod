@@ -3,7 +3,7 @@ module github.com/filecoin-project/venus-sealer
 go 1.16
 
 require (
-	contrib.go.opencensus.io/exporter/jaeger v0.1.0
+	contrib.go.opencensus.io/exporter/jaeger v0.2.1
 	github.com/BurntSushi/toml v0.3.1
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 	github.com/detailyang/go-fallocate v0.0.0-20180908115635-432fa640bd2e
@@ -31,10 +31,9 @@ require (
 	github.com/filecoin-project/specs-actors/v3 v3.1.1
 	github.com/filecoin-project/specs-actors/v5 v5.0.1
 	github.com/filecoin-project/specs-storage v0.1.1-0.20201105051918-5188d9774506
-	github.com/filecoin-project/venus v0.9.7
+	github.com/filecoin-project/venus v1.0.2
 	github.com/filecoin-project/venus-messager v1.1.0
 	github.com/gbrlsnchs/jwt/v3 v3.0.0
-	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/uuid v1.2.0
 	github.com/gorilla/mux v1.8.0
 	github.com/hako/durafmt v0.0.0-20200710122514-c0fb7b4da026
@@ -47,7 +46,7 @@ require (
 	github.com/ipfs/go-ipfs-ds-help v1.0.0
 	github.com/ipfs/go-ipfs-util v0.0.2
 	github.com/ipfs/go-ipld-cbor v0.0.5
-	github.com/ipfs/go-log v1.0.4
+	github.com/ipfs/go-log v1.0.5
 	github.com/ipfs/go-log/v2 v2.1.3
 	github.com/ipfs/go-metrics-interface v0.0.1
 	github.com/kelseyhightower/envconfig v1.4.0
@@ -57,27 +56,29 @@ require (
 	github.com/minio/sha256-simd v1.0.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/multiformats/go-base32 v0.0.3
-	github.com/multiformats/go-multiaddr v0.3.1
+	github.com/multiformats/go-multiaddr v0.3.3
 	github.com/polydawn/refmt v0.0.0-20201211092308-30ac6d18308e
 	github.com/raulk/clock v1.1.0
 	github.com/stretchr/testify v1.7.0
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/whyrusleeping/cbor-gen v0.0.0-20210219115102-f37d292932f2
 	github.com/zbiljic/go-filelock v0.0.0-20170914061330-1dbf7103ab7d
-	go.opencensus.io v0.22.6
+	go.opencensus.io v0.23.0
 	go.uber.org/fx v1.13.1
 	go.uber.org/multierr v1.6.0
 	go.uber.org/zap v1.16.0
 	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4
-	golang.org/x/sys v0.0.0-20210510120138-977fb7262007
+	golang.org/x/sys v0.0.0-20210603081109-ebe580a85c40
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
-	gorm.io/driver/mysql v1.0.5
+	gorm.io/driver/mysql v1.1.1
 	gorm.io/driver/sqlite v1.1.4
-	gorm.io/gorm v1.21.3
+	gorm.io/gorm v1.21.11
 	gotest.tools v2.2.0+incompatible
 )
 
 replace github.com/filecoin-project/filecoin-ffi => ./extern/filecoin-ffi
+
+replace github.com/ipfs/go-ipfs-cmds => github.com/ipfs-force-community/go-ipfs-cmds v0.6.1-0.20210521090123-4587df7fa0ab
 
 replace github.com/filecoin-project/go-statemachine => github.com/hunjixin/go-statemachine v0.0.0-20210309063909-a65119041e93
 
