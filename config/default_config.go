@@ -71,6 +71,8 @@ func DefaultMainnetStorageMiner() *StorageMiner {
 			CommitBatchWait:  Duration(24 * time.Hour),    // this can be up to 30 days
 			CommitBatchSlack: Duration(1 * time.Hour),     // time buffer for forceful batch submission before sectors/deals in batch would start expiring, higher value will lower the chances for message fail due to expiration
 
+			AggregateAboveBaseFee: types.FIL(types.BigMul(types.PicoFil, types.NewInt(150))), // 0.15 nFIL
+
 			TerminateBatchMin:  1,
 			TerminateBatchMax:  100,
 			TerminateBatchWait: Duration(5 * time.Minute),
@@ -170,6 +172,8 @@ func DefaultNerpdaStorageMiner() *StorageMiner {
 			MaxCommitBatch:   miner5.MaxAggregatedSectors, // maximum 819 sectors, this is the maximum aggregation per FIP13
 			CommitBatchWait:  Duration(24 * time.Hour),    // this can be up to 30 days
 			CommitBatchSlack: Duration(1 * time.Hour),     // time buffer for forceful batch submission before sectors/deals in batch would start expiring, higher value will lower the chances for message fail due to expiration
+
+			AggregateAboveBaseFee: types.FIL(types.BigMul(types.PicoFil, types.NewInt(150))), // 0.15 nFIL
 
 			TerminateBatchMin:  1,
 			TerminateBatchMax:  100,
@@ -272,6 +276,8 @@ func DefaultCalibrationStorageMiner() *StorageMiner {
 			CommitBatchWait:  Duration(24 * time.Hour),    // this can be up to 30 days
 			CommitBatchSlack: Duration(1 * time.Hour),     // time buffer for forceful batch submission before sectors/deals in batch would start expiring, higher value will lower the chances for message fail due to expiration
 
+			AggregateAboveBaseFee: types.FIL(types.BigMul(types.PicoFil, types.NewInt(150))), // 0.15 nFIL
+
 			TerminateBatchMin:  1,
 			TerminateBatchMax:  100,
 			TerminateBatchWait: Duration(5 * time.Minute),
@@ -371,6 +377,8 @@ func Default2kStorageMiner() *StorageMiner {
 			MaxCommitBatch:   miner5.MaxAggregatedSectors, // maximum 819 sectors, this is the maximum aggregation per FIP13
 			CommitBatchWait:  Duration(24 * time.Hour),    // this can be up to 30 days
 			CommitBatchSlack: Duration(1 * time.Hour),     // time buffer for forceful batch submission before sectors/deals in batch would start expiring, higher value will lower the chances for message fail due to expiration
+
+			AggregateAboveBaseFee: types.FIL(types.BigMul(types.PicoFil, types.NewInt(150))), // 0.15 nFIL
 
 			TerminateBatchMin:  1,
 			TerminateBatchMax:  100,

@@ -160,6 +160,10 @@ type SealingConfig struct {
 	// time buffer for forceful batch submission before sectors/deals in batch would start expiring
 	CommitBatchSlack Duration
 
+	// network BaseFee below which to stop doing commit aggregation, instead
+	// submitting proofs to the chain individually
+	AggregateAboveBaseFee types.FIL
+
 	TerminateBatchMax  uint64
 	TerminateBatchMin  uint64
 	TerminateBatchWait Duration
