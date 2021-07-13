@@ -124,7 +124,8 @@ type Sealing struct {
 	dealInfo  *CurrentDealInfoManager
 
 	//service
-	logService *service.LogService
+	sealingState types2.SealingState
+	logService   *service.LogService
 }
 
 type openSector struct {
@@ -184,12 +185,34 @@ func New(mctx context.Context, api SealingAPI, fc config.MinerFeeConfig, events 
 	return s
 }
 
+func (m *Sealing) State() types2.SealingState {
+	return m.sealingState
+}
+
 func (m *Sealing) Run(ctx context.Context) error {
 	if err := m.restartSectors(ctx); err != nil {
 		log.Errorf("%+v", err)
 		return xerrors.Errorf("failed load sector states: %w", err)
 	}
+	m.sealingState = types2.SEALING
+	return nil
+}
 
+func (m *Sealing) StartSeal(ctx context.Context) error {
+	m.unsealedInfoMap.lk.Lock()
+	if err := m.restartSectors(ctx); err != nil {
+		log.Errorf("%+v", err)
+		return xerrors.Errorf("failed load sector states: %w", err)
+	}
+	m.sealingState = types2.SEALING
+	return nil
+}
+
+func (m *Sealing) StopSeal(ctx context.Context) error {
+	if err := m.sectors.Stop(ctx); err != nil {
+		return err
+	}
+	m.sealingState = types2.SEALINGSTOP
 	return nil
 }
 
