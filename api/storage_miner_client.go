@@ -5,6 +5,7 @@ import (
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/lib/rpcenc"
+	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 	"net/http"
@@ -125,7 +126,7 @@ func GetStorageMinerAPI(ctx *cli.Context, opts ...GetStorageOption) (StorageMine
 }
 
 func GetConfigAPI(cctx *cli.Context, options GetStorageOptions) (string, http.Header, error) {
-	var apiInfo APIInfo
+	var apiInfo apiinfo.APIInfo
 	if len(options.Address) > 0 {
 		apiInfo.Addr = options.Address
 		apiInfo.Token = []byte(options.Token)
@@ -161,7 +162,7 @@ func GetConfigAPI(cctx *cli.Context, options GetStorageOptions) (string, http.He
 		log.Warn("API Token not set and requested, capabilities might be limited.")
 	}
 
-	addr, err := apiInfo.DialArgs()
+	addr, err := apiInfo.DialArgs("v0")
 	if err != nil {
 		return "", nil, xerrors.Errorf("could not get API info: %w", err)
 	}
