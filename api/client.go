@@ -6,6 +6,8 @@ import (
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/venus-sealer/api/repo"
 	"github.com/filecoin-project/venus-sealer/config"
+	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
+	logging "github.com/ipfs/go-log/v2"
 	"github.com/mitchellh/go-homedir"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
@@ -15,6 +17,8 @@ import (
 	"strings"
 	"syscall"
 )
+
+var log = logging.Logger("api")
 
 const (
 	metadataTraceContext = "traceContext"
@@ -75,7 +79,7 @@ func envForRepoDeprecation(t repo.RepoType) string {
 	}
 }
 
-func GetAPIInfo(ctx *cli.Context, t repo.RepoType) (APIInfo, error) {
+func GetAPIInfo(ctx *cli.Context, t repo.RepoType) (apiinfo.APIInfo, error) {
 	// Check if there was a flag passed with the listen address of the API
 	// server (only used by the tests)
 	apiFlag := flagForAPI(t)
@@ -83,7 +87,7 @@ func GetAPIInfo(ctx *cli.Context, t repo.RepoType) (APIInfo, error) {
 		strma := ctx.String(apiFlag)
 		strma = strings.TrimSpace(strma)
 
-		return APIInfo{Addr: strma}, nil
+		return apiinfo.APIInfo{Addr: strma}, nil
 	}
 
 	envKey := envForRepo(t)
@@ -97,21 +101,21 @@ func GetAPIInfo(ctx *cli.Context, t repo.RepoType) (APIInfo, error) {
 		}
 	}
 	if ok {
-		return ParseApiInfo(env), nil
+		return apiinfo.ParseApiInfo(env), nil
 	}
 
 	repoFlag := flagForRepo(t)
 
 	p, err := homedir.Expand(ctx.String(repoFlag))
 	if err != nil {
-		return APIInfo{}, xerrors.Errorf("could not expand home dir (%s): %w", repoFlag, err)
+		return apiinfo.APIInfo{}, xerrors.Errorf("could not expand home dir (%s): %w", repoFlag, err)
 	}
 
 	cfg := config.NewLocalStorage(p, "")
 
 	ma, err := cfg.APIEndpoint()
 	if err != nil {
-		return APIInfo{}, xerrors.Errorf("could not get api endpoint: %w", err)
+		return apiinfo.APIInfo{}, xerrors.Errorf("could not get api endpoint: %w", err)
 	}
 
 	token, err := cfg.APIToken()
@@ -119,7 +123,7 @@ func GetAPIInfo(ctx *cli.Context, t repo.RepoType) (APIInfo, error) {
 		log.Warnf("Couldn't load CLI token, capabilities may be limited: %v", err)
 	}
 
-	return APIInfo{
+	return apiinfo.APIInfo{
 		Addr:  ma.String(),
 		Token: token,
 	}, nil
@@ -131,7 +135,7 @@ func GetRawAPI(ctx *cli.Context, t repo.RepoType) (string, http.Header, error) {
 		return "", nil, xerrors.Errorf("could not get API info: %w", err)
 	}
 
-	addr, err := ainfo.DialArgs()
+	addr, err := ainfo.DialArgs("v0")
 	if err != nil {
 		return "", nil, xerrors.Errorf("could not get DialArgs: %w", err)
 	}
@@ -198,28 +202,28 @@ func GetFullNodeAPIV2(cctx *cli.Context) (FullNode, jsonrpc.ClientCloser, error)
 			return nil, nil, xerrors.New("must set url or token")
 		}
 
-		apiInfo = APIInfo{
+		apiInfo = apiinfo.APIInfo{
 			Addr:  cctx.String("node-url"),
 			Token: []byte(cctx.String("node-token")),
 		}
 	}
 
-	addr, err := apiInfo.DialArgs()
+	addr, err := apiInfo.DialArgs("v1")
 	if err != nil {
 		return nil, nil, xerrors.Errorf("could not get DialArgs: %w", err)
 	}
 	return NewFullNodeRPC(cctx.Context, addr, apiInfo.AuthHeader())
 }
 
-func GetFullNodeAPIFromConfig(cctx *cli.Context) (APIInfo, error) {
+func GetFullNodeAPIFromConfig(cctx *cli.Context) (apiinfo.APIInfo, error) {
 	cfgPath := cctx.String("config")
 	cfg, err := config.MinerFromFile(cfgPath)
 	if err != nil {
-		return APIInfo{}, err
+		return apiinfo.APIInfo{}, err
 	}
 	cfg.ConfigPath = cfgPath
 
-	return APIInfo{
+	return apiinfo.APIInfo{
 		Addr:  cfg.Node.Url,
 		Token: []byte(cfg.Node.Token),
 	}, nil

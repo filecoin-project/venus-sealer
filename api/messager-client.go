@@ -8,6 +8,7 @@ import (
 	"github.com/filecoin-project/venus-messager/types"
 	"github.com/filecoin-project/venus-sealer/config"
 	types2 "github.com/filecoin-project/venus/pkg/types"
+	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
 	"golang.org/x/xerrors"
 )
 
@@ -59,12 +60,12 @@ func (m *Messager) GetMessageByUid(ctx context.Context, id string) (*types.Messa
 }
 
 func NewMessageRPC(messagerCfg *config.MessagerConfig) (IMessager, jsonrpc.ClientCloser, error) {
-	apiInfo := APIInfo{
+	apiInfo := apiinfo.APIInfo{
 		Addr:  messagerCfg.Url,
 		Token: []byte(messagerCfg.Token),
 	}
 
-	addr, err := apiInfo.DialArgs()
+	addr, err := apiInfo.DialArgs("v0")
 	if err != nil {
 		return nil, nil, err
 	}
