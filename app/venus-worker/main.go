@@ -416,8 +416,8 @@ var runCmd = &cli.Command{
 		}
 
 		go func() {
-			<-ctx.Done()
-			log.Warn("Shutting down...")
+			cs := <-ctx.Done()
+			log.Warnf("Shutting down: %v ...", cs)
 			if err := srv.Shutdown(context.TODO()); err != nil {
 				log.Errorf("shutting down RPC server failed: %s", err)
 			}
@@ -505,7 +505,7 @@ var runCmd = &cli.Command{
 					}
 
 					select {
-					case <-readyCh:
+					case <-readyCh: // 没有tasks后退出
 						if err := nodeApi.WorkerConnect(ctx, "http://"+address+"/rpc/v0"); err != nil {
 							log.Errorf("Registering worker failed: %+v", err)
 							cancel()
@@ -521,7 +521,7 @@ var runCmd = &cli.Command{
 					}
 				}
 
-				log.Errorf("LOTUS-MINER CONNECTION LOST")
+				log.Errorf("VENUS-MINER CONNECTION LOST")
 
 				redeclareStorage = true
 			}
