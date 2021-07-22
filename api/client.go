@@ -259,8 +259,12 @@ func ReqContext(cctx *cli.Context) context.Context {
 	ctx, done := context.WithCancel(tCtx)
 	sigChan := make(chan os.Signal, 2)
 	go func() {
-		<-sigChan
-		done()
+		sig := <-sigChan
+		log.Warnf("receive sig: %v", sig)
+		switch sig {
+		case syscall.SIGTERM:
+			done()
+		}
 	}()
 	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
 
