@@ -774,6 +774,8 @@ func (s *WindowPoStScheduler) sectorsForProof(ctx context.Context, goodSectors, 
 	return proofSectors, nil
 }
 
+const RetrySubmitPoStCounts = 30
+
 func (s *WindowPoStScheduler) submitPost(ctx context.Context, proof *miner.SubmitWindowedPoStParams) (string, error) {
 	ctx, span := trace.StartSpan(ctx, "storage.commitPost")
 	defer span.End()
@@ -790,15 +792,32 @@ func (s *WindowPoStScheduler) submitPost(ctx context.Context, proof *miner.Submi
 		Value:  types.NewInt(0),
 	}
 	spec := &types.MessageSendSpec{MaxFee: abi.TokenAmount(s.feeCfg.MaxWindowPoStGasFee)}
-	if err := s.setSender(ctx, msg, spec); err != nil {
-		return "", err
+
+	var (
+		uid string
+		err error
+	)
+
+	for idx := 0; idx < RetrySubmitPoStCounts; idx++ {
+		if err = s.setSender(ctx, msg, spec); err != nil {
+			log.Errorf("[%d] submitPoSt set sender failed: %v", idx+1, err)
+			time.Sleep(10 * time.Second)
+			continue
+		}
+
+		// TODO: consider maybe caring about the output
+		uid, err = s.Messager.PushMessage(ctx, msg, &types3.MsgMeta{MaxFee: spec.MaxFee})
+		if err != nil {
+			log.Errorf("[%d] pushing SubmitWindowedPoSt message failed: %v", idx+1, err)
+			time.Sleep(10 * time.Second)
+			continue
+		}
+
+		break
 	}
 
-	// TODO: consider maybe caring about the output
-	uid, err := s.Messager.PushMessage(ctx, msg, &types3.MsgMeta{MaxFee: spec.MaxFee})
-
 	if err != nil {
-		return "", xerrors.Errorf("pushing message to mpool: %w", err)
+		return "", xerrors.Errorf("submitPoSt failed: %w", err)
 	}
 
 	log.Infof("Submitted window post: %s", uid)
