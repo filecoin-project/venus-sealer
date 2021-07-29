@@ -1,7 +1,7 @@
 package sealing
 
 import (
-	"github.com/filecoin-project/venus-sealer/types"
+
 	"testing"
 
 	"github.com/filecoin-project/go-address"
@@ -10,6 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/filecoin-project/go-statemachine"
+
+	"github.com/filecoin-project/venus-sealer/types"
 )
 
 func init() {
@@ -155,6 +157,45 @@ func TestHappyPathFinalizeEarly(t *testing.T) {
 	}
 }
 
+func TestCommitFinalizeFailed(t *testing.T) {
+	var notif []struct{ before, after types.SectorInfo }
+	ma, _ := address.NewIDAddress(55151)
+	m := test{
+		s: &Sealing{
+			maddr: ma,
+			stats: types.SectorStats{
+				BySector: map[abi.SectorID]types.StatSectorState{},
+			},
+			notifee: func(before, after types.SectorInfo) {
+				notif = append(notif, struct{ before, after types.SectorInfo }{before, after})
+			},
+		},
+		t:     t,
+		state: &types.SectorInfo{State: types.Committing},
+	}
+
+	m.planSingle(SectorProofReady{})
+	require.Equal(m.t, m.state.State, types.CommitFinalize)
+
+	m.planSingle(SectorFinalizeFailed{})
+	require.Equal(m.t, m.state.State, types.CommitFinalizeFailed)
+
+	m.planSingle(SectorRetryFinalize{})
+	require.Equal(m.t, m.state.State, types.CommitFinalize)
+
+	m.planSingle(SectorFinalized{})
+	require.Equal(m.t, m.state.State, types.SubmitCommit)
+
+	expected := []types.SectorState{types.Committing, types.CommitFinalize, types.CommitFinalizeFailed, types.CommitFinalize, types.SubmitCommit}
+	for i, n := range notif {
+		if n.before.State != expected[i] {
+			t.Fatalf("expected before state: %s, got: %s", expected[i], n.before.State)
+		}
+		if n.after.State != expected[i+1] {
+			t.Fatalf("expected after state: %s, got: %s", expected[i+1], n.after.State)
+		}
+	}
+}
 func TestSeedRevert(t *testing.T) {
 	ma, _ := address.NewIDAddress(55151)
 	m := test{
@@ -269,6 +310,46 @@ func TestBrokenState(t *testing.T) {
 	require.Equal(m.t, m.state.State, types.Removing)
 
 	expected := []types.SectorState{"not a state", "not a state", types.Removing}
+	for i, n := range notif {
+		if n.before.State != expected[i] {
+			t.Fatalf("expected before state: %s, got: %s", expected[i], n.before.State)
+		}
+		if n.after.State != expected[i+1] {
+			t.Fatalf("expected after state: %s, got: %s", expected[i+1], n.after.State)
+		}
+	}
+}
+
+func TestTicketExpired(t *testing.T) {
+	var notif []struct{ before, after types.SectorInfo }
+	ma, _ := address.NewIDAddress(55151)
+	m := test{
+		s: &Sealing{
+			maddr: ma,
+			stats: types.SectorStats{
+				BySector: map[abi.SectorID]types.StatSectorState{},
+			},
+			notifee: func(before, after types.SectorInfo) {
+				notif = append(notif, struct{ before, after types.SectorInfo }{before, after})
+			},
+		},
+		t:     t,
+		state: &types.SectorInfo{State: types.Packing},
+	}
+
+	m.planSingle(SectorPacked{})
+	require.Equal(m.t, m.state.State, types.GetTicket)
+
+	m.planSingle(SectorTicket{})
+	require.Equal(m.t, m.state.State, types.PreCommit1)
+
+	expired := checkTicketExpired(0, types.MaxTicketAge+1)
+	require.True(t, expired)
+
+	m.planSingle(SectorOldTicket{})
+	require.Equal(m.t, m.state.State, types.GetTicket)
+
+	expected := []types.SectorState{types.Packing, types.GetTicket, types.PreCommit1, types.GetTicket}
 	for i, n := range notif {
 		if n.before.State != expected[i] {
 			t.Fatalf("expected before state: %s, got: %s", expected[i], n.before.State)

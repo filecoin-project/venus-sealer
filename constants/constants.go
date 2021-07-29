@@ -1,23 +1,26 @@
 package constants
 
 import (
-	"github.com/filecoin-project/go-state-types/network"
-	"github.com/filecoin-project/venus/pkg/specactors/policy"
 	"github.com/raulk/clock"
+
+	builtin2 "github.com/filecoin-project/specs-actors/v2/actors/builtin"
+
+	"github.com/filecoin-project/go-state-types/network"
 )
 
 const (
-	NewestNetworkVersion = network.Version9
+	NewestNetworkVersion = network.Version13
 	MessageConfidence    = uint64(5)
-	BlocksPerEpoch       = uint64(5)
-	ForkLengthThreshold2 = policy.ChainFinality
 )
+
+// Blocks (e)
+var BlocksPerEpoch = uint64(builtin2.ExpectedLeadersPerEpoch)
 
 var (
 	FullAPIVersion0  = newVer(1, 3, 0)
 	FullAPIVersion1  = newVer(2, 1, 0)
-	MinerAPIVersion  = newVer(2, 1, 0)
-	WorkerAPIVersion = newVer(1, 0, 0)
+	MinerAPIVersion0  = newVer(1, 2, 0)
+	WorkerAPIVersion0 = newVer(1, 1, 0)
 
 	MinerVersion = newVer(1, 0, 2)
 )

@@ -159,7 +159,7 @@ var fsmPlanners = map[types.SectorState]func(events []statemachine.Event, state 
 		on(SectorSealPreCommit1Failed{}, types.SealPreCommit1Failed),
 	),
 	types.CommitFinalizeFailed: planOne(
-		on(SectorRetryFinalize{}, types.CommitFinalizeFailed),
+		on(SectorRetryFinalize{}, types.CommitFinalize),
 	),
 	types.CommitFailed: planOne(
 		on(SectorSealPreCommit1Failed{}, types.SealPreCommit1Failed),
@@ -478,15 +478,16 @@ func (m *Sealing) onUpdateSector(ctx context.Context, state *types.SectorInfo) e
 	if err != nil {
 		return xerrors.Errorf("getting config: %w", err)
 	}
-	sp, err := m.currentSealProof(ctx)
-	if err != nil {
-		return xerrors.Errorf("getting seal proof type: %w", err)
-	}
 
 	shouldUpdateInput := m.stats.UpdateSector(cfg, m.minerSectorID(state.SectorNumber), state.State)
 
 	// trigger more input processing when we've dipped below max sealing limits
 	if shouldUpdateInput {
+		sp, err := m.currentSealProof(ctx)
+		if err != nil {
+			return xerrors.Errorf("getting seal proof type: %w", err)
+		}
+
 		go func() {
 			m.inputLk.Lock()
 			defer m.inputLk.Unlock()

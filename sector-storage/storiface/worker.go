@@ -5,10 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/filecoin-project/venus-sealer/types"
-	"io"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/ipfs/go-cid"
 
 	"github.com/filecoin-project/go-state-types/abi"
@@ -18,7 +16,12 @@ import (
 type WorkerInfo struct {
 	Hostname string
 
-	Resources WorkerResources
+	// IgnoreResources indicates whether the worker's available resources should
+	// be used ignored (true) or used (false) for the purposes of scheduling and
+	// task assignment. Only supported on local workers. Used for testing.
+	// Default should be false (zero value, i.e. resources taken into account).
+	IgnoreResources bool
+	Resources       WorkerResources
 }
 
 type WorkerResources struct {
@@ -63,19 +66,6 @@ type WorkerJob struct {
 	Hostname string `json:",omitempty"` // optional, set for ret-wait jobs
 }
 
-type CallID struct {
-	Sector abi.SectorID
-	ID     uuid.UUID
-}
-
-func (c CallID) String() string {
-	return fmt.Sprintf("%d-%d-%s", c.Sector.Miner, c.Sector.Number, c.ID)
-}
-
-var _ fmt.Stringer = &CallID{}
-
-var UndefCall CallID
-
 type WorkerCalls interface {
 	AddPiece(ctx context.Context, sector storage.SectorRef, pieceSizes []abi.UnpaddedPieceSize, newPieceSize abi.UnpaddedPieceSize, pieceData storage.Data) (types.CallID, error)
 	SealPreCommit1(ctx context.Context, sector storage.SectorRef, ticket abi.SealRandomness, pieces []abi.PieceInfo) (types.CallID, error)
@@ -86,7 +76,6 @@ type WorkerCalls interface {
 	ReleaseUnsealed(ctx context.Context, sector storage.SectorRef, safeToFree []storage.Range) (types.CallID, error)
 	MoveStorage(ctx context.Context, sector storage.SectorRef, types SectorFileType) (types.CallID, error)
 	UnsealPiece(context.Context, storage.SectorRef, UnpaddedByteIndex, abi.UnpaddedPieceSize, abi.SealRandomness, cid.Cid) (types.CallID, error)
-	ReadPiece(context.Context, io.Writer, storage.SectorRef, UnpaddedByteIndex, abi.UnpaddedPieceSize) (types.CallID, error)
 	Fetch(context.Context, storage.SectorRef, SectorFileType, PathType, AcquireMode) (types.CallID, error)
 }
 

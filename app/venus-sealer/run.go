@@ -2,35 +2,25 @@ package main
 
 import (
 	"context"
-	"github.com/filecoin-project/venus-sealer/config"
-	"github.com/filecoin-project/venus-sealer/constants"
-	"github.com/filecoin-project/venus-sealer/types"
-	"github.com/mitchellh/go-homedir"
-	"github.com/zbiljic/go-filelock"
-	"net"
-	"net/http"
+	"fmt"
 	_ "net/http/pprof"
 	"os"
-	"os/signal"
 	"path"
 	"regexp"
-	"syscall"
 
-	mux "github.com/gorilla/mux"
+	"github.com/mitchellh/go-homedir"
 	"github.com/multiformats/go-multiaddr"
-	manet "github.com/multiformats/go-multiaddr/net"
 	"github.com/urfave/cli/v2"
+	"github.com/zbiljic/go-filelock"
 	"go.opencensus.io/stats/view"
-	"go.opencensus.io/tag"
 	"golang.org/x/xerrors"
-
-	"github.com/filecoin-project/go-jsonrpc"
-	"github.com/filecoin-project/go-jsonrpc/auth"
 
 	sealer "github.com/filecoin-project/venus-sealer"
 	"github.com/filecoin-project/venus-sealer/api"
-	"github.com/filecoin-project/venus-sealer/api/impl"
+	"github.com/filecoin-project/venus-sealer/config"
+	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus-sealer/lib/ulimit"
+	"github.com/filecoin-project/venus-sealer/types"
 )
 
 var runCmd = &cli.Command{
@@ -124,6 +114,7 @@ var runCmd = &cli.Command{
 		var minerapi api.StorageMiner
 		stop, err := sealer.New(ctx,
 			sealer.ConfigStorageAPIImpl(&minerapi),
+			sealer.Override(new(types.ShutdownChan), shutdownChan),
 			sealer.Repo(cfg),
 			sealer.Online(cfg),
 			sealer.ApplyIf(func(s *sealer.Settings) bool { return cctx.IsSet("miner-api") },
@@ -134,7 +125,6 @@ var runCmd = &cli.Command{
 					return multiaddr.NewMultiaddr(cfg.API.ListenAddress)
 				})),
 			sealer.Override(new(api.FullNode), nodeApi),
-			sealer.Override(new(types.ShutdownChan), shutdownChan),
 		)
 		if err != nil {
 			return xerrors.Errorf("creating node: %w", err)
@@ -145,55 +135,26 @@ var runCmd = &cli.Command{
 			return xerrors.Errorf("getting API endpoint: %w", err)
 		}
 
-		lst, err := manet.Listen(endpoint)
+		// Instantiate the miner node handler.
+		handler, err := sealer.MinerHandler(minerapi, true)
 		if err != nil {
-			return xerrors.Errorf("could not listen: %w", err)
+			return xerrors.Errorf("failed to instantiate rpc handler: %w", err)
 		}
 
-		mux := mux.NewRouter()
-
-		rpcServer := jsonrpc.NewServer()
-		rpcServer.Register("Filecoin", minerapi)
-
-		mux.Handle("/rpc/v0", rpcServer)
-		mux.PathPrefix("/remote").HandlerFunc(minerapi.(*impl.StorageMinerAPI).ServeRemote)
-		mux.PathPrefix("/").Handler(http.DefaultServeMux) // pprof
-
-		ah := &auth.Handler{
-			Verify: minerapi.AuthVerify,
-			Next:   mux.ServeHTTP,
+		// Serve the RPC.
+		rpcStopper, err := sealer.ServeRPC(handler, "venus-miner", endpoint)
+		if err != nil {
+			return fmt.Errorf("failed to start json-rpc endpoint: %s", err)
 		}
 
-		srv := &http.Server{
-			Handler: ah,
-			BaseContext: func(listener net.Listener) context.Context {
-				key, _ := tag.NewKey("api")
-				ctx, _ := tag.New(context.Background(), tag.Upsert(key, "venus-sealer"))
-				return ctx
-			},
-		}
+		// Monitor for shutdown.
+		finishCh := MonitorShutdown(shutdownChan,
+			ShutdownHandler{Component: "rpc server", StopFunc: rpcStopper},
+			ShutdownHandler{Component: "miner", StopFunc: stop},
+		)
 
-		sigChan := make(chan os.Signal, 2)
-		go func() {
-			select {
-			case sig := <-sigChan:
-				log.Warnw("received shutdown", "signal", sig)
-			case <-shutdownChan:
-				log.Warn("received shutdown")
-			}
-
-			log.Warn("Shutting down...")
-			if err := stop(context.TODO()); err != nil {
-				log.Errorf("graceful shutting down failed: %s", err)
-			}
-			if err := srv.Shutdown(context.TODO()); err != nil {
-				log.Errorf("shutting down RPC server failed: %s", err)
-			}
-			log.Warn("Graceful shutdown successful")
-		}()
-		signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT)
-
-		return srv.Serve(manet.NetListener(lst))
+		<-finishCh
+		return nil
 	},
 }
 

@@ -37,11 +37,11 @@ import (
 var _ sealing.SealingAPI = new(SealingAPIAdapter)
 
 type SealingAPIAdapter struct {
-	delegate storageMinerApi
+	delegate fullNodeFilteredAPI
 	messager api.IMessager
 }
 
-func NewSealingAPIAdapter(api storageMinerApi, messager api.IMessager) SealingAPIAdapter {
+func NewSealingAPIAdapter(api fullNodeFilteredAPI, messager api.IMessager) SealingAPIAdapter {
 	return SealingAPIAdapter{delegate: api, messager: messager}
 }
 

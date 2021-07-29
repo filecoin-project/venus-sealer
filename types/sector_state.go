@@ -118,3 +118,4 @@ func toStatState(st SectorState) StatSectorState {
 
 	return SstFailed
 }
+

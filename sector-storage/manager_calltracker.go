@@ -39,7 +39,7 @@ type WorkState struct {
 
 	Status WorkStatus
 
-	WorkerCall storiface.CallID // Set when entering wsRunning
+	WorkerCall types.CallID // Set when entering wsRunning
 	WorkError  string           // Status = wsDone, set when failed to start work
 
 	WorkerHostname string // hostname of last worker handling this job

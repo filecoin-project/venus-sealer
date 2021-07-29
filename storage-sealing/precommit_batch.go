@@ -24,6 +24,8 @@ import (
 	"github.com/filecoin-project/venus-sealer/types"
 )
 
+//go:generate go run github.com/golang/mock/mockgen -destination=mocks/mock_precommit_batcher.go -package=mocks . PreCommitBatcherApi
+
 type PreCommitBatcherApi interface {
 	//for messager
 	MessagerSendMsg(ctx context.Context, from, to address.Address, method abi.MethodNum, value, maxFee abi.TokenAmount, params []byte) (string, error)
@@ -254,7 +256,7 @@ func (b *PreCommitBatcher) processBatch(cfg sealiface.Config) ([]sealiface.PreCo
 
 	res.Msg = uid
 
-	log.Infow("Sent ProveCommitAggregate message", "uid", uid, "from", from, "sectors", len(b.todo))
+	log.Infow("Sent PreCommitSectorBatch message", "uid", uid, "from", from, "sectors", len(b.todo))
 
 	return []sealiface.PreCommitBatchRes{res}, nil
 }

@@ -129,6 +129,8 @@ func Online(cfg *config.StorageMiner) Option {
 		Override(new(abi.RegisteredSealProof), SealProofType),
 		Override(new(stores.LocalStorage), cfg.LocalStorage()), //todo
 		Override(new(types.SectorIDCounter), SectorIDCounter),
+		Override(new(*stores.Local), LocalStorage),
+		Override(new(*stores.Remote), RemoteStorage),
 		Override(new(*sectorstorage.Manager), SectorStorage),
 		Override(new(ffiwrapper.Verifier), ffiwrapper.ProofVerifier),
 		Override(new(ffiwrapper.Prover), ffiwrapper.ProofProver),

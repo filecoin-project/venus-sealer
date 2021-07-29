@@ -15,10 +15,10 @@ require (
 	github.com/filecoin-project/go-address v0.0.5
 	github.com/filecoin-project/go-bitfield v0.2.4
 	github.com/filecoin-project/go-cbor-util v0.0.0-20201016124514-d0bbec7bfcc4
-	github.com/filecoin-project/go-commp-utils v0.1.0
-	github.com/filecoin-project/go-data-transfer v1.5.0
+	github.com/filecoin-project/go-commp-utils v0.1.1-0.20210427191551-70bf140d31c7
+	github.com/filecoin-project/go-data-transfer v1.6.0
 	github.com/filecoin-project/go-fil-commcid v0.0.0-20201016201715-d41df56b4f6a
-	github.com/filecoin-project/go-fil-markets v1.2.5
+	github.com/filecoin-project/go-fil-markets v1.5.0
 	github.com/filecoin-project/go-jsonrpc v0.1.4-0.20210217175800-45ea43ac2bec
 	github.com/filecoin-project/go-padreader v0.0.0-20200903213702-ed5fae088b20
 	github.com/filecoin-project/go-paramfetch v0.0.2-0.20210614165157-25a6c7769498
@@ -31,14 +31,15 @@ require (
 	github.com/filecoin-project/specs-actors/v3 v3.1.1
 	github.com/filecoin-project/specs-actors/v5 v5.0.1
 	github.com/filecoin-project/specs-storage v0.1.1-0.20201105051918-5188d9774506
-	github.com/filecoin-project/venus v1.0.2
-	github.com/filecoin-project/venus-messager v1.1.0
+	github.com/filecoin-project/venus v1.0.4-0.20210729132421-f042d91e180e
+	github.com/filecoin-project/venus-messager v1.1.1
 	github.com/gbrlsnchs/jwt/v3 v3.0.0
+	github.com/golang/mock v1.4.4
 	github.com/google/uuid v1.2.0
 	github.com/gorilla/mux v1.8.0
 	github.com/hako/durafmt v0.0.0-20200710122514-c0fb7b4da026
 	github.com/hashicorp/go-multierror v1.1.0
-	github.com/ipfs-force-community/venus-common-utils v0.0.0-20210714031758-ea0e25ff0ec4
+	github.com/ipfs-force-community/venus-common-utils v0.0.0-20210714054928-2042a9040759
 	github.com/ipfs-force-community/venus-gateway v1.1.0
 	github.com/ipfs/go-block-format v0.0.3
 	github.com/ipfs/go-cid v0.0.7
@@ -47,12 +48,11 @@ require (
 	github.com/ipfs/go-ipfs-ds-help v1.0.0
 	github.com/ipfs/go-ipfs-util v0.0.2
 	github.com/ipfs/go-ipld-cbor v0.0.5
-	github.com/ipfs/go-log v1.0.5
 	github.com/ipfs/go-log/v2 v2.3.0
 	github.com/ipfs/go-metrics-interface v0.0.1
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/libp2p/go-buffer-pool v0.0.2
-	github.com/libp2p/go-libp2p-core v0.7.0
+	github.com/libp2p/go-libp2p-core v0.8.5
 	github.com/libp2p/go-libp2p-pubsub v0.4.2-0.20210212194758-6c1addf493eb
 	github.com/minio/sha256-simd v1.0.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
@@ -68,12 +68,12 @@ require (
 	go.uber.org/fx v1.13.1
 	go.uber.org/multierr v1.6.0
 	go.uber.org/zap v1.16.0
-	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4
+	golang.org/x/net v0.0.0-20210423184538-5f58ad60dda6
 	golang.org/x/sys v0.0.0-20210603081109-ebe580a85c40
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 	gorm.io/driver/mysql v1.1.1
 	gorm.io/driver/sqlite v1.1.4
-	gorm.io/gorm v1.21.11
+	gorm.io/gorm v1.21.12
 	gotest.tools v2.2.0+incompatible
 )
 

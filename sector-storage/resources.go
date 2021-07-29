@@ -312,7 +312,6 @@ var ResourceTable = map[types.TaskType]map[abi.RegisteredSealProof]Resources{
 
 func init() {
 	ResourceTable[types.TTUnseal] = ResourceTable[types.TTPreCommit1] // TODO: measure accurately
-	ResourceTable[types.TTReadUnsealed] = ResourceTable[types.TTFetch]
 
 	// V1_1 is the same as V1
 	for _, m := range ResourceTable {
