@@ -17,6 +17,7 @@ type MinerID abi.ActorID
 type NetworkName string
 type APIAlg jwt.HMACSHA
 type APIEndpoint multiaddr.Multiaddr
+type APIToken []byte
 
 // SetSealingDelay sets how long a sector waits for more deals before sealing begins.
 type SetSealingConfigFunc func(sealiface.Config) error

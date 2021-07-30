@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-bitfield"
 	"github.com/filecoin-project/go-jsonrpc/auth"
@@ -493,6 +494,7 @@ type CommonStruct struct {
 	Internal struct {
 		AuthVerify func(ctx context.Context, token string) ([]auth.Permission, error) `perm:"read"`
 		AuthNew    func(ctx context.Context, perms []auth.Permission) ([]byte, error) `perm:"admin"`
+		Token      func(ctx context.Context) ([]byte, error)                          `perm:"admin"`
 
 		NetConnectedness            func(context.Context, peer.ID) (network.Connectedness, error)    `perm:"read"`
 		NetPeers                    func(context.Context) ([]peer.AddrInfo, error)                   `perm:"read"`
@@ -705,6 +707,10 @@ func (c *CommonStruct) AuthVerify(ctx context.Context, token string) ([]auth.Per
 
 func (c *CommonStruct) AuthNew(ctx context.Context, perms []auth.Permission) ([]byte, error) {
 	return c.Internal.AuthNew(ctx, perms)
+}
+
+func (c *CommonStruct) Token(ctx context.Context) ([]byte, error) {
+	return c.Internal.Token(ctx)
 }
 
 func (c *CommonStruct) NetPubsubScores(ctx context.Context) ([]PubsubScore, error) {
