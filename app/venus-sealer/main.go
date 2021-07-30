@@ -14,8 +14,6 @@ import (
 
 var log = logging.Logger("main")
 
-const FlagMinerRepo = "miner-repo"
-
 func main() {
 	sealer.SetupLogLevels()
 
@@ -70,12 +68,6 @@ func main() {
 				EnvVars: []string{"VENUS_SEALER_CONFIG"},
 				Hidden:  true,
 				Value:   "~/.venussealer/config.toml", // TODO: Consider XDG_DATA_HOME
-			},
-			&cli.StringFlag{
-				Name:    "repo",
-				EnvVars: []string{"VENUS_PATH"},
-				Hidden:  true,
-				Value:   "~/.venus", // TODO: Consider XDG_DATA_HOME
 			},
 		},
 		Commands: local,

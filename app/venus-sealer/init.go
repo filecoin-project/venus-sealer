@@ -203,7 +203,7 @@ var initCmd = &cli.Command{
 
 		log.Info("Checking if repo exists")
 
-		cfgPath := cctx.String(FlagMinerRepo)
+		cfgPath := cctx.String("data")
 		defaultCfg.ConfigPath = cfgPath
 
 		exit, err := config.ConfigExist(defaultCfg.DataDir)
