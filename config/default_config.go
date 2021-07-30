@@ -39,7 +39,7 @@ func GetDefaultStorageConfig(network string) (*StorageMiner, error) {
 	case "2k":
 		return Default2kStorageMiner(), nil
 	case "nerpa":
-		return DefaultNerpdaStorageMiner(), nil
+		return DefaultNerpaStorageMiner(), nil
 	default:
 		return nil, errors.New("unsupport network type")
 	}
@@ -147,7 +147,7 @@ func DefaultMainnetStorageMiner() *StorageMiner {
 	return cfg
 }
 
-func DefaultNerpdaStorageMiner() *StorageMiner {
+func DefaultNerpaStorageMiner() *StorageMiner {
 	cfg := &StorageMiner{
 		DataDir: "~/.venussealer",
 		API: API{

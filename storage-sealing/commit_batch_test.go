@@ -3,11 +3,12 @@ package sealing_test
 import (
 	"bytes"
 	"context"
-	"github.com/filecoin-project/venus/pkg/specactors/policy"
 	"sort"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/filecoin-project/venus/pkg/specactors/policy"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -196,7 +197,7 @@ func TestCommitBatcher(t *testing.T) {
 				s.EXPECT().ChainBaseFee(gomock.Any(), gomock.Any()).Return(basefee, nil)
 			}
 
-			s.EXPECT().SendMsg(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), funMatcher(func(i interface{}) bool {
+			s.EXPECT().MessagerSendMsg(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), funMatcher(func(i interface{}) bool {
 				b := i.([]byte)
 				if batch {
 					var params miner5.ProveCommitAggregateParams

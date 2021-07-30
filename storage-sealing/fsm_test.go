@@ -1,8 +1,11 @@
 package sealing
 
 import (
-
 	"testing"
+
+	"github.com/filecoin-project/venus-sealer/config"
+	"github.com/filecoin-project/venus-sealer/models/sqlite"
+	"github.com/filecoin-project/venus-sealer/service"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
@@ -29,6 +32,18 @@ type test struct {
 	state *types.SectorInfo
 }
 
+func newLogService(t *testing.T) *service.LogService {
+	r, err := sqlite.OpenSqlite(&config.SqliteConfig{Path: "./sealing.db"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = r.AutoMigrate(); err != nil {
+		t.Fatal(err)
+	}
+
+	return &service.LogService{LogRepo: r.LogRepo()}
+}
+
 func TestHappyPath(t *testing.T) {
 	var notif []struct{ before, after types.SectorInfo }
 	ma, _ := address.NewIDAddress(55151)
@@ -41,6 +56,7 @@ func TestHappyPath(t *testing.T) {
 			notifee: func(before, after types.SectorInfo) {
 				notif = append(notif, struct{ before, after types.SectorInfo }{before, after})
 			},
+			logService: newLogService(t),
 		},
 		t:     t,
 		state: &types.SectorInfo{State: types.Packing},
@@ -102,6 +118,7 @@ func TestHappyPathFinalizeEarly(t *testing.T) {
 			notifee: func(before, after types.SectorInfo) {
 				notif = append(notif, struct{ before, after types.SectorInfo }{before, after})
 			},
+			logService: newLogService(t),
 		},
 		t:     t,
 		state: &types.SectorInfo{State: types.Packing},
@@ -169,6 +186,7 @@ func TestCommitFinalizeFailed(t *testing.T) {
 			notifee: func(before, after types.SectorInfo) {
 				notif = append(notif, struct{ before, after types.SectorInfo }{before, after})
 			},
+			logService: newLogService(t),
 		},
 		t:     t,
 		state: &types.SectorInfo{State: types.Committing},
@@ -204,6 +222,7 @@ func TestSeedRevert(t *testing.T) {
 			stats: types.SectorStats{
 				BySector: map[abi.SectorID]types.StatSectorState{},
 			},
+			logService: newLogService(t),
 		},
 		t:     t,
 		state: &types.SectorInfo{State: types.Packing},
@@ -257,6 +276,7 @@ func TestPlanCommittingHandlesSectorCommitFailed(t *testing.T) {
 			stats: types.SectorStats{
 				BySector: map[abi.SectorID]types.StatSectorState{},
 			},
+			logService: newLogService(t),
 		},
 		t:     t,
 		state: &types.SectorInfo{State: types.Committing},
@@ -297,6 +317,7 @@ func TestBrokenState(t *testing.T) {
 			notifee: func(before, after types.SectorInfo) {
 				notif = append(notif, struct{ before, after types.SectorInfo }{before, after})
 			},
+			logService: newLogService(t),
 		},
 		t:     t,
 		state: &types.SectorInfo{State: "not a state"},
@@ -332,6 +353,7 @@ func TestTicketExpired(t *testing.T) {
 			notifee: func(before, after types.SectorInfo) {
 				notif = append(notif, struct{ before, after types.SectorInfo }{before, after})
 			},
+			logService: newLogService(t),
 		},
 		t:     t,
 		state: &types.SectorInfo{State: types.Packing},

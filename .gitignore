@@ -2,6 +2,8 @@
 ./venus-worker
 app/sealer
 app/sealer/sealer
+sealing.db*
+
 
 .task
 .idea

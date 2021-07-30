@@ -5,6 +5,9 @@ import (
 	"context"
 	"testing"
 
+	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus-sealer/config"
+
 	"github.com/stretchr/testify/require"
 	"golang.org/x/xerrors"
 
@@ -28,6 +31,7 @@ import (
 	tutils "github.com/filecoin-project/specs-actors/v2/support/testing"
 	proof5 "github.com/filecoin-project/specs-actors/v5/actors/runtime/proof"
 
+	type2 "github.com/filecoin-project/venus-messager/types"
 	"github.com/filecoin-project/venus/app/submodule/apitypes"
 	"github.com/filecoin-project/venus/pkg/chain"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
@@ -217,7 +221,14 @@ func TestWDPostDoPost(t *testing.T) {
 
 	// Run window PoST
 	scheduler := &WindowPoStScheduler{
-		api:          mockStgMinerAPI,
+		Messager: &mockMessagerAPI{pushedMessages: mockStgMinerAPI.pushedMessages},
+		api:      mockStgMinerAPI,
+		networkParams: &config.NetParamsConfig{
+			UpgradeIgnitionHeight:  94000,
+			ForkLengthThreshold:    policy.ChainFinality,
+			InsecurePoStValidation: false,
+			BlockDelaySecs:         30,
+		},
 		prover:       &mockProver{},
 		verifier:     &mockVerif{},
 		faultTracker: &mockFaultTracker{},
@@ -404,3 +415,36 @@ func (m *mockStorageMinerAPI) WalletHas(ctx context.Context, address address.Add
 }
 
 var _ fullNodeFilteredAPI = &mockStorageMinerAPI{}
+
+type mockMessagerAPI struct{
+	pushedMessages chan *types.Message
+}
+
+func (m *mockMessagerAPI) WalletHas(ctx context.Context, addr address.Address) (bool, error) {
+	return true, nil
+}
+
+func (m *mockMessagerAPI) WaitMessage(ctx context.Context, id string, confidence uint64) (*type2.Message, error) {
+	return &type2.Message{
+		ID: id,
+		Receipt: &types.MessageReceipt{
+			ExitCode: 0,
+		},
+	}, nil
+}
+
+func (m *mockMessagerAPI) PushMessage(ctx context.Context, msg *types.UnsignedMessage, meta *type2.MsgMeta) (string, error) {
+	m.pushedMessages <- msg
+	return type2.NewUUID().String(), nil
+}
+
+func (m *mockMessagerAPI) PushMessageWithId(ctx context.Context, id string, msg *types.UnsignedMessage, meta *type2.MsgMeta) (string, error) {
+	m.pushedMessages <- msg
+	return id, nil
+}
+
+func (m *mockMessagerAPI) GetMessageByUid(ctx context.Context, id string) (*type2.Message, error) {
+	panic("implement me")
+}
+
+var _ api.IMessager = &mockMessagerAPI{}

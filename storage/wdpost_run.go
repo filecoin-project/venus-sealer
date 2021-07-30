@@ -812,6 +812,7 @@ func (s *WindowPoStScheduler) sectorsForProof(ctx context.Context, goodSectors, 
 }
 
 const RetrySubmitPoStCounts = 30
+
 // submitPoStMessage builds a SubmitWindowedPoSt message and submits it to
 // the mpool. It doesn't synchronously block on confirmations, but it does
 // monitor in the background simply for the purposes of logging.
