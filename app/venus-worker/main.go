@@ -55,9 +55,10 @@ func main() {
 	}
 
 	app := &cli.App{
-		Name:    "lotus-worker",
+		Name:    "venus-worker",
 		Usage:   "Remote miner worker",
 		Version: constants.UserVersion(),
+		EnableBashCompletion: true,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "data",
@@ -239,8 +240,8 @@ var runCmd = &cli.Command{
 		if err != nil {
 			return err
 		}
-		if v.APIVersion != constants.MinerAPIVersion {
-			return xerrors.Errorf("lotus-miner API version doesn't match: expected: %s", api.Version{APIVersion: constants.MinerAPIVersion})
+		if v.APIVersion != constants.MinerAPIVersion0 {
+			return xerrors.Errorf("lotus-miner API version doesn't match: expected: %s", api.Version{APIVersion: constants.MinerAPIVersion0})
 		}
 		log.Infof("Remote version %s", v)
 
@@ -362,9 +363,10 @@ var runCmd = &cli.Command{
 			return err
 		}
 
-		remote := stores.NewRemote(localStore, nodeApi, cfg.Sealer.AuthHeader(), cctx.Int("parallel-fetch-limit"))
+		remote := stores.NewRemote(localStore, nodeApi, cfg.Sealer.AuthHeader(), cctx.Int("parallel-fetch-limit"),
+			&stores.DefaultPartialFileHandler{})
 
-		fh := &stores.FetchHandler{Local: localStore}
+		fh := &stores.FetchHandler{Local: localStore, PfHandler: &stores.DefaultPartialFileHandler{}}
 		remoteHandler := func(w http.ResponseWriter, r *http.Request) {
 			if !auth.HasPerm(r.Context(), nil, api.PermAdmin) {
 				w.WriteHeader(401)

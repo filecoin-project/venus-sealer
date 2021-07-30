@@ -1,6 +1,9 @@
 package constants
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
 var CurrentCommit string
 
@@ -37,8 +40,12 @@ func (ve Version) EqMajorMinor(v2 Version) bool {
 }
 
 // BuildVersion is the local build version, set by build system
-const BuildVersion = "1.2.1"
+const BuildVersion = "1.2.5"
 
 func UserVersion() string {
+	if os.Getenv("VENUS_SEALER_VERSION_IGNORE_COMMIT") == "1" {
+		return BuildVersion
+	}
+
 	return BuildVersion + CurrentCommit
 }

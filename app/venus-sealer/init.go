@@ -6,20 +6,19 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	market2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
-	types3 "github.com/filecoin-project/venus-messager/types"
-	"github.com/filecoin-project/venus-sealer/api"
-	"github.com/filecoin-project/venus-sealer/config"
-	"github.com/filecoin-project/venus-sealer/constants"
-	"github.com/filecoin-project/venus-sealer/models"
-	"github.com/filecoin-project/venus-sealer/service"
-	types2 "github.com/filecoin-project/venus-sealer/types"
-	"github.com/filecoin-project/venus/fixtures/asset"
-	"github.com/filecoin-project/venus/pkg/gen/genesis"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
+
+	"github.com/filecoin-project/go-address"
+	paramfetch "github.com/filecoin-project/go-paramfetch"
+	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/go-state-types/big"
+	market2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
+	power2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/power"
+	"github.com/filecoin-project/venus/fixtures/asset"
+	"github.com/filecoin-project/venus/pkg/gen/genesis"
 
 	"github.com/docker/go-units"
 	"github.com/google/uuid"
@@ -29,17 +28,21 @@ import (
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
-	"github.com/filecoin-project/go-address"
-	paramfetch "github.com/filecoin-project/go-paramfetch"
-	"github.com/filecoin-project/go-state-types/abi"
-	"github.com/filecoin-project/go-state-types/big"
-	power2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/power"
-	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
 	actors "github.com/filecoin-project/venus/pkg/specactors"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/power"
 	"github.com/filecoin-project/venus/pkg/specactors/policy"
 	"github.com/filecoin-project/venus/pkg/types"
+
+	types3 "github.com/filecoin-project/venus-messager/types"
+
+	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus-sealer/config"
+	"github.com/filecoin-project/venus-sealer/constants"
+	"github.com/filecoin-project/venus-sealer/models"
+	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
+	"github.com/filecoin-project/venus-sealer/service"
+	types2 "github.com/filecoin-project/venus-sealer/types"
 )
 
 var initCmd = &cli.Command{
@@ -58,7 +61,7 @@ var initCmd = &cli.Command{
 		&cli.StringFlag{
 			Name:    "worker",
 			Aliases: []string{"w"},
-			Usage:   "worker key to use (overrides --create-worker-key)",
+			Usage:   "worker key to use",
 		},
 		&cli.StringFlag{
 			Name:    "owner",
@@ -101,7 +104,7 @@ var initCmd = &cli.Command{
 		},
 		&cli.StringFlag{
 			Name:        "network",
-			Usage:       "set network type mainnet calibration 2k",
+			Usage:       "network type: one of mainnet,calibration,2k&nerpa",
 			Value:       "mainnet",
 			DefaultText: "mainnet",
 		},
@@ -160,6 +163,7 @@ var initCmd = &cli.Command{
 		ctx := api.ReqContext(cctx)
 
 		log.Info("Checking proof parameters")
+
 		ps, err := asset.Asset("fixtures/_assets/proof-params/parameters.json")
 		if err != nil {
 			return err
@@ -170,10 +174,11 @@ var initCmd = &cli.Command{
 		}
 
 		if err := paramfetch.GetParams(ctx, ps, srs, uint64(ssize)); err != nil {
-			return xerrors.Errorf("get params: %w", err)
+			return xerrors.Errorf("fetching proof parameters: %w", err)
 		}
 
 		log.Info("Trying to connect to full node RPC")
+
 		setAuthToken(cctx)
 		fullNode, closer, err := api.GetFullNodeAPIV2(cctx) // TODO: consider storing full node address in config
 		if err != nil {
@@ -187,6 +192,7 @@ var initCmd = &cli.Command{
 			return err
 		}
 		parserFlag(defaultCfg, cctx)
+
 		log.Info("Checking full node sync status")
 
 		if !cctx.Bool("genesis-miner") && !cctx.Bool("nosync") {
@@ -196,7 +202,8 @@ var initCmd = &cli.Command{
 		}
 
 		log.Info("Checking if repo exists")
-		cfgPath := cctx.String("config")
+
+		cfgPath := cctx.String(FlagMinerRepo)
 		defaultCfg.ConfigPath = cfgPath
 
 		exit, err := config.ConfigExist(defaultCfg.DataDir)
@@ -204,10 +211,11 @@ var initCmd = &cli.Command{
 			return err
 		}
 		if exit {
-			return xerrors.Errorf("data has exit in %s", defaultCfg.DataDir)
+			return xerrors.Errorf("repo is already initialized at %s", defaultCfg.DataDir)
 		}
 
 		log.Info("Checking full node version")
+
 		v, err := fullNode.Version(ctx)
 		if err != nil {
 			return err
@@ -224,6 +232,7 @@ var initCmd = &cli.Command{
 		defer closer()
 
 		log.Info("Initializing repo")
+
 		{
 			//write config
 			err = config.SaveConfig(cfgPath, defaultCfg)
@@ -301,9 +310,9 @@ var initCmd = &cli.Command{
 func setAuthToken(cctx *cli.Context) {
 	if cctx.IsSet("auth-token") {
 		authToken := cctx.String("auth-token")
-		cctx.Set("node-token", authToken)
-		cctx.Set("messager-token", authToken)
-		cctx.Set("gateway-token", authToken)
+		_ = cctx.Set("node-token", authToken)
+		_ = cctx.Set("messager-token", authToken)
+		_ = cctx.Set("gateway-token", authToken)
 	}
 }
 
@@ -331,12 +340,14 @@ func parserFlag(cfg *config.StorageMiner, cctx *cli.Context) {
 	if cctx.IsSet("messager-token") {
 		cfg.Messager.Token = cctx.String("messager-token")
 	}
+
 	if cctx.IsSet("gateway-token") {
 		cfg.RegisterProof.Token = cctx.String("gateway-token")
 	}
 }
 func storageMinerInit(ctx context.Context, cctx *cli.Context, api api.FullNode, messagerClient api.IMessager, cfg *config.StorageMiner, ssize abi.SectorSize, gasPrice types.BigInt) error {
 	log.Info("Initializing libp2p identity")
+
 	repo, err := models.SetDataBase(config.HomeDir(cfg.DataDir), &cfg.DB)
 	if err != nil {
 		return err
@@ -369,6 +380,7 @@ func storageMinerInit(ctx context.Context, cctx *cli.Context, api api.FullNode, 
 			if err := metaDataService.SaveMinerAddress(a); err != nil {
 				return err
 			}
+
 			if pssb := cctx.String("pre-sealed-metadata"); pssb != "" {
 				pssb, err := homedir.Expand(pssb)
 				if err != nil {

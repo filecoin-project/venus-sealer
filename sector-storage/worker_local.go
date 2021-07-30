@@ -20,7 +20,7 @@ import (
 	ffi "github.com/filecoin-project/filecoin-ffi"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-statestore"
-	storage "github.com/filecoin-project/specs-storage/storage"
+	"github.com/filecoin-project/specs-storage/storage"
 
 	"github.com/filecoin-project/venus-sealer/sector-storage/ffiwrapper"
 	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
@@ -33,6 +33,11 @@ var pathTypes = []storiface.SectorFileType{storiface.FTUnsealed, storiface.FTSea
 type WorkerConfig struct {
 	TaskTypes []types.TaskType
 	NoSwap    bool
+
+	// IgnoreResourceFiltering enables task distribution to happen on this
+	// worker regardless of its currently available resources. Used in testing
+	// with the local worker.
+	IgnoreResourceFiltering bool
 }
 
 // used do provide custom proofs impl (mostly used in testing)
@@ -45,6 +50,9 @@ type LocalWorker struct {
 	ret        storiface.WorkerReturn
 	executor   ExecutorFunc
 	noSwap     bool
+
+	// see equivalent field on WorkerConfig.
+	ignoreResources bool
 
 	ct          *workerCallTracker
 	acceptTasks map[types.TaskType]struct{}
@@ -71,12 +79,12 @@ func newLocalWorker(executor ExecutorFunc, wcfg WorkerConfig, store stores.Store
 		ct: &workerCallTracker{
 			st: cst,
 		},
-		acceptTasks: acceptTasks,
-		executor:    executor,
-		noSwap:      wcfg.NoSwap,
-
-		session: uuid.New(),
-		closing: make(chan struct{}),
+		acceptTasks:     acceptTasks,
+		executor:        executor,
+		noSwap:          wcfg.NoSwap,
+		ignoreResources: wcfg.IgnoreResourceFiltering,
+		session:         uuid.New(),
+		closing:         make(chan struct{}),
 	}
 
 	if w.executor == nil {
@@ -193,7 +201,6 @@ var returnFunc = map[types.ReturnType]func(context.Context, types.CallID, storif
 	types.ReturnReleaseUnsealed: rfunc(storiface.WorkerReturn.ReturnReleaseUnsealed),
 	types.ReturnMoveStorage:     rfunc(storiface.WorkerReturn.ReturnMoveStorage),
 	types.ReturnUnsealPiece:     rfunc(storiface.WorkerReturn.ReturnUnsealPiece),
-	types.ReturnReadPiece:       rfunc(storiface.WorkerReturn.ReturnReadPiece),
 	types.ReturnFetch:           rfunc(storiface.WorkerReturn.ReturnFetch),
 }
 
@@ -414,6 +421,7 @@ func (l *LocalWorker) UnsealPiece(ctx context.Context, sector storage.SectorRef,
 	}
 
 	return l.asyncCall(ctx, sector, types.ReturnUnsealPiece, func(ctx context.Context, ci types.CallID) (interface{}, error) {
+		log.Debugf("worker will unseal piece now, sector=%+v", sector.ID)
 		if err = sb.UnsealPiece(ctx, sector, index, size, randomness, cid); err != nil {
 			return nil, xerrors.Errorf("unsealing sector: %w", err)
 		}
@@ -426,18 +434,9 @@ func (l *LocalWorker) UnsealPiece(ctx context.Context, sector storage.SectorRef,
 			return nil, xerrors.Errorf("removing source data: %w", err)
 		}
 
+		log.Debugf("worker has unsealed piece, sector=%+v", sector.ID)
+
 		return nil, nil
-	})
-}
-
-func (l *LocalWorker) ReadPiece(ctx context.Context, writer io.Writer, sector storage.SectorRef, index storiface.UnpaddedByteIndex, size abi.UnpaddedPieceSize) (types.CallID, error) {
-	sb, err := l.executor()
-	if err != nil {
-		return types.UndefCall, err
-	}
-
-	return l.asyncCall(ctx, sector, types.ReturnReadPiece, func(ctx context.Context, ci types.CallID) (interface{}, error) {
-		return sb.ReadPiece(ctx, writer, sector, index, size)
 	})
 }
 
@@ -495,7 +494,8 @@ func (l *LocalWorker) Info(context.Context) (storiface.WorkerInfo, error) {
 	}
 
 	return storiface.WorkerInfo{
-		Hostname: hostname,
+		Hostname:        hostname,
+		IgnoreResources: l.ignoreResources,
 		Resources: storiface.WorkerResources{
 			MemPhysical: mem.Total,
 			MemSwap:     memSwap,

@@ -14,6 +14,8 @@ import (
 
 var log = logging.Logger("main")
 
+const FlagMinerRepo = "miner-repo"
+
 func main() {
 	sealer.SetupLogLevels()
 

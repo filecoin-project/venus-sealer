@@ -51,7 +51,7 @@ func (a *CommonAPI) AuthNew(ctx context.Context, perms []auth.Permission) ([]byt
 func (a *CommonAPI) Version(context.Context) (api.Version, error) {
 	return api.Version{
 		Version:    constants.MinerVersion.String(),
-		APIVersion: constants.MinerAPIVersion,
+		APIVersion: constants.MinerAPIVersion0,
 		BlockDelay: a.NetworkParams.BlockDelaySecs,
 	}, nil
 }

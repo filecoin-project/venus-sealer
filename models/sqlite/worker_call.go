@@ -10,7 +10,7 @@ import (
 
 type workerCall struct {
 	Id string `gorm:"column:id;type:varchar(36);primary_key;" json:"id"` // 主键
-	//storiface.CallID
+	//types.CallID
 	WorkId   string `gorm:"uniqueIndex:call_id;column:work_id;type:varchar(36);" json:"work_id"`
 	MinerID  uint64 `gorm:"uniqueIndex:call_id;column:miner_id;type:unsigned bigint;" json:"miner_id"`
 	SectorId uint64 `gorm:"uniqueIndex:call_id;column:sector_id;type:unsigned bigint;" json:"sector_id"`
