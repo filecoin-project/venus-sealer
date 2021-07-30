@@ -21,12 +21,13 @@ func WorkerFromFile(path string) (*StorageWorker, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 
-	defer file.Close() //nolint:errcheck // The file is RO
+	defer file.Close() // nolint:errcheck
 	return WorkerFromReader(file)
 }
 
@@ -37,17 +38,17 @@ func MinerFromFile(path string) (*StorageMiner, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
+	defer file.Close() // nolint:errcheck
 
-	defer file.Close() //nolint:errcheck // The file is RO
 	return MinerFromReader(file)
 }
 
-// MinerFromFile loads config from a specified file overriding defaults specified in
-// the def parameter. If file does not exist or is empty defaults are assumed.
+// ConfigExist check if the configuration file exists
 func ConfigExist(path string) (bool, error) {
 	path, err := homedir.Expand(path)
 	if err != nil {
@@ -61,7 +62,8 @@ func ConfigExist(path string) (bool, error) {
 	case err != nil:
 		return false, err
 	}
-	file.Close()
+	_ = file.Close()
+
 	return true, nil
 }
 
