@@ -22,6 +22,7 @@ import (
 
 	"github.com/filecoin-project/venus-sealer/sector-storage/ffiwrapper"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
+	"github.com/filecoin-project/venus-sealer/types"
 )
 
 var log = logging.Logger("sbmock")
@@ -275,8 +276,6 @@ func (mgr *SectorMgr) Fail() {
 	mgr.lk.Lock()
 	defer mgr.lk.Unlock()
 	mgr.failPoSt = true
-
-	return
 }
 
 func (mgr *SectorMgr) MarkCorrupted(sid storage.SectorRef, corrupted bool) error {

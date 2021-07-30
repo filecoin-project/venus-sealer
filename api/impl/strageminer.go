@@ -233,7 +233,7 @@ func (sm *StorageMinerAPI) SectorsInfoListInStates(ctx context.Context, states [
 	}
 
 	var sis []types2.SectorInfo
-	if states != nil && len(states) > 0 {
+	if len(states) > 0 {
 		filterStates := make(map[types2.SectorState]struct{})
 		for _, state := range states {
 			st := types2.SectorState(state)
