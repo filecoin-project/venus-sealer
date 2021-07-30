@@ -12,13 +12,13 @@ var stopCmd = &cli.Command{
 	Usage: "Stop a running venus sealer",
 	Flags: []cli.Flag{},
 	Action: func(cctx *cli.Context) error {
-		nodeAPI, closer, err := api.GetAPI(cctx)
+		storageAPI, closer, err := api.GetStorageMinerAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
 
-		err = nodeAPI.Shutdown(api.ReqContext(cctx))
+		err = storageAPI.Shutdown(api.ReqContext(cctx))
 		if err != nil {
 			return err
 		}

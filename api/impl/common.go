@@ -2,19 +2,18 @@ package impl
 
 import (
 	"context"
-	"github.com/filecoin-project/venus-sealer/config"
-	"github.com/filecoin-project/venus-sealer/constants"
-	"github.com/filecoin-project/venus-sealer/types"
 
+	"github.com/filecoin-project/go-jsonrpc/auth"
 	"github.com/gbrlsnchs/jwt/v3"
 	"github.com/google/uuid"
 	logging "github.com/ipfs/go-log/v2"
 	"go.uber.org/fx"
 	"golang.org/x/xerrors"
 
-	"github.com/filecoin-project/go-jsonrpc/auth"
-
 	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus-sealer/config"
+	"github.com/filecoin-project/venus-sealer/constants"
+	"github.com/filecoin-project/venus-sealer/types"
 )
 
 var session = uuid.New()
@@ -25,6 +24,7 @@ type CommonAPI struct {
 	APISecret     *types.APIAlg
 	ShutdownChan  types.ShutdownChan
 	NetworkParams *config.NetParamsConfig
+	APIToken      types.APIToken
 }
 
 type jwtPayload struct {
@@ -75,6 +75,10 @@ func (a *CommonAPI) Session(ctx context.Context) (uuid.UUID, error) {
 
 func (a *CommonAPI) Closing(ctx context.Context) (<-chan struct{}, error) {
 	return make(chan struct{}), nil // relies on jsonrpc closing
+}
+
+func (a *CommonAPI) Token(ctx context.Context) ([]byte, error) {
+	return a.APIToken, nil
 }
 
 var _ api.Common = &CommonAPI{}

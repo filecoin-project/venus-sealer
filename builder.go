@@ -189,6 +189,9 @@ func ConfigAPI(cfg *config.StorageMiner) Option {
 		Override(SetApiEndpointKey, func(e types.APIEndpoint) error {
 			return cfg.LocalStorage().SetAPIEndpoint(e)
 		}),
+		Override(new(types.APIToken), func() ([]byte, error) {
+			return cfg.LocalStorage().APIToken()
+		}),
 		Override(new(sectorstorage.URLs), func(e types.APIEndpoint) (sectorstorage.URLs, error) {
 			ip := cfg.API.RemoteListenAddress
 

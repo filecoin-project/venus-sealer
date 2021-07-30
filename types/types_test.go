@@ -54,10 +54,10 @@ func TestSectorInfoSerialization(t *testing.T) {
 		Proof:            nil,
 		TicketValue:      []byte{87, 78, 7, 87},
 		TicketEpoch:      345,
-		PreCommitMessage: nil,
+		PreCommitMessage: "",
 		SeedValue:        []byte{},
 		SeedEpoch:        0,
-		CommitMessage:    nil,
+		CommitMessage:    "",
 		FaultReportMsg:   "",
 		LastErr:          "hi",
 	}

@@ -65,7 +65,7 @@ func (e *ProofEvent) listenProofRequestOnce(ctx context.Context) error {
 			req := types.ComputeProofRequest{}
 			err := json.Unmarshal(proofEvent.Payload, &req)
 			if err != nil {
-				e.client.ResponseProofEvent(ctx, &types.ResponseEvent{
+				_ = e.client.ResponseProofEvent(ctx, &types.ResponseEvent{
 					Id:      proofEvent.Id,
 					Payload: nil,
 					Error:   err.Error(),
@@ -85,7 +85,7 @@ func (e *ProofEvent) processComputeProof(ctx context.Context, reqId uuid.UUID, r
 
 	proof, err := e.prover.ComputeProof(ctx, req.SectorInfos, req.Rand)
 	if err != nil {
-		e.client.ResponseProofEvent(ctx, &types.ResponseEvent{
+		_ = e.client.ResponseProofEvent(ctx, &types.ResponseEvent{
 			Id:      reqId,
 			Payload: nil,
 			Error:   err.Error(),
@@ -95,7 +95,7 @@ func (e *ProofEvent) processComputeProof(ctx context.Context, reqId uuid.UUID, r
 
 	proofBytes, err := json.Marshal(proof)
 	if err != nil {
-		e.client.ResponseProofEvent(ctx, &types.ResponseEvent{
+		_ = e.client.ResponseProofEvent(ctx, &types.ResponseEvent{
 			Id:      reqId,
 			Payload: nil,
 			Error:   err.Error(),

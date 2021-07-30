@@ -230,6 +230,7 @@ func (m *Sealing) handleAddPiece(ctx statemachine.Context, sector types.SectorIn
 	return ctx.Send(res)
 }
 
+// nolint
 func (m *Sealing) handleAddPieceFailed(ctx statemachine.Context, sector types.SectorInfo) error {
 	log.Errorf("No recovery plan for AddPiece failing")
 	// todo: cleanup sector / just go retry (requires adding offset param to AddPiece in sector-storage for this to be safe)

@@ -127,10 +127,12 @@ func SealProofType(maddr types2.MinerAddress, fnapi api.FullNode) (abi.Registere
 
 var StorageCounterDSPrefix = "/storage/nextid"
 
+// nolint
 type sidsc struct {
 	sc *storedcounter.StoredCounter
 }
 
+// nolint
 func (s *sidsc) Next() (abi.SectorNumber, error) {
 	i, err := s.sc.Next()
 	return abi.SectorNumber(i), err

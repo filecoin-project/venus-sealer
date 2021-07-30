@@ -28,6 +28,7 @@ var (
 	SchedWindows = 2
 )
 
+// nolint
 func getPriority(ctx context.Context) int {
 	sp := ctx.Value(SchedPriorityKey)
 	if p, ok := sp.(int); ok {

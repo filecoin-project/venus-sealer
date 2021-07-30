@@ -27,4 +27,7 @@ type Common interface {
 	Session(context.Context) (uuid.UUID, error)
 
 	Closing(context.Context) (<-chan struct{}, error)
+
+	// Token returns api token
+	Token(ctx context.Context) ([]byte, error)
 }
