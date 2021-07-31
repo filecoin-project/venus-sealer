@@ -19,6 +19,7 @@ const (
 	fsAPI           = "api"
 	fsAPIToken      = "token"
 	fsStorageConfig = "storage.json"
+	// nolint
 	fsLock          = "repo.lock"
 )
 

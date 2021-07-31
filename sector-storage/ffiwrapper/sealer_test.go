@@ -231,12 +231,12 @@ func corrupt(t *testing.T, sealer *Sealer, id storage.SectorRef) {
 }
 
 func getGrothParamFileAndVerifyingKeys(s abi.SectorSize) {
-	dat, err := ioutil.ReadFile("../../../build/proof-params/parameters.json")
+	dat, err := ioutil.ReadFile("./../../constants/proof-params/parameters.json")
 	if err != nil {
 		panic(err)
 	}
 
-	datSrs, err := ioutil.ReadFile("../../../build/proof-params/srs-inner-product.json")
+	datSrs, err := ioutil.ReadFile("./../../constants/proof-params/srs-inner-product.json")
 	if err != nil {
 		panic(err)
 	}

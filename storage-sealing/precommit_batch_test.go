@@ -3,11 +3,12 @@ package sealing_test
 import (
 	"bytes"
 	"context"
-	"github.com/filecoin-project/venus/pkg/specactors/policy"
 	"sort"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/filecoin-project/venus/pkg/specactors/policy"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -153,7 +154,7 @@ func TestPrecommitBatcher(t *testing.T) {
 	expectSend := func(expect []abi.SectorNumber) action {
 		return func(t *testing.T, s *mocks.MockPreCommitBatcherApi, pcb *sealing.PreCommitBatcher) promise {
 			s.EXPECT().StateMinerInfo(gomock.Any(), gomock.Any(), gomock.Any()).Return(miner.MinerInfo{Owner: t0123, Worker: t0123}, nil)
-			s.EXPECT().SendMsg(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), funMatcher(func(i interface{}) bool {
+			s.EXPECT().MessagerSendMsg(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), funMatcher(func(i interface{}) bool {
 				b := i.([]byte)
 				var params miner5.PreCommitSectorBatchParams
 				require.NoError(t, params.UnmarshalCBOR(bytes.NewReader(b)))

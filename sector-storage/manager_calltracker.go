@@ -46,6 +46,7 @@ type WorkState struct {
 	StartTime      int64  // unix seconds
 }
 
+// nolint
 func newWorkID(method types.TaskType, params ...interface{}) (WorkID, error) {
 	pb, err := json.Marshal(params)
 	if err != nil {
