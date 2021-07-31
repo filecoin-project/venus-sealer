@@ -193,6 +193,12 @@ var runCmd = &cli.Command{
 			if err != nil {
 				return err
 			}
+		} else {
+		    // Update config.toml
+			err = config.UpdateConfig(cfg.ConfigPath, cfg)
+			if err != nil {
+				return err
+			}
 		}
 
 		dataDir, err := homedir.Expand(cfg.DataDir)

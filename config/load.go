@@ -79,8 +79,24 @@ func SaveConfig(path string, cfg interface{}) error {
 	}
 	buf := new(bytes.Buffer)
 	_, _ = buf.WriteString("# Default config:\n")
-	e := toml.NewEncoder(buf)
-	if err := e.Encode(cfg); err != nil {
+	encoder := toml.NewEncoder(buf)
+	if err := encoder.Encode(cfg); err != nil {
+		return xerrors.Errorf("encoding config: %w", err)
+	}
+
+	return ioutil.WriteFile(path, buf.Bytes(), 0666)
+}
+
+func UpdateConfig(path string, cfg interface{}) error {
+	path, err := homedir.Expand(path)
+	if err != nil {
+		return xerrors.Errorf("homedir expand error %s", path)
+	}
+
+	buf := new(bytes.Buffer)
+	_, _ = buf.WriteString("# Default config:\n")
+	encoder := toml.NewEncoder(buf)
+	if err := encoder.Encode(cfg); err != nil {
 		return xerrors.Errorf("encoding config: %w", err)
 	}
 
