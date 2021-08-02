@@ -398,7 +398,9 @@ func (sw *schedWorker) startProcessingTask(taskDone chan struct{}, req *workerRe
 
 	go func() {
 		// first run the prepare step (e.g. fetching sector data from other worker)
+		log.Infof("Sector %d prepare for %s ...", req.sector.ID.Number, req.taskType)
 		err := req.prepare(req.ctx, sh.workTracker.worker(sw.wid, w.info, w.workerRpc))
+		log.Infof("Sector %d prepare for %s end ...", req.sector.ID.Number, req.taskType)
 		sh.workersLk.Lock()
 
 		if err != nil {
@@ -437,7 +439,9 @@ func (sw *schedWorker) startProcessingTask(taskDone chan struct{}, req *workerRe
 			}
 
 			// Do the work!
+			log.Infof("Sector %d work for %s ...", req.sector.ID.Number, req.taskType)
 			err = req.work(req.ctx, sh.workTracker.worker(sw.wid, w.info, w.workerRpc))
+			log.Infof("Sector %d work for %s end ...", req.sector.ID.Number, req.taskType)
 
 			select {
 			case req.ret <- workerResponse{err: err}:
