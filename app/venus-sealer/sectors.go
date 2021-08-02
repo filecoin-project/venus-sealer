@@ -27,7 +27,6 @@ import (
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/lib/tablewriter"
 	types2 "github.com/filecoin-project/venus-sealer/types"
-
 )
 
 var sectorsCmd = &cli.Command{
@@ -220,8 +219,13 @@ var sectorsListCmd = &cli.Command{
 			}
 		}
 
+		// reduce query time
+		skipLog := true
+		if cctx.Bool("events") || cctx.Bool("seal-time") {
+			skipLog = false
+		}
 		fast := cctx.Bool("fast")
-		list, err = storageAPI.SectorsInfoListInStates(ctx, ss, !fast)
+		list, err = storageAPI.SectorsInfoListInStates(ctx, ss, !fast, skipLog)
 		if err != nil {
 			return err
 		}
@@ -458,7 +462,7 @@ var sectorsExtendCmd = &cli.Command{
 		}
 		defer closer()
 
-		maddr, err :=  getActorAddress(ctx, nodeApi, cctx.String("actor"))
+		maddr, err := getActorAddress(ctx, nodeApi, cctx.String("actor"))
 		if err != nil {
 			return err
 		}

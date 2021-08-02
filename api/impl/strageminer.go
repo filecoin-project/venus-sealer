@@ -20,6 +20,7 @@ import (
 	"github.com/filecoin-project/go-state-types/big"
 	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 	sto "github.com/filecoin-project/specs-storage/storage"
+	multi "github.com/hashicorp/go-multierror"
 
 	"github.com/filecoin-project/venus/app/submodule/apitypes"
 	"github.com/filecoin-project/venus/pkg/chain"
@@ -226,7 +227,7 @@ func (sm *StorageMinerAPI) SectorsList(context.Context) ([]abi.SectorNumber, err
 }
 
 // List all staged sector's info in particular states
-func (sm *StorageMinerAPI) SectorsInfoListInStates(ctx context.Context, states []api.SectorState, showOnChainInfo bool) ([]api.SectorInfo, error) {
+func (sm *StorageMinerAPI) SectorsInfoListInStates(ctx context.Context, states []api.SectorState, showOnChainInfo, skipLog bool) ([]api.SectorInfo, error) {
 	sectors, err := sm.Miner.ListSectors()
 	if err != nil {
 		return nil, err
@@ -257,89 +258,110 @@ func (sm *StorageMinerAPI) SectorsInfoListInStates(ctx context.Context, states [
 	}
 
 	out := make([]api.SectorInfo, len(sis))
-	for i, sector := range sis {
-		deals := make([]abi.DealID, len(sector.Pieces))
-		for i, piece := range sector.Pieces {
-			if piece.DealInfo == nil {
-				continue
-			}
-			deals[i] = piece.DealInfo.DealID
-		}
-
-		logs, err := sm.LogService.List(sector.SectorNumber)
-		if err != nil {
-			return nil, err
-		}
-		log := make([]api.SectorLog, len(logs))
-		for i, l := range logs {
-			log[i] = api.SectorLog{
-				Kind:      l.Kind,
-				Timestamp: l.Timestamp,
-				Trace:     l.Trace,
-				Message:   l.Message,
-			}
-		}
-
-		sInfo := api.SectorInfo{
-			SectorID: sector.SectorNumber,
-			State:    api.SectorState(sector.State),
-			CommD:    sector.CommD,
-			CommR:    sector.CommR,
-			Proof:    sector.Proof,
-			Deals:    deals,
-			Ticket: api.SealTicket{
-				Value: sector.TicketValue,
-				Epoch: sector.TicketEpoch,
-			},
-			Seed: api.SealSeed{
-				Value: sector.SeedValue,
-				Epoch: sector.SeedEpoch,
-			},
-			PreCommitMsg: sector.PreCommitMessage,
-			CommitMsg:    sector.CommitMessage,
-			Retries:      sector.InvalidProofs,
-			ToUpgrade:    sm.Miner.IsMarkedForUpgrade(sector.SectorNumber),
-
-			LastErr: sector.LastErr,
-			Log:     log,
-			// on chain info
-			SealProof:          0,
-			Activation:         0,
-			Expiration:         0,
-			DealWeight:         big.Zero(),
-			VerifiedDealWeight: big.Zero(),
-			InitialPledge:      big.Zero(),
-			OnTime:             0,
-			Early:              0,
-		}
-
-		if showOnChainInfo {
-			onChainInfo, err := sm.Full.StateSectorGetInfo(ctx, sm.Miner.Address(), sector.SectorNumber, types.EmptyTSK)
-			if err != nil {
-				return nil, err
-			}
-			if onChainInfo != nil {
-				sInfo.SealProof = onChainInfo.SealProof
-				sInfo.Activation = onChainInfo.Activation
-				sInfo.Expiration = onChainInfo.Expiration
-				sInfo.DealWeight = onChainInfo.DealWeight
-				sInfo.VerifiedDealWeight = onChainInfo.VerifiedDealWeight
-				sInfo.InitialPledge = onChainInfo.InitialPledge
-
-				ex, err := sm.Full.StateSectorExpiration(ctx, sm.Miner.Address(), sector.SectorNumber, types.EmptyTSK)
-				if err == nil {
-					sInfo.OnTime = ex.OnTime
-					sInfo.Early = ex.Early
-				} else {
-					// TODO The official didn't deal with this
-				}
-			}
-		}
-
-		out[i] = sInfo
+	group := multi.Group{}
+	limit := make(chan struct{}, 1)
+	if !skipLog {
+		// increase concurrency and reduce query time
+		limit = make(chan struct{}, 5)
 	}
 
-	return out, nil
+	for i, sector := range sis {
+		sector := sector
+		i := i
+		oneSector := func() error {
+			deals := make([]abi.DealID, len(sector.Pieces))
+			for i, piece := range sector.Pieces {
+				if piece.DealInfo == nil {
+					continue
+				}
+				deals[i] = piece.DealInfo.DealID
+			}
+
+			var log []api.SectorLog
+			if !skipLog {
+				logs, err := sm.LogService.List(sector.SectorNumber)
+				if err != nil {
+					return err
+				}
+				log = make([]api.SectorLog, len(logs))
+				for i, l := range logs {
+					log[i] = api.SectorLog{
+						Kind:      l.Kind,
+						Timestamp: l.Timestamp,
+						Trace:     l.Trace,
+						Message:   l.Message,
+					}
+				}
+			}
+
+			sInfo := api.SectorInfo{
+				SectorID: sector.SectorNumber,
+				State:    api.SectorState(sector.State),
+				CommD:    sector.CommD,
+				CommR:    sector.CommR,
+				Proof:    sector.Proof,
+				Deals:    deals,
+				Ticket: api.SealTicket{
+					Value: sector.TicketValue,
+					Epoch: sector.TicketEpoch,
+				},
+				Seed: api.SealSeed{
+					Value: sector.SeedValue,
+					Epoch: sector.SeedEpoch,
+				},
+				PreCommitMsg: sector.PreCommitMessage,
+				CommitMsg:    sector.CommitMessage,
+				Retries:      sector.InvalidProofs,
+				ToUpgrade:    sm.Miner.IsMarkedForUpgrade(sector.SectorNumber),
+
+				LastErr: sector.LastErr,
+				Log:     log,
+				// on chain info
+				SealProof:          0,
+				Activation:         0,
+				Expiration:         0,
+				DealWeight:         big.Zero(),
+				VerifiedDealWeight: big.Zero(),
+				InitialPledge:      big.Zero(),
+				OnTime:             0,
+				Early:              0,
+			}
+
+			if showOnChainInfo {
+				onChainInfo, err := sm.Full.StateSectorGetInfo(ctx, sm.Miner.Address(), sector.SectorNumber, types.EmptyTSK)
+				if err != nil {
+					return err
+				}
+				if onChainInfo != nil {
+					sInfo.SealProof = onChainInfo.SealProof
+					sInfo.Activation = onChainInfo.Activation
+					sInfo.Expiration = onChainInfo.Expiration
+					sInfo.DealWeight = onChainInfo.DealWeight
+					sInfo.VerifiedDealWeight = onChainInfo.VerifiedDealWeight
+					sInfo.InitialPledge = onChainInfo.InitialPledge
+
+					ex, err := sm.Full.StateSectorExpiration(ctx, sm.Miner.Address(), sector.SectorNumber, types.EmptyTSK)
+					if err == nil {
+						sInfo.OnTime = ex.OnTime
+						sInfo.Early = ex.Early
+					} else {
+						// TODO The official didn't deal with this
+					}
+				}
+			}
+
+			out[i] = sInfo
+
+			return nil
+		}
+		limit <- struct{}{}
+		group.Go(oneSector)
+		<-limit
+	}
+	errs := group.Wait()
+	close(limit)
+
+	return out, errs.ErrorOrNil()
 }
 
 func (sm *StorageMinerAPI) SectorsListInStates(ctx context.Context, states []api.SectorState) ([]abi.SectorNumber, error) {

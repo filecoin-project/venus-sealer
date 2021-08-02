@@ -51,7 +51,7 @@ type StorageMiner interface {
 	SectorsList(context.Context) ([]abi.SectorNumber, error)
 
 	// List all staged sector's info in particular states
-	SectorsInfoListInStates(ctx context.Context, ss []SectorState, showOnChainInfo bool) ([]SectorInfo, error)
+	SectorsInfoListInStates(ctx context.Context, ss []SectorState, showOnChainInfo, skipLog bool) ([]SectorInfo, error)
 
 	// Get summary info of sectors
 	SectorsSummary(ctx context.Context) (map[SectorState]int, error)
@@ -165,27 +165,27 @@ type StorageMinerStruct struct {
 
 		PledgeSector func(context.Context) (abi.SectorID, error) `perm:"write"`
 
-		SectorsStatus                 func(ctx context.Context, sid abi.SectorNumber, showOnChainInfo bool) (SectorInfo, error) `perm:"read"`
-		SectorsList                   func(context.Context) ([]abi.SectorNumber, error)                                         `perm:"read"`
-		SectorsListInStates           func(context.Context, []SectorState) ([]abi.SectorNumber, error)                          `perm:"read"`
-		SectorsInfoListInStates       func(ctx context.Context, ss []SectorState, showOnChainInfo bool) ([]SectorInfo, error)   `perm:"read"`
-		SectorsSummary                func(ctx context.Context) (map[SectorState]int, error)                                    `perm:"read"`
-		SectorsRefs                   func(context.Context) (map[string][]types.SealedRef, error)                               `perm:"read"`
-		SectorStartSealing            func(context.Context, abi.SectorNumber) error                                             `perm:"write"`
-		SectorSetSealDelay            func(context.Context, time.Duration) error                                                `perm:"write"`
-		SectorGetSealDelay            func(context.Context) (time.Duration, error)                                              `perm:"read"`
-		SectorSetExpectedSealDuration func(context.Context, time.Duration) error                                                `perm:"write"`
-		SectorGetExpectedSealDuration func(context.Context) (time.Duration, error)                                              `perm:"read"`
-		SectorsUpdate                 func(context.Context, abi.SectorNumber, SectorState) error                                `perm:"admin"`
-		SectorRemove                  func(context.Context, abi.SectorNumber) error                                             `perm:"admin"`
-		SectorTerminate               func(context.Context, abi.SectorNumber) error                                             `perm:"admin"`
-		SectorTerminateFlush          func(ctx context.Context) (string, error)                                                 `perm:"admin"`
-		SectorTerminatePending        func(ctx context.Context) ([]abi.SectorID, error)                                         `perm:"admin"`
-		SectorMarkForUpgrade          func(ctx context.Context, id abi.SectorNumber) error                                      `perm:"admin"`
-		SectorPreCommitFlush          func(ctx context.Context) ([]sealiface.PreCommitBatchRes, error)                          `perm:"admin"`
-		SectorPreCommitPending        func(ctx context.Context) ([]abi.SectorID, error)                                         `perm:"admin"`
-		SectorCommitFlush             func(ctx context.Context) ([]sealiface.CommitBatchRes, error)                             `perm:"admin"`
-		SectorCommitPending           func(ctx context.Context) ([]abi.SectorID, error)                                         `perm:"admin"`
+		SectorsStatus                 func(ctx context.Context, sid abi.SectorNumber, showOnChainInfo bool) (SectorInfo, error)        `perm:"read"`
+		SectorsList                   func(context.Context) ([]abi.SectorNumber, error)                                                `perm:"read"`
+		SectorsListInStates           func(context.Context, []SectorState) ([]abi.SectorNumber, error)                                 `perm:"read"`
+		SectorsInfoListInStates       func(ctx context.Context, ss []SectorState, showOnChainInfo, skipLog bool) ([]SectorInfo, error) `perm:"read"`
+		SectorsSummary                func(ctx context.Context) (map[SectorState]int, error)                                           `perm:"read"`
+		SectorsRefs                   func(context.Context) (map[string][]types.SealedRef, error)                                      `perm:"read"`
+		SectorStartSealing            func(context.Context, abi.SectorNumber) error                                                    `perm:"write"`
+		SectorSetSealDelay            func(context.Context, time.Duration) error                                                       `perm:"write"`
+		SectorGetSealDelay            func(context.Context) (time.Duration, error)                                                     `perm:"read"`
+		SectorSetExpectedSealDuration func(context.Context, time.Duration) error                                                       `perm:"write"`
+		SectorGetExpectedSealDuration func(context.Context) (time.Duration, error)                                                     `perm:"read"`
+		SectorsUpdate                 func(context.Context, abi.SectorNumber, SectorState) error                                       `perm:"admin"`
+		SectorRemove                  func(context.Context, abi.SectorNumber) error                                                    `perm:"admin"`
+		SectorTerminate               func(context.Context, abi.SectorNumber) error                                                    `perm:"admin"`
+		SectorTerminateFlush          func(ctx context.Context) (string, error)                                                        `perm:"admin"`
+		SectorTerminatePending        func(ctx context.Context) ([]abi.SectorID, error)                                                `perm:"admin"`
+		SectorMarkForUpgrade          func(ctx context.Context, id abi.SectorNumber) error                                             `perm:"admin"`
+		SectorPreCommitFlush          func(ctx context.Context) ([]sealiface.PreCommitBatchRes, error)                                 `perm:"admin"`
+		SectorPreCommitPending        func(ctx context.Context) ([]abi.SectorID, error)                                                `perm:"admin"`
+		SectorCommitFlush             func(ctx context.Context) ([]sealiface.CommitBatchRes, error)                                    `perm:"admin"`
+		SectorCommitPending           func(ctx context.Context) ([]abi.SectorID, error)                                                `perm:"admin"`
 
 		WorkerConnect func(context.Context, string) error                                `perm:"admin" retry:"true"` // TODO: worker perm
 		WorkerStats   func(context.Context) (map[uuid.UUID]storiface.WorkerStats, error) `perm:"admin"`
@@ -288,8 +288,8 @@ func (c *StorageMinerStruct) SectorsListInStates(ctx context.Context, states []S
 }
 
 // List all staged sector's info in particular states
-func (c *StorageMinerStruct) SectorsInfoListInStates(ctx context.Context, ss []SectorState, showOnChainInfo bool) ([]SectorInfo, error) {
-	return c.Internal.SectorsInfoListInStates(ctx, ss, showOnChainInfo)
+func (c *StorageMinerStruct) SectorsInfoListInStates(ctx context.Context, ss []SectorState, showOnChainInfo, skipLog bool) ([]SectorInfo, error) {
+	return c.Internal.SectorsInfoListInStates(ctx, ss, showOnChainInfo, skipLog)
 }
 
 func (c *StorageMinerStruct) SectorsSummary(ctx context.Context) (map[SectorState]int, error) {
