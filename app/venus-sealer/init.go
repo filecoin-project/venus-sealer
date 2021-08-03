@@ -28,6 +28,8 @@ import (
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
+	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
+
 	actors "github.com/filecoin-project/venus/pkg/specactors"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
 	"github.com/filecoin-project/venus/pkg/specactors/builtin/power"
@@ -160,10 +162,17 @@ var initCmd = &cli.Command{
 			log.Info("will attempt to symlink to imported sectors")
 		}
 
-		ctx := api.ReqContext(cctx)
+		network := cctx.String("network")
+		defaultCfg, err := config.GetDefaultStorageConfig(network)
+		if err != nil {
+			return err
+		}
+		parseFlag(defaultCfg, cctx)
+		if err := checkURL(defaultCfg); err != nil {
+			return err
+		}
 
 		log.Info("Checking proof parameters")
-
 		ps, err := asset.Asset("fixtures/_assets/proof-params/parameters.json")
 		if err != nil {
 			return err
@@ -173,6 +182,7 @@ var initCmd = &cli.Command{
 			return err
 		}
 
+		ctx := api.ReqContext(cctx)
 		if err := paramfetch.GetParams(ctx, ps, srs, uint64(ssize)); err != nil {
 			return xerrors.Errorf("fetching proof parameters: %w", err)
 		}
@@ -185,13 +195,6 @@ var initCmd = &cli.Command{
 			return err
 		}
 		defer closer()
-
-		network := cctx.String("network")
-		defaultCfg, err := config.GetDefaultStorageConfig(network)
-		if err != nil {
-			return err
-		}
-		parserFlag(defaultCfg, cctx)
 
 		log.Info("Checking full node sync status")
 
@@ -316,9 +319,9 @@ func setAuthToken(cctx *cli.Context) {
 	}
 }
 
-func parserFlag(cfg *config.StorageMiner, cctx *cli.Context) {
-	if cctx.IsSet("data") {
-		cfg.DataDir = cctx.String("data")
+func parseFlag(cfg *config.StorageMiner, cctx *cli.Context) {
+	if cctx.IsSet("repo") {
+		cfg.DataDir = cctx.String("repo")
 	}
 
 	if cctx.IsSet("messager-url") {
@@ -345,6 +348,35 @@ func parserFlag(cfg *config.StorageMiner, cctx *cli.Context) {
 		cfg.RegisterProof.Token = cctx.String("gateway-token")
 	}
 }
+
+func parseMultiAddr(url string) error {
+	ai := apiinfo.APIInfo{Addr: url}
+
+	str, err := ai.DialArgs("v0")
+
+	log.Infof("parse url: %s, multi_url: %s", url, str)
+
+	return err
+}
+
+func checkURL(cfg *config.StorageMiner) error {
+	if err := parseMultiAddr(cfg.Messager.Url); err != nil {
+		return xerrors.Errorf("message url: %w", err)
+	}
+
+	if err := parseMultiAddr(cfg.Node.Url); err != nil {
+		return xerrors.Errorf("node url: %w", err)
+	}
+
+	for _, url := range cfg.RegisterProof.Urls {
+		if err := parseMultiAddr(url); err != nil {
+			return xerrors.Errorf("gateway url:[%s]: %w", url, err)
+		}
+	}
+
+	return nil
+}
+
 func storageMinerInit(ctx context.Context, cctx *cli.Context, api api.FullNode, messagerClient api.IMessager, cfg *config.StorageMiner, ssize abi.SectorSize, gasPrice types.BigInt) error {
 	log.Info("Initializing libp2p identity")
 

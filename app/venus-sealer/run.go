@@ -66,9 +66,10 @@ var runCmd = &cli.Command{
 		if err != nil {
 			return err
 		}
+		
 		cfg.ConfigPath = cfgPath
-		if cctx.IsSet("data") {
-			cfg.DataDir = cctx.String("data")
+		if cctx.IsSet("repo") {
+			cfg.DataDir = cctx.String("repo")
 		}
 
 		//lock repo

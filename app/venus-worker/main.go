@@ -55,13 +55,13 @@ func main() {
 	}
 
 	app := &cli.App{
-		Name:    "venus-worker",
-		Usage:   "Remote miner worker",
-		Version: constants.UserVersion(),
+		Name:                 "venus-worker",
+		Usage:                "Remote miner worker",
+		Version:              constants.UserVersion(),
 		EnableBashCompletion: true,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:    "data",
+				Name:    "repo",
 				EnvVars: []string{"VENUS_WORKER_PATH"},
 				Hidden:  true,
 				Value:   "~/.venusworker", // TODO: Consider XDG_DATA_HOME
@@ -92,7 +92,7 @@ func main() {
 
 var runCmd = &cli.Command{
 	Name:  "run",
-	Usage: "Start lotus worker",
+	Usage: "Start venus worker",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:  "listen",
@@ -141,7 +141,7 @@ var runCmd = &cli.Command{
 		&cli.StringFlag{
 			Name:  "miner-addr",
 			Usage: "miner address to connect",
-			Value: "0.0.0.0:3456",
+			Value: "127.0.0.1:2345",
 		},
 		&cli.StringFlag{
 			Name:  "miner-token",
@@ -155,7 +155,7 @@ var runCmd = &cli.Command{
 		},
 	},
 	Action: func(cctx *cli.Context) error {
-		log.Info("Starting lotus worker")
+		log.Info("Starting venus worker")
 
 		if !cctx.Bool("enable-gpu-proving") {
 			if err := os.Setenv("BELLMAN_NO_GPU", "true"); err != nil {
@@ -171,10 +171,8 @@ var runCmd = &cli.Command{
 		}
 		var cfg *config.StorageWorker
 		if !ok {
-			//init config
 			cfg = config.GetDefaultWorkerConfig()
 		} else {
-			//load config
 			cfg, err = config.WorkerFromFile(cfgPath)
 			if err != nil {
 				return err
@@ -187,9 +185,17 @@ var runCmd = &cli.Command{
 			return err
 		}
 
+		log.Infof("config: %v", *cfg)
+
 		if !ok {
-			//dump config
+			// Create repo, generate config.toml file
 			err = config.SaveConfig(cfg.ConfigPath, cfg)
+			if err != nil {
+				return err
+			}
+		} else {
+		    // Update config.toml
+			err = config.UpdateConfig(cfg.ConfigPath, cfg)
 			if err != nil {
 				return err
 			}
@@ -200,15 +206,18 @@ var runCmd = &cli.Command{
 			return err
 		}
 
+		// Check the legitimacy of the repo
 		err = vfile.EnsureDir(dataDir)
 		if err != nil {
 			return err
 		}
-		// Connect to storage-miner
-		ctx := api.ReqContext(cctx)
 
-		var nodeApi api.StorageMiner
-		var closer func()
+		// Connect to venus-sealer
+		ctx := api.ReqContext(cctx)
+		var (
+			nodeApi api.StorageMiner
+			closer  func()
+		)
 		for {
 			select {
 			case <-ctx.Done():
@@ -222,12 +231,12 @@ var runCmd = &cli.Command{
 					break
 				}
 			}
-			fmt.Printf("\r\x1b[0KConnecting to miner API... (%s)", err)
-			time.Sleep(time.Second)
-			continue
-		}
 
+			fmt.Printf("\r\x1b[0KConnecting to miner API ... (%s)", err)
+			time.Sleep(time.Second * 2)
+		}
 		defer closer()
+
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
@@ -245,12 +254,12 @@ var runCmd = &cli.Command{
 		}
 		log.Infof("Remote version %s", v)
 
-		// Check params
-
+		// Check proof-params
 		act, err := nodeApi.ActorAddress(ctx)
 		if err != nil {
 			return err
 		}
+
 		ssize, err := nodeApi.ActorSectorSize(ctx, act)
 		if err != nil {
 			return err
@@ -273,9 +282,7 @@ var runCmd = &cli.Command{
 		}
 
 		var taskTypes []types.TaskType
-
 		taskTypes = append(taskTypes, types.TTFetch, types.TTCommit1, types.TTFinalize)
-
 		if cctx.Bool("addpiece") {
 			taskTypes = append(taskTypes, types.TTAddPiece)
 		}
@@ -296,8 +303,13 @@ var runCmd = &cli.Command{
 			return xerrors.Errorf("no task types specified")
 		}
 
+		log.Infof("Acceptable task types: %v", taskTypes)
+
 		localStorage := cfg.LocalStorage()
-		if !ok {
+		_, err = localStorage.GetStorage()
+		if !ok || err != nil {
+			log.Infof("get storage err: %v", err)
+
 			err = config.SaveConfig(cfgPath, cfg)
 			if err != nil {
 				return err
@@ -312,6 +324,7 @@ var runCmd = &cli.Command{
 					CanSeal:  true,
 					CanStore: false,
 				}, "", "  ")
+
 				if err != nil {
 					return xerrors.Errorf("marshaling storage config: %w", err)
 				}
@@ -533,6 +546,13 @@ var runCmd = &cli.Command{
 	},
 }
 
+func cleaningUpRepo(path string) {
+	log.Infof("Cleaning up %s after attempt...", path)
+	if err := os.RemoveAll(path); err != nil {
+		log.Errorf("Failed to clean up failed storage repo: %s", err)
+	}
+}
+
 func extractRoutableIP(url string, timeout time.Duration) (string, error) {
 	minerAddr := strings.Split(url, "/")
 	conn, err := net.DialTimeout("tcp", minerAddr[2]+":"+minerAddr[4], timeout)
@@ -555,9 +575,9 @@ func flagData(cfg *config.StorageWorker, cctx *cli.Context) error {
 	if cctx.IsSet("miner-token") {
 		cfg.Sealer.Token = cctx.String("miner-token")
 	}
-	//check data dir
-	if cctx.IsSet("data") {
-		cfg.DataDir = cctx.String("data")
+
+	if cctx.IsSet("repo") {
+		cfg.DataDir = cctx.String("repo")
 	}
 	return nil
 }

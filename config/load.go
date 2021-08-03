@@ -21,12 +21,13 @@ func WorkerFromFile(path string) (*StorageWorker, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 
-	defer file.Close() //nolint:errcheck // The file is RO
+	defer file.Close() // nolint:errcheck
 	return WorkerFromReader(file)
 }
 
@@ -37,17 +38,17 @@ func MinerFromFile(path string) (*StorageMiner, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
+	defer file.Close() // nolint:errcheck
 
-	defer file.Close() //nolint:errcheck // The file is RO
 	return MinerFromReader(file)
 }
 
-// MinerFromFile loads config from a specified file overriding defaults specified in
-// the def parameter. If file does not exist or is empty defaults are assumed.
+// ConfigExist check if the configuration file exists
 func ConfigExist(path string) (bool, error) {
 	path, err := homedir.Expand(path)
 	if err != nil {
@@ -61,7 +62,8 @@ func ConfigExist(path string) (bool, error) {
 	case err != nil:
 		return false, err
 	}
-	file.Close()
+	_ = file.Close()
+
 	return true, nil
 }
 
@@ -77,8 +79,24 @@ func SaveConfig(path string, cfg interface{}) error {
 	}
 	buf := new(bytes.Buffer)
 	_, _ = buf.WriteString("# Default config:\n")
-	e := toml.NewEncoder(buf)
-	if err := e.Encode(cfg); err != nil {
+	encoder := toml.NewEncoder(buf)
+	if err := encoder.Encode(cfg); err != nil {
+		return xerrors.Errorf("encoding config: %w", err)
+	}
+
+	return ioutil.WriteFile(path, buf.Bytes(), 0666)
+}
+
+func UpdateConfig(path string, cfg interface{}) error {
+	path, err := homedir.Expand(path)
+	if err != nil {
+		return xerrors.Errorf("homedir expand error %s", path)
+	}
+
+	buf := new(bytes.Buffer)
+	_, _ = buf.WriteString("# Default config:\n")
+	encoder := toml.NewEncoder(buf)
+	if err := encoder.Encode(cfg); err != nil {
 		return xerrors.Errorf("encoding config: %w", err)
 	}
 
