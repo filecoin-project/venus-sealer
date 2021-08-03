@@ -3,7 +3,12 @@ SHELL=/usr/bin/env bash
 CLEAN:=
 BINS:=
 
-github.com/filecoin-project/venus-sealer/build.CurrentCommit=+git.$(subst -,.,$(shell git describe --always --match=NeVeRmAtCh --dirty 2>/dev/null || git rev-parse --short HEAD 2>/dev/null))
+ldflags=-X=github.com/filecoin-project/venus-sealer/constants.CurrentCommit=+git.$(subst -,.,$(shell git describe --always --match=NeVeRmAtCh --dirty 2>/dev/null || git rev-parse --short HEAD 2>/dev/null))
+ifneq ($(strip $(LDFLAGS)),)
+	ldflags+=-extldflags=$(LDFLAGS)
+endif
+
+GOFLAGS+=-ldflags="$(ldflags)"
 
 ## FFI
 
@@ -12,8 +17,8 @@ FFI_PATH:=extern/filecoin-ffi/
 CLEAN+=build/.filecoin-install
 
 build:
-	go build -o venus-sealer ./app/venus-sealer
-	go build -o venus-worker ./app/venus-worker
+	go build $(GOFLAGS) -o venus-sealer ./app/venus-sealer
+	go build $(GOFLAGS) -o venus-worker ./app/venus-worker
 	BINS+=venus-sealer
 	BINS+=venus-worker
 
