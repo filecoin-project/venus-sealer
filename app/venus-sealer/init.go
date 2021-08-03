@@ -203,7 +203,7 @@ var initCmd = &cli.Command{
 
 		log.Info("Checking if repo exists")
 
-		cfgPath := cctx.String("data")
+		cfgPath := cctx.String("config")
 		defaultCfg.ConfigPath = cfgPath
 
 		exit, err := config.ConfigExist(defaultCfg.DataDir)
