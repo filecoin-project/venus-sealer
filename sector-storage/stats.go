@@ -1,8 +1,10 @@
 package sectorstorage
 
 import (
+	"sort"
 	"time"
 
+	"context"
 	"github.com/google/uuid"
 
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
@@ -16,8 +18,22 @@ func (m *Manager) WorkerStats() map[uuid.UUID]storiface.WorkerStats {
 	out := map[uuid.UUID]storiface.WorkerStats{}
 
 	for id, handle := range m.sched.workers {
+		taskTypes, err := handle.workerRpc.TaskTypes(context.Background())
+		var tasks []types.TaskType
+		if err != nil {
+			log.Errorf("fail to get task type from worker")
+		} else {
+			for t, _ := range taskTypes {
+				tasks = append(tasks, t)
+			}
+			sort.Slice(tasks, func(i, j int) bool {
+				return tasks[i].Less(tasks[j])
+			})
+		}
+
 		out[uuid.UUID(id)] = storiface.WorkerStats{
 			Info:    handle.info,
+			Tasks:   tasks,
 			Enabled: handle.enabled,
 
 			MemUsedMin: handle.active.memUsedMin,
