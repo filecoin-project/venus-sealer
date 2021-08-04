@@ -114,6 +114,12 @@ var sealingWorkersCmd = &cli.Command{
 				types.SizeStr(types.NewInt(stat.Info.Resources.MemReserved+stat.MemUsedMax)),
 				types.SizeStr(types.NewInt(vmem)))
 
+			fmt.Print("\tTask:")
+			for _, task := range stat.Tasks {
+				fmt.Print(task.Short(), " ")
+			}
+			fmt.Println()
+
 			for _, gpu := range stat.Info.Resources.GPUs {
 				fmt.Printf("\tGPU: %s\n", color.New(gpuCol).Sprintf("%s, %sused", gpu, gpuUse))
 			}
