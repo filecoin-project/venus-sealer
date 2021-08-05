@@ -11,7 +11,6 @@ import (
 	"github.com/filecoin-project/venus/pkg/specactors/policy"
 	"github.com/filecoin-project/venus/pkg/types"
 
-	"github.com/filecoin-project/venus-sealer/constants"
 	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
 )
 
