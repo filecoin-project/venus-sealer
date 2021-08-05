@@ -237,7 +237,6 @@ type FeeConfig struct {
 type NetParamsConfig struct {
 	UpgradeIgnitionHeight   abi.ChainEpoch
 	ForkLengthThreshold     abi.ChainEpoch
-	InsecurePoStValidation  bool
 	BlockDelaySecs          uint64
 	PreCommitChallengeDelay abi.ChainEpoch
 }

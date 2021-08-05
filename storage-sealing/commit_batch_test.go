@@ -361,7 +361,6 @@ func TestCommitBatcher(t *testing.T) {
 			pcb := sealing.NewCommitBatcher(ctx, &config.NetParamsConfig{
 				UpgradeIgnitionHeight:  94000,
 				ForkLengthThreshold:    policy.ChainFinality,
-				InsecurePoStValidation: false,
 				BlockDelaySecs:         30,
 			}, t0123, pcapi, as, fc, cfg, &fakeProver{})
 

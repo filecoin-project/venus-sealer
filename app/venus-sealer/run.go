@@ -45,6 +45,12 @@ var runCmd = &cli.Command{
 			Usage: "manage open file limit",
 			Value: true,
 		},
+		&cli.StringFlag{
+			Name:        "network",
+			Usage:       "network type: one of mainnet,calibration,2k&nerpa",
+			Value:       "mainnet",
+			DefaultText: "mainnet",
+		},
 	},
 	Action: func(cctx *cli.Context) error {
 		if !cctx.Bool("enable-gpu-proving") {
@@ -60,13 +66,21 @@ var runCmd = &cli.Command{
 			}
 		}
 
+		network := cctx.String("network")
+		switch network {
+		case "2k":
+			constants.InsecurePoStValidation = true
+		default:
+
+		}
+
 		//read config
 		cfgPath := cctx.String("config")
 		cfg, err := config.MinerFromFile(cfgPath)
 		if err != nil {
 			return err
 		}
-		
+
 		cfg.ConfigPath = cfgPath
 		if cctx.IsSet("repo") {
 			cfg.DataDir = cctx.String("repo")

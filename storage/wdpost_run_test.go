@@ -226,7 +226,6 @@ func TestWDPostDoPost(t *testing.T) {
 		networkParams: &config.NetParamsConfig{
 			UpgradeIgnitionHeight:  94000,
 			ForkLengthThreshold:    policy.ChainFinality,
-			InsecurePoStValidation: false,
 			BlockDelaySecs:         30,
 		},
 		prover:       &mockProver{},

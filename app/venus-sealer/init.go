@@ -110,7 +110,6 @@ var initCmd = &cli.Command{
 			Value:       "mainnet",
 			DefaultText: "mainnet",
 		},
-
 		&cli.StringFlag{
 			Name:  "messager-url",
 			Usage: "messager url",

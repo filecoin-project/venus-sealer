@@ -11,6 +11,7 @@ import (
 	"github.com/filecoin-project/venus/pkg/specactors/policy"
 	"github.com/filecoin-project/venus/pkg/types"
 
+	"github.com/filecoin-project/venus-sealer/constants"
 	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
 )
 
@@ -113,7 +114,6 @@ func DefaultMainnetStorageMiner() *StorageMiner {
 		NetParams: NetParamsConfig{
 			UpgradeIgnitionHeight:  94000,
 			ForkLengthThreshold:    policy.ChainFinality,
-			InsecurePoStValidation: false,
 			BlockDelaySecs:         30,
 		},
 		DB: DbConfig{
@@ -215,7 +215,6 @@ func DefaultNerpaStorageMiner() *StorageMiner {
 		NetParams: NetParamsConfig{
 			UpgradeIgnitionHeight:   94000,
 			ForkLengthThreshold:     policy.ChainFinality,
-			InsecurePoStValidation:  false,
 			PreCommitChallengeDelay: 10,
 			BlockDelaySecs:          30,
 		},
@@ -318,7 +317,6 @@ func DefaultCalibrationStorageMiner() *StorageMiner {
 		NetParams: NetParamsConfig{
 			UpgradeIgnitionHeight:  94000,
 			ForkLengthThreshold:    policy.ChainFinality,
-			InsecurePoStValidation: false,
 			BlockDelaySecs:         30,
 		},
 		DB: DbConfig{
@@ -423,7 +421,6 @@ func Default2kStorageMiner() *StorageMiner {
 		NetParams: NetParamsConfig{
 			UpgradeIgnitionHeight:  -2,
 			ForkLengthThreshold:    policy.ChainFinality,
-			InsecurePoStValidation: false,
 			BlockDelaySecs:         3,
 		},
 		DB: DbConfig{
