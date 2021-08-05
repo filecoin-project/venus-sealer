@@ -8,6 +8,8 @@ import (
 	"github.com/filecoin-project/go-state-types/network"
 )
 
+var InsecurePoStValidation = false
+
 const (
 	NewestNetworkVersion = network.Version13
 	MessageConfidence    = uint64(5)
@@ -17,8 +19,8 @@ const (
 var BlocksPerEpoch = uint64(builtin2.ExpectedLeadersPerEpoch)
 
 var (
-	FullAPIVersion0  = newVer(1, 3, 0)
-	FullAPIVersion1  = newVer(2, 1, 0)
+	FullAPIVersion0   = newVer(1, 3, 0)
+	FullAPIVersion1   = newVer(2, 1, 0)
 	MinerAPIVersion0  = newVer(1, 2, 0)
 	WorkerAPIVersion0 = newVer(1, 1, 0)
 

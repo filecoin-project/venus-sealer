@@ -278,6 +278,12 @@ func NewWinningPoStProver(api api.FullNode, prover storage.Prover, verifier ffiw
 		return nil, xerrors.Errorf("getting sector size: %w", err)
 	}
 
+	if constants.InsecurePoStValidation {
+		log.Warn("*****************************************************************************")
+		log.Warn(" Generating fake PoSt proof! You should only see this while running tests! ")
+		log.Warn("*****************************************************************************")
+	}
+
 	return &StorageWpp{prover, verifier, abi.ActorID(miner), mi.WindowPoStProofType}, nil
 }
 
@@ -300,6 +306,10 @@ func (wpp *StorageWpp) GenerateCandidates(ctx context.Context, randomness abi.Po
 }
 
 func (wpp *StorageWpp) ComputeProof(ctx context.Context, ssi []builtin.SectorInfo, rand abi.PoStRandomness) ([]builtin.PoStProof, error) {
+	if constants.InsecurePoStValidation {
+		return []builtin.PoStProof{{ProofBytes: []byte("valid proof")}}, nil
+	}
+
 	log.Infof("Computing WinningPoSt ;%+v; %v", ssi, rand)
 
 	start := constants.Clock.Now()
