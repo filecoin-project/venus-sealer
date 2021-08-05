@@ -167,6 +167,8 @@ var initCmd = &cli.Command{
 		if err != nil {
 			return err
 		}
+
+		setAuthToken(cctx)
 		parseFlag(defaultCfg, cctx)
 		if err := checkURL(defaultCfg); err != nil {
 			return err
@@ -189,7 +191,6 @@ var initCmd = &cli.Command{
 
 		log.Info("Trying to connect to full node RPC")
 
-		setAuthToken(cctx)
 		fullNode, closer, err := api.GetFullNodeAPIV2(cctx) // TODO: consider storing full node address in config
 		if err != nil {
 			return err
@@ -228,6 +229,7 @@ var initCmd = &cli.Command{
 			return xerrors.Errorf("Remote API version didn't match (expected %s, remote %s)", constants.FullAPIVersion0, v.APIVersion)
 		}
 
+		log.Info("Initializing repo")
 		messagerClient, closer, err := api.NewMessageRPC(&defaultCfg.Messager)
 		if err != nil {
 			return err
