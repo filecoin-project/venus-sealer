@@ -73,9 +73,10 @@ func DefaultMainnetStorageMiner() *StorageMiner {
 
 			AggregateAboveBaseFee: types.FIL(types.BigMul(types.PicoFil, types.NewInt(150))), // 0.15 nFIL
 
-			TerminateBatchMin:  1,
-			TerminateBatchMax:  100,
-			TerminateBatchWait: Duration(5 * time.Minute),
+			TerminateBatchMin:                1,
+			TerminateBatchMax:                100,
+			TerminateBatchWait:               Duration(5 * time.Minute),
+			CommittedCapacityDefaultLifetime: Duration(time.Duration(policy.GetMaxSectorExpirationExtension()*30) * time.Second),
 		},
 		Storage: sectorstorage.SealerConfig{
 			AllowAddPiece:   true,
@@ -174,9 +175,10 @@ func DefaultNerpaStorageMiner() *StorageMiner {
 
 			AggregateAboveBaseFee: types.FIL(types.BigMul(types.PicoFil, types.NewInt(150))), // 0.15 nFIL
 
-			TerminateBatchMin:  1,
-			TerminateBatchMax:  100,
-			TerminateBatchWait: Duration(5 * time.Minute),
+			TerminateBatchMin:                1,
+			TerminateBatchMax:                100,
+			TerminateBatchWait:               Duration(5 * time.Minute),
+			CommittedCapacityDefaultLifetime: Duration(time.Duration(policy.GetMaxSectorExpirationExtension()*30) * time.Second),
 		},
 		Storage: sectorstorage.SealerConfig{
 			AllowAddPiece:   true,
@@ -276,9 +278,10 @@ func DefaultCalibrationStorageMiner() *StorageMiner {
 
 			AggregateAboveBaseFee: types.FIL(types.BigMul(types.PicoFil, types.NewInt(150))), // 0.15 nFIL
 
-			TerminateBatchMin:  1,
-			TerminateBatchMax:  100,
-			TerminateBatchWait: Duration(5 * time.Minute),
+			TerminateBatchMin:                1,
+			TerminateBatchMax:                100,
+			TerminateBatchWait:               Duration(5 * time.Minute),
+			CommittedCapacityDefaultLifetime: Duration(time.Duration(policy.GetMaxSectorExpirationExtension()*30) * time.Second),
 		},
 		Storage: sectorstorage.SealerConfig{
 			AllowAddPiece:   true,
@@ -377,9 +380,10 @@ func Default2kStorageMiner() *StorageMiner {
 
 			AggregateAboveBaseFee: types.FIL(types.BigMul(types.PicoFil, types.NewInt(150))), // 0.15 nFIL
 
-			TerminateBatchMin:  1,
-			TerminateBatchMax:  100,
-			TerminateBatchWait: Duration(5 * time.Minute),
+			TerminateBatchMin:                1,
+			TerminateBatchMax:                100,
+			TerminateBatchWait:               Duration(5 * time.Minute),
+			CommittedCapacityDefaultLifetime: Duration(time.Duration(policy.GetMaxSectorExpirationExtension()*4) * time.Second),
 		},
 
 		Storage: sectorstorage.SealerConfig{

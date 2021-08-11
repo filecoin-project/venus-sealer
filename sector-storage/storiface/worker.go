@@ -36,6 +36,7 @@ type WorkerResources struct {
 
 type WorkerStats struct {
 	Info    WorkerInfo
+	Tasks   []types.TaskType
 	Enabled bool
 
 	MemUsedMin uint64
