@@ -123,7 +123,9 @@ func (s *WindowPoStScheduler) Run(ctx context.Context) {
 			}
 
 			gotCur = false
+			log.Infof("connect to venus success")
 		}
+
 
 		select {
 		case changes, ok := <-notifs:
