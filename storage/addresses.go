@@ -30,11 +30,23 @@ func (as *AddressSelector) AddressFor(ctx context.Context, a addrSelectApi, am a
 	var addrs []address.Address
 	switch use {
 	case api.PreCommitAddr:
-		addrs = append(addrs, as.PreCommitControl...)
+		for _, addr := range as.PreCommitControl {
+			if addr.String() != mi.Worker.String() && addr.String() != mi.Owner.String() {
+				addrs = append(addrs, addr)
+			}
+		}
 	case api.CommitAddr:
-		addrs = append(addrs, as.CommitControl...)
+		for _, addr := range as.CommitControl {
+			if addr.String() != mi.Worker.String() && addr.String() != mi.Owner.String() {
+				addrs = append(addrs, addr)
+			}
+		}
 	case api.TerminateSectorsAddr:
-		addrs = append(addrs, as.TerminateControl...)
+		for _, addr := range as.TerminateControl {
+			if addr.String() != mi.Worker.String() && addr.String() != mi.Owner.String() {
+				addrs = append(addrs, addr)
+			}
+		}
 	default:
 		defaultCtl := map[address.Address]struct{}{}
 		for _, a := range mi.ControlAddresses {
@@ -64,7 +76,13 @@ func (as *AddressSelector) AddressFor(ctx context.Context, a addrSelectApi, am a
 			addrs = append(addrs, a)
 		}
 	}
-	addrs = append(addrs, mi.Owner, mi.Worker)
+	if !as.DisableOwnerFallback {
+		addrs = append(addrs, mi.Owner)
+	}
+	if !as.DisableOwnerFallback {
+		addrs = append(addrs,  mi.Worker)
+	}
+	log.Infof("pick address: %v", addrs)
 
 	return pickAddress(ctx, a, am, mi, goodFunds, minFunds, addrs)
 }
