@@ -416,6 +416,7 @@ var actorControlList = &cli.Command{
 		if err != nil {
 			return err
 		}
+		fmt.Printf("miner address config: %v\n", ac)
 
 		commit := map[address.Address]struct{}{}
 		precommit := map[address.Address]struct{}{}

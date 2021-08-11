@@ -308,4 +308,7 @@ type AddressConfig struct {
 	PreCommitControl []address.Address
 	CommitControl    []address.Address
 	TerminateControl []address.Address
+
+	DisableOwnerFallback  bool
+	DisableWorkerFallback bool
 }

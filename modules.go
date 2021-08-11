@@ -208,6 +208,7 @@ func AddressSelector(addrConf *config.MinerAddressConfig) func() (*storage.Addre
 			return as, nil
 		}
 
+		log.Infof("miner address config: %v", *addrConf)
 		for _, s := range addrConf.PreCommitControl {
 			addr, err := address.NewFromString(s)
 			if err != nil {
@@ -225,6 +226,9 @@ func AddressSelector(addrConf *config.MinerAddressConfig) func() (*storage.Addre
 
 			as.CommitControl = append(as.CommitControl, addr)
 		}
+
+		as.DisableOwnerFallback = addrConf.DisableOwnerFallback
+		as.DisableWorkerFallback = addrConf.DisableWorkerFallback
 
 		return as, nil
 	}
@@ -334,6 +338,7 @@ func NewSetSealConfigFunc(r *config.StorageMiner) (types2.SetSealingConfigFunc, 
 func NewGetSealConfigFunc(r *config.StorageMiner) (types2.GetSealingConfigFunc, error) {
 	return func() (out sealiface.Config, err error) {
 		err = readCfg(r, func(cfg *config.StorageMiner) {
+			// log.Infof("max sealing sectors: %v", cfg.Sealing.MaxSealingSectors)
 			out = sealiface.Config{
 				MaxWaitDealsSectors:       cfg.Sealing.MaxWaitDealsSectors,
 				MaxSealingSectors:         cfg.Sealing.MaxSealingSectors,
