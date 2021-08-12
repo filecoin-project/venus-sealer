@@ -80,6 +80,13 @@ type Manager struct {
 
 	results map[types.WorkID]result
 	waitRes map[types.WorkID]chan struct{}
+
+	fetchCfg FetchConfig
+}
+
+type FetchConfig struct {
+	EnablePC2Fetch bool
+	EnableC1Fetch  bool
 }
 
 type result struct {
@@ -103,7 +110,8 @@ const (
 
 type SealerConfig struct {
 	ParallelFetchLimit int
-
+	EnablePC2Fetch     bool
+	EnableC1Fetch      bool
 	// Local worker config
 	AllowAddPiece   bool
 	AllowPreCommit1 bool
@@ -144,6 +152,10 @@ func New(ctx context.Context, lstor *stores.Local, stor *stores.Remote, ls store
 		callRes:    map[types.CallID]chan result{},
 		results:    map[types.WorkID]result{},
 		waitRes:    map[types.WorkID]chan struct{}{},
+		fetchCfg: FetchConfig{
+			EnablePC2Fetch: sc.EnablePC2Fetch,
+			EnableC1Fetch:  sc.EnableC1Fetch,
+		},
 	}
 
 	m.setupWorkTracker()
@@ -395,7 +407,7 @@ func (m *Manager) SealPreCommit2(ctx context.Context, sector storage.SectorRef, 
 		return storage.SectorCids{}, xerrors.Errorf("acquiring sector lock: %w", err)
 	}
 
-	selector := newExistingSelector(m.index, sector.ID, storiface.FTCache|storiface.FTSealed, true)
+	selector := newExistingSelector(m.index, sector.ID, storiface.FTCache|storiface.FTSealed, m.fetchCfg.EnablePC2Fetch)
 
 	err = m.sched.Schedule(ctx, sector, types.TTPreCommit2, selector, m.schedFetch(sector, storiface.FTCache|storiface.FTSealed, storiface.PathSealing, storiface.AcquireMove), func(ctx context.Context, w Worker) error {
 		err := m.startWork(ctx, w, wk)(w.SealPreCommit2(ctx, sector, phase1Out))
@@ -447,7 +459,7 @@ func (m *Manager) SealCommit1(ctx context.Context, sector storage.SectorRef, tic
 	// NOTE: We set allowFetch to false in so that we always execute on a worker
 	// with direct access to the data. We want to do that because this step is
 	// generally very cheap / fast, and transferring data is not worth the effort
-	selector := newExistingSelector(m.index, sector.ID, storiface.FTCache|storiface.FTSealed, false)
+	selector := newExistingSelector(m.index, sector.ID, storiface.FTCache|storiface.FTSealed, m.fetchCfg.EnableC1Fetch)
 
 	err = m.sched.Schedule(ctx, sector, types.TTCommit1, selector, m.schedFetch(sector, storiface.FTCache|storiface.FTSealed, storiface.PathSealing, storiface.AcquireMove), func(ctx context.Context, w Worker) error {
 		err := m.startWork(ctx, w, wk)(w.SealCommit1(ctx, sector, ticket, seed, pieces, cids))

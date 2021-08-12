@@ -77,17 +77,7 @@ func DefaultMainnetStorageMiner() *StorageMiner {
 			TerminateBatchMax:  100,
 			TerminateBatchWait: Duration(5 * time.Minute),
 		},
-		Storage: sectorstorage.SealerConfig{
-			AllowAddPiece:   true,
-			AllowPreCommit1: true,
-			AllowPreCommit2: true,
-			AllowCommit:     true,
-			AllowUnseal:     true,
-
-			// Default to 10 - tcp should still be able to figure this out, and
-			// it's the ratio between 10gbit / 1gbit
-			ParallelFetchLimit: 10,
-		},
+		Storage: defaultSealerCfg(),
 		Fees: MinerFeeConfig{
 			MaxPreCommitGasFee: types.MustParseFIL("0.025"),
 			MaxCommitGasFee:    types.MustParseFIL("0.05"),
@@ -111,9 +101,9 @@ func DefaultMainnetStorageMiner() *StorageMiner {
 			CommitControl:    []string{},
 		},
 		NetParams: NetParamsConfig{
-			UpgradeIgnitionHeight:  94000,
-			ForkLengthThreshold:    policy.ChainFinality,
-			BlockDelaySecs:         30,
+			UpgradeIgnitionHeight: 94000,
+			ForkLengthThreshold:   policy.ChainFinality,
+			BlockDelaySecs:        30,
 		},
 		DB: DbConfig{
 			Type: "sqlite",
@@ -178,17 +168,7 @@ func DefaultNerpaStorageMiner() *StorageMiner {
 			TerminateBatchMax:  100,
 			TerminateBatchWait: Duration(5 * time.Minute),
 		},
-		Storage: sectorstorage.SealerConfig{
-			AllowAddPiece:   true,
-			AllowPreCommit1: true,
-			AllowPreCommit2: true,
-			AllowCommit:     true,
-			AllowUnseal:     true,
-
-			// Default to 10 - tcp should still be able to figure this out, and
-			// it's the ratio between 10gbit / 1gbit
-			ParallelFetchLimit: 10,
-		},
+		Storage: defaultSealerCfg(),
 		Fees: MinerFeeConfig{
 			MaxPreCommitGasFee: types.MustParseFIL("0.025"),
 			MaxCommitGasFee:    types.MustParseFIL("0.05"),
@@ -280,17 +260,7 @@ func DefaultCalibrationStorageMiner() *StorageMiner {
 			TerminateBatchMax:  100,
 			TerminateBatchWait: Duration(5 * time.Minute),
 		},
-		Storage: sectorstorage.SealerConfig{
-			AllowAddPiece:   true,
-			AllowPreCommit1: true,
-			AllowPreCommit2: true,
-			AllowCommit:     true,
-			AllowUnseal:     true,
-
-			// Default to 10 - tcp should still be able to figure this out, and
-			// it's the ratio between 10gbit / 1gbit
-			ParallelFetchLimit: 10,
-		},
+		Storage: defaultSealerCfg(),
 		Fees: MinerFeeConfig{
 			MaxPreCommitGasFee: types.MustParseFIL("0.025"),
 			MaxCommitGasFee:    types.MustParseFIL("0.05"),
@@ -314,9 +284,9 @@ func DefaultCalibrationStorageMiner() *StorageMiner {
 			CommitControl:    []string{},
 		},
 		NetParams: NetParamsConfig{
-			UpgradeIgnitionHeight:  94000,
-			ForkLengthThreshold:    policy.ChainFinality,
-			BlockDelaySecs:         30,
+			UpgradeIgnitionHeight: 94000,
+			ForkLengthThreshold:   policy.ChainFinality,
+			BlockDelaySecs:        30,
 		},
 		DB: DbConfig{
 			Type: "sqlite",
@@ -382,17 +352,7 @@ func Default2kStorageMiner() *StorageMiner {
 			TerminateBatchWait: Duration(5 * time.Minute),
 		},
 
-		Storage: sectorstorage.SealerConfig{
-			AllowAddPiece:   true,
-			AllowPreCommit1: true,
-			AllowPreCommit2: true,
-			AllowCommit:     true,
-			AllowUnseal:     true,
-
-			// Default to 10 - tcp should still be able to figure this out, and
-			// it's the ratio between 10gbit / 1gbit
-			ParallelFetchLimit: 10,
-		},
+		Storage: defaultSealerCfg(),
 
 		Fees: MinerFeeConfig{
 			MaxPreCommitGasFee: types.MustParseFIL("0.025"),
@@ -418,9 +378,9 @@ func Default2kStorageMiner() *StorageMiner {
 			CommitControl:    []string{},
 		},
 		NetParams: NetParamsConfig{
-			UpgradeIgnitionHeight:  -2,
-			ForkLengthThreshold:    policy.ChainFinality,
-			BlockDelaySecs:         3,
+			UpgradeIgnitionHeight: -2,
+			ForkLengthThreshold:   policy.ChainFinality,
+			BlockDelaySecs:        3,
 		},
 		DB: DbConfig{
 			Type: "sqlite",
@@ -451,4 +411,20 @@ func Default2kStorageMiner() *StorageMiner {
 	cfg.API.ListenAddress = "/ip4/127.0.0.1/tcp/2345/http"
 	cfg.API.RemoteListenAddress = "127.0.0.1:2345"
 	return cfg
+}
+
+func defaultSealerCfg() sectorstorage.SealerConfig {
+	return sectorstorage.SealerConfig{
+		EnablePC2Fetch:  true,
+		EnableC1Fetch:   false,
+		AllowAddPiece:   true,
+		AllowPreCommit1: true,
+		AllowPreCommit2: true,
+		AllowCommit:     true,
+		AllowUnseal:     true,
+
+		// Default to 10 - tcp should still be able to figure this out, and
+		// it's the ratio between 10gbit / 1gbit
+		ParallelFetchLimit: 10,
+	}
 }
