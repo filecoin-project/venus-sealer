@@ -27,7 +27,7 @@ func (m *Manager) WorkerStats() map[uuid.UUID]storiface.WorkerStats {
 				tasks = append(tasks, t)
 			}
 			sort.Slice(tasks, func(i, j int) bool {
-				return tasks[i].Less(tasks[j])
+				return !tasks[i].Less(tasks[j])
 			})
 		}
 
