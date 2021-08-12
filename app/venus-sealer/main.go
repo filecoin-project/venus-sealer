@@ -2,14 +2,18 @@ package main
 
 import (
 	"fmt"
-	sealer "github.com/filecoin-project/venus-sealer"
-	"github.com/filecoin-project/venus-sealer/constants"
-	"github.com/filecoin-project/venus-sealer/lib/tracing"
+	"os"
+
+	"github.com/filecoin-project/go-address"
+
 	logging "github.com/ipfs/go-log/v2"
 	"github.com/urfave/cli/v2"
 	"go.opencensus.io/trace"
 	"golang.org/x/xerrors"
-	"os"
+
+	sealer "github.com/filecoin-project/venus-sealer"
+	"github.com/filecoin-project/venus-sealer/constants"
+	"github.com/filecoin-project/venus-sealer/lib/tracing"
 )
 
 var log = logging.Logger("main")
@@ -53,6 +57,10 @@ func main() {
 				Usage:   "specify other actor to check state for (read only)",
 				Aliases: []string{"a"},
 			},
+			&cli.StringFlag{
+				Name:  "network",
+				Usage: "network type: one of mainnet,calibration,2k&nerpa, Default: mainnet",
+			},
 			&cli.BoolFlag{
 				Name: "color",
 			},
@@ -71,6 +79,24 @@ func main() {
 			},
 		},
 		Commands: local,
+		Before: func(cctx *cli.Context) error {
+			network := cctx.String("network")
+			switch network {
+			case "mainnet":
+				constants.SetAddressNetwork(address.Mainnet)
+			case "2k":
+				constants.InsecurePoStValidation = true
+			default:
+				if network == "" {
+					_ = cctx.Set("network", "mainnet")
+					if _, ok := os.LookupEnv("VENUS_ADDRESS_TYPE"); !ok {
+						constants.SetAddressNetwork(address.Mainnet)
+					}
+				}
+			}
+
+			return nil
+		},
 	}
 	app.Setup()
 
