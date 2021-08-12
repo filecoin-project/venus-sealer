@@ -105,12 +105,6 @@ var initCmd = &cli.Command{
 			Usage: "select which address to send actor creation message from",
 		},
 		&cli.StringFlag{
-			Name:        "network",
-			Usage:       "network type: one of mainnet,calibration,2k&nerpa",
-			Value:       "mainnet",
-			DefaultText: "mainnet",
-		},
-		&cli.StringFlag{
 			Name:  "messager-url",
 			Usage: "messager url",
 		},
@@ -118,7 +112,6 @@ var initCmd = &cli.Command{
 			Name:  "messager-token",
 			Usage: "messager token",
 		},
-
 		&cli.StringFlag{
 			Name:  "node-url",
 			Usage: "node url",

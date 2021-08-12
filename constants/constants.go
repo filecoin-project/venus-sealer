@@ -1,6 +1,9 @@
 package constants
 
 import (
+	"os"
+
+	"github.com/filecoin-project/go-address"
 	"github.com/raulk/clock"
 
 	builtin2 "github.com/filecoin-project/specs-actors/v2/actors/builtin"
@@ -15,6 +18,11 @@ const (
 	MessageConfidence    = uint64(5)
 )
 
+// /////
+// Address
+
+const AddressMainnetEnvVar = "_mainnet_"
+
 // Blocks (e)
 var BlocksPerEpoch = uint64(builtin2.ExpectedLeadersPerEpoch)
 
@@ -27,3 +35,13 @@ var (
 	MinerVersion = newVer(1, 0, 2)
 )
 var Clock = clock.New()
+
+func SetAddressNetwork(n address.Network) {
+	address.CurrentNetwork = n
+}
+
+func init() {
+	if os.Getenv("VENUS_ADDRESS_TYPE") == AddressMainnetEnvVar {
+		SetAddressNetwork(address.Mainnet)
+	}
+}

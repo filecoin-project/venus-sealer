@@ -111,9 +111,9 @@ func DefaultMainnetStorageMiner() *StorageMiner {
 			CommitControl:    []string{},
 		},
 		NetParams: NetParamsConfig{
-			UpgradeIgnitionHeight:  94000,
-			ForkLengthThreshold:    policy.ChainFinality,
-			BlockDelaySecs:         30,
+			UpgradeIgnitionHeight: 94000,
+			ForkLengthThreshold:   policy.ChainFinality,
+			BlockDelaySecs:        30,
 		},
 		DB: DbConfig{
 			Type: "sqlite",
@@ -314,9 +314,9 @@ func DefaultCalibrationStorageMiner() *StorageMiner {
 			CommitControl:    []string{},
 		},
 		NetParams: NetParamsConfig{
-			UpgradeIgnitionHeight:  94000,
-			ForkLengthThreshold:    policy.ChainFinality,
-			BlockDelaySecs:         30,
+			UpgradeIgnitionHeight: 94000,
+			ForkLengthThreshold:   policy.ChainFinality,
+			BlockDelaySecs:        30,
 		},
 		DB: DbConfig{
 			Type: "sqlite",
@@ -418,9 +418,9 @@ func Default2kStorageMiner() *StorageMiner {
 			CommitControl:    []string{},
 		},
 		NetParams: NetParamsConfig{
-			UpgradeIgnitionHeight:  -2,
-			ForkLengthThreshold:    policy.ChainFinality,
-			BlockDelaySecs:         3,
+			UpgradeIgnitionHeight: -2,
+			ForkLengthThreshold:   policy.ChainFinality,
+			BlockDelaySecs:        3,
 		},
 		DB: DbConfig{
 			Type: "sqlite",

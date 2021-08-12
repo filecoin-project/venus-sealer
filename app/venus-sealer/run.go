@@ -45,12 +45,6 @@ var runCmd = &cli.Command{
 			Usage: "manage open file limit",
 			Value: true,
 		},
-		&cli.StringFlag{
-			Name:        "network",
-			Usage:       "network type: one of mainnet,calibration,2k&nerpa",
-			Value:       "mainnet",
-			DefaultText: "mainnet",
-		},
 	},
 	Action: func(cctx *cli.Context) error {
 		if !cctx.Bool("enable-gpu-proving") {
@@ -64,14 +58,6 @@ var runCmd = &cli.Command{
 			if _, _, err := ulimit.ManageFdLimit(); err != nil {
 				log.Errorf("setting file descriptor limit: %s", err)
 			}
-		}
-
-		network := cctx.String("network")
-		switch network {
-		case "2k":
-			constants.InsecurePoStValidation = true
-		default:
-
 		}
 
 		//read config
