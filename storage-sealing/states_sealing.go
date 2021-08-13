@@ -456,12 +456,11 @@ func (m *Sealing) handlePreCommitWait(ctx statemachine.Context, sector types.Sec
 	log.Info("Sector precommitted: ", sector.SectorNumber)
 	mw, err := m.api.MessagerWaitMsg(ctx.Context(), sector.PreCommitMessage)
 	if err != nil {
-		return ctx.Send(SectorChainPreCommitFailed{err})
-		//if xerrors.Is(err, api.ErrFailMsg) {
-		//	return ctx.Send(SectorRemove{})
-		//} else {
-		//	return ctx.Send(SectorChainPreCommitFailed{err})
-		//}
+		if isUnRecoverError(err.Error()) {
+			return ctx.Send(SectorChainPreCommitFailed{err})
+		} else {
+			return ctx.Send(SectorRetryPreCommit{})
+		}
 	}
 
 	switch mw.Receipt.ExitCode {
@@ -733,12 +732,11 @@ func (m *Sealing) handleCommitWait(ctx statemachine.Context, sector types.Sector
 
 	mw, err := m.api.MessagerWaitMsg(ctx.Context(), sector.CommitMessage)
 	if err != nil {
-		return ctx.Send(SectorCommitFailed{xerrors.Errorf("failed to wait for porep inclusion: %w", err)})
-		//if xerrors.Is(err, api.ErrFailMsg) {
-		//	return ctx.Send(SectorRemove{})
-		//} else {
-		//	return ctx.Send(SectorCommitFailed{xerrors.Errorf("failed to wait for porep inclusion: %w", err)})
-		//}
+		if isUnRecoverError(err.Error()) {
+			return ctx.Send(SectorCommitFailed{xerrors.Errorf("failed to wait for porep inclusion: %w", err)})
+		} else {
+			return ctx.Send(SectorRetrySubmitCommit{})
+		}
 	}
 
 	switch mw.Receipt.ExitCode {
@@ -796,4 +794,10 @@ func (m *Sealing) handleProvingSector(ctx statemachine.Context, sector types.Sec
 	// TODO: Auto-extend if set
 
 	return nil
+}
+
+func isUnRecoverError(errString string) bool {
+	return !(strings.Contains(errString, "failed to submit proof for bulk verification (RetCode=32)") ||
+		strings.Contains(errString, "not enough funds") ||
+		strings.Contains(errString, "unlocked balance can not repay fee debt"))
 }
