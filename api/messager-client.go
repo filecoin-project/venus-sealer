@@ -13,8 +13,6 @@ import (
 	"time"
 )
 
-var ErrFailMsg = xerrors.New("Message Fail")
-
 type IMessager interface {
 	WalletHas(ctx context.Context, addr address.Address) (bool, error)
 	WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error)
@@ -45,7 +43,9 @@ func (message *Messager) WaitMessage(ctx context.Context, id string, confidence 
 		case <-doneCh:
 			msg, err := message.in.GetMessageByUid(ctx, id)
 			if err != nil {
-				return nil, xerrors.Errorf("get message fail while wait %w", ErrFailMsg)
+				log.Warnw("get message fail while wait %w", err)
+				time.Sleep(time.Second*5)
+				continue
 			}
 
 			switch msg.State {
@@ -70,13 +70,13 @@ func (message *Messager) WaitMessage(ctx context.Context, id string, confidence 
 				if msg.Receipt != nil {
 					reason = string(msg.Receipt.ReturnValue)
 				}
-				return nil, xerrors.Errorf("msg failed due to %s %w", reason, ErrFailMsg)
+				return nil, xerrors.Errorf("msg failed due to %s", reason)
 			}
 
 		case <-tm.C:
 			doneCh <- struct{}{}
 		case <-ctx.Done():
-			return nil, xerrors.Errorf("get message fail while wait %w", ErrFailMsg)
+			return nil, xerrors.Errorf("get message fail while wait")
 		}
 	}
 }
