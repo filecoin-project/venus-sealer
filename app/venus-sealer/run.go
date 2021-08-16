@@ -100,7 +100,6 @@ var runCmd = &cli.Command{
 			return err
 		}
 		defer fl.Unlock()
-		fmt.Println(cfg.Storage)
 		nodeApi, ncloser, err := api.GetFullNodeAPIV2(cctx)
 		if err != nil {
 			return xerrors.Errorf("getting full node api: %w", err)
