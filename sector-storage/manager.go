@@ -85,6 +85,7 @@ type Manager struct {
 }
 
 type FetchConfig struct {
+	EnablePC1Fetch bool
 	EnablePC2Fetch bool
 	EnableC1Fetch  bool
 }
@@ -110,6 +111,7 @@ const (
 
 type SealerConfig struct {
 	ParallelFetchLimit int
+	EnablePC1Fetch     bool
 	EnablePC2Fetch     bool
 	EnableC1Fetch      bool
 	// Local worker config
@@ -153,6 +155,7 @@ func New(ctx context.Context, lstor *stores.Local, stor *stores.Remote, ls store
 		results:    map[types.WorkID]result{},
 		waitRes:    map[types.WorkID]chan struct{}{},
 		fetchCfg: FetchConfig{
+			EnablePC1Fetch: sc.EnablePC1Fetch,
 			EnablePC2Fetch: sc.EnablePC2Fetch,
 			EnableC1Fetch:  sc.EnableC1Fetch,
 		},
@@ -357,8 +360,13 @@ func (m *Manager) SealPreCommit1(ctx context.Context, sector storage.SectorRef, 
 	}
 
 	// TODO: also consider where the unsealed data sits
-
-	selector := newAllocSelector(m.index, storiface.FTCache|storiface.FTSealed, storiface.PathSealing)
+	//selector := newAllocSelector(m.index, storiface.FTCache|storiface.FTSealed, storiface.PathSealing)
+	var selector WorkerSelector
+	if m.fetchCfg.EnablePC1Fetch {
+		selector = newAllocSelector(m.index, storiface.FTCache|storiface.FTSealed, storiface.PathSealing)
+	} else {
+		selector = newExitAndAllocSelector(m.index, sector.ID, storiface.FTUnsealed, storiface.FTCache|storiface.FTSealed, storiface.PathSealing, false)
+	}
 
 	err = m.sched.Schedule(ctx, sector, types.TTPreCommit1, selector, m.schedFetch(sector, storiface.FTUnsealed, storiface.PathSealing, storiface.AcquireMove), func(ctx context.Context, w Worker) error {
 		err := m.startWork(ctx, w, wk)(w.SealPreCommit1(ctx, sector, ticket, pieces))

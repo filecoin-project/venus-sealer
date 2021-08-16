@@ -415,6 +415,7 @@ func Default2kStorageMiner() *StorageMiner {
 
 func defaultSealerCfg() sectorstorage.SealerConfig {
 	return sectorstorage.SealerConfig{
+		EnablePC1Fetch:  false,
 		EnablePC2Fetch:  true,
 		EnableC1Fetch:   false,
 		AllowAddPiece:   true,
