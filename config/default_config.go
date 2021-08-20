@@ -418,9 +418,10 @@ func Default2kStorageMiner() *StorageMiner {
 			CommitControl:    []string{},
 		},
 		NetParams: NetParamsConfig{
-			UpgradeIgnitionHeight: -2,
-			ForkLengthThreshold:   policy.ChainFinality,
-			BlockDelaySecs:        3,
+			UpgradeIgnitionHeight:   -2,
+			ForkLengthThreshold:     policy.ChainFinality,
+			BlockDelaySecs:          4,
+			PreCommitChallengeDelay: 10,
 		},
 		DB: DbConfig{
 			Type: "sqlite",
