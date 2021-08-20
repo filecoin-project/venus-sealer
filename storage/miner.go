@@ -193,7 +193,7 @@ func (m *Miner) Run(ctx context.Context) error {
 		adaptedAPI = NewSealingAPIAdapter(m.api, m.messager)
 
 		// Instantiate a precommit policy.
-		defaultDuration = policy.GetMaxSectorExpirationExtension() - (md.WPoStProvingPeriod * 2)
+		defaultDuration = getDefaultSectorExpirationExtension(m.getSealConfig) - (md.WPoStProvingPeriod * 2)
 		provingBoundary = md.PeriodStart % md.WPoStProvingPeriod
 
 		// TODO: Maybe we update this policy after actor upgrades?
@@ -258,6 +258,16 @@ func (m *Miner) runPreflightChecks(ctx context.Context) error {
 
 	log.Infof("starting up miner %s, worker addr %s", m.maddr, workerKey)
 	return nil
+}
+
+func getDefaultSectorExpirationExtension(cfg types2.GetSealingConfigFunc) abi.ChainEpoch {
+	c, err := cfg()
+	if err != nil {
+		log.Warnf("failed to load sealing config, using default sector extension expiration")
+		log.Errorf("sealing config load error: %s", err.Error())
+		return policy.GetMaxSectorExpirationExtension()
+	}
+	return abi.ChainEpoch(c.CommittedCapacityDefaultLifetime.Truncate(builtin.EpochDurationSeconds))
 }
 
 type StorageWpp struct {

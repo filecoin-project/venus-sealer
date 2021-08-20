@@ -139,6 +139,7 @@ func Online(cfg *config.StorageMiner) Option {
 		Override(new(storage2.Prover), From(new(sectorstorage.SectorManager))),
 		Override(new(storiface.WorkerReturn), From(new(sectorstorage.SectorManager))),
 
+		Override(new(types.GetSealingConfigFunc), NewGetSealConfigFunc),
 		Override(new(*sectorblocks.SectorBlocks), sectorblocks.NewSectorBlocks),
 		Override(new(*storage.Miner), StorageMiner(config.DefaultMainnetStorageMiner().Fees)),
 		// Override(new(*storage.AddressSelector), AddressSelector(nil)), // venus-sealer run: Call Repo before, Online after,will overwrite the original injection(MinerAddressConfig)
