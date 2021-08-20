@@ -340,12 +340,13 @@ func NewGetSealConfigFunc(r *config.StorageMiner) (types2.GetSealingConfigFunc, 
 		err = readCfg(r, func(cfg *config.StorageMiner) {
 			// log.Infof("max sealing sectors: %v", cfg.Sealing.MaxSealingSectors)
 			out = sealiface.Config{
-				MaxWaitDealsSectors:       cfg.Sealing.MaxWaitDealsSectors,
-				MaxSealingSectors:         cfg.Sealing.MaxSealingSectors,
-				MaxSealingSectorsForDeals: cfg.Sealing.MaxSealingSectorsForDeals,
-				WaitDealsDelay:            time.Duration(cfg.Sealing.WaitDealsDelay),
-				AlwaysKeepUnsealedCopy:    cfg.Sealing.AlwaysKeepUnsealedCopy,
-				FinalizeEarly:             cfg.Sealing.FinalizeEarly,
+				MaxWaitDealsSectors:              cfg.Sealing.MaxWaitDealsSectors,
+				MaxSealingSectors:                cfg.Sealing.MaxSealingSectors,
+				MaxSealingSectorsForDeals:        cfg.Sealing.MaxSealingSectorsForDeals,
+				WaitDealsDelay:                   time.Duration(cfg.Sealing.WaitDealsDelay),
+				CommittedCapacityDefaultLifetime: time.Duration(cfg.Sealing.CommittedCapacityDefaultLifetime),
+				AlwaysKeepUnsealedCopy:           cfg.Sealing.AlwaysKeepUnsealedCopy,
+				FinalizeEarly:                    cfg.Sealing.FinalizeEarly,
 
 				BatchPreCommits:     cfg.Sealing.BatchPreCommits,
 				MaxPreCommitBatch:   cfg.Sealing.MaxPreCommitBatch,
