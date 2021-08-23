@@ -70,13 +70,6 @@ func main() {
 				Hidden:  true,
 				Value:   "~/.venussealer", // TODO: Consider XDG_DATA_HOME
 			},
-			&cli.StringFlag{
-				Name:    "config",
-				Aliases: []string{"c"},
-				EnvVars: []string{"VENUS_SEALER_CONFIG"},
-				Hidden:  true,
-				Value:   "~/.venussealer/config.toml", // TODO: Consider XDG_DATA_HOME
-			},
 		},
 		Commands: local,
 		Before: func(cctx *cli.Context) error {
