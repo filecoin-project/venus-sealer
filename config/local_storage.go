@@ -2,25 +2,28 @@ package config
 
 import (
 	"bytes"
-	"github.com/BurntSushi/toml"
-	"github.com/filecoin-project/venus-sealer/sector-storage/fsutil"
-	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
-	"github.com/mitchellh/go-homedir"
-	"github.com/multiformats/go-multiaddr"
-	"golang.org/x/xerrors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/BurntSushi/toml"
+	"github.com/mitchellh/go-homedir"
+	"github.com/multiformats/go-multiaddr"
+	"golang.org/x/xerrors"
+
+	"github.com/filecoin-project/venus-sealer/sector-storage/fsutil"
+	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
 )
 
 const (
 	fsAPI           = "api"
 	fsAPIToken      = "token"
+	fsConfig        = "config.toml"
 	fsStorageConfig = "storage.json"
 	// nolint
-	fsLock          = "repo.lock"
+	fsLock = "repo.lock"
 )
 
 var (
@@ -173,4 +176,8 @@ func (fsr *LocalStorage) SetAPIEndpoint(ma multiaddr.Multiaddr) error {
 
 func (fsr *LocalStorage) SetAPIToken(token []byte) error {
 	return ioutil.WriteFile(fsr.join(fsAPIToken), token, 0600)
+}
+
+func FsConfig(path string) string {
+	return filepath.Join(path, fsConfig)
 }

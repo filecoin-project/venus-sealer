@@ -4,14 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/filecoin-project/venus-sealer/config"
-	"github.com/filecoin-project/venus-sealer/constants"
-	"github.com/filecoin-project/venus-sealer/lib/vfile"
-	"github.com/filecoin-project/venus-sealer/models"
-	"github.com/filecoin-project/venus-sealer/service"
-	"github.com/filecoin-project/venus-sealer/types"
-	"github.com/filecoin-project/venus/fixtures/asset"
-	"github.com/mitchellh/go-homedir"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -23,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	logging "github.com/ipfs/go-log/v2"
+	"github.com/mitchellh/go-homedir"
 	manet "github.com/multiformats/go-multiaddr/net"
 	"github.com/urfave/cli/v2"
 	"go.opencensus.io/stats/view"
@@ -35,9 +28,16 @@ import (
 
 	sealer "github.com/filecoin-project/venus-sealer"
 	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus-sealer/config"
+	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus-sealer/lib/rpcenc"
+	"github.com/filecoin-project/venus-sealer/lib/vfile"
+	"github.com/filecoin-project/venus-sealer/models"
 	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
 	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
+	"github.com/filecoin-project/venus-sealer/service"
+	"github.com/filecoin-project/venus-sealer/types"
+	"github.com/filecoin-project/venus/fixtures/asset"
 )
 
 var log = logging.Logger("main")
@@ -65,13 +65,6 @@ func main() {
 				EnvVars: []string{"VENUS_WORKER_PATH"},
 				Hidden:  true,
 				Value:   "~/.venusworker", // TODO: Consider XDG_DATA_HOME
-			},
-			&cli.StringFlag{
-				Name:    "config",
-				Aliases: []string{"c"},
-				EnvVars: []string{"VENUS_WORKER_CONFIG"},
-				Hidden:  true,
-				Value:   "~/.venusworker/config.toml", // TODO: Consider XDG_DATA_HOME
 			},
 			&cli.BoolFlag{
 				Name:  "enable-gpu-proving",
@@ -164,7 +157,8 @@ var runCmd = &cli.Command{
 		}
 
 		// Open repo
-		cfgPath := cctx.String("config")
+		repoPath := cctx.String("repo")
+		cfgPath := config.FsConfig(repoPath)
 		ok, err := config.ConfigExist(cfgPath)
 		if err != nil {
 			return err
@@ -308,7 +302,7 @@ var runCmd = &cli.Command{
 		localStorage := cfg.LocalStorage()
 		_, err = localStorage.GetStorage()
 		if !ok || err != nil {
-			log.Infof("get storage err: %v", err)
+			log.Infof("no storage: %v", err)
 
 			err = config.SaveConfig(cfgPath, cfg)
 			if err != nil {
@@ -576,8 +570,7 @@ func flagData(cfg *config.StorageWorker, cctx *cli.Context) error {
 		cfg.Sealer.Token = cctx.String("miner-token")
 	}
 
-	if cctx.IsSet("repo") {
-		cfg.DataDir = cctx.String("repo")
-	}
+	cfg.DataDir = cctx.String("repo")
+
 	return nil
 }

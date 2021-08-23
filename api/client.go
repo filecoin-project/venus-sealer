@@ -3,19 +3,23 @@ package api
 import (
 	"context"
 	"fmt"
-	"github.com/filecoin-project/go-jsonrpc"
-	"github.com/filecoin-project/venus-sealer/api/repo"
-	"github.com/filecoin-project/venus-sealer/config"
-	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
-	logging "github.com/ipfs/go-log/v2"
-	"github.com/mitchellh/go-homedir"
-	"github.com/urfave/cli/v2"
-	"golang.org/x/xerrors"
 	"net/http"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
+
+	"github.com/filecoin-project/go-jsonrpc"
+
+	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
+
+	logging "github.com/ipfs/go-log/v2"
+	"github.com/mitchellh/go-homedir"
+	"github.com/urfave/cli/v2"
+	"golang.org/x/xerrors"
+
+	"github.com/filecoin-project/venus-sealer/api/repo"
+	"github.com/filecoin-project/venus-sealer/config"
 )
 
 var log = logging.Logger("api")
@@ -216,11 +220,13 @@ func GetFullNodeAPIV2(cctx *cli.Context) (FullNode, jsonrpc.ClientCloser, error)
 }
 
 func GetFullNodeAPIFromConfig(cctx *cli.Context) (apiinfo.APIInfo, error) {
-	cfgPath := cctx.String("config")
+	repoPath := cctx.String("repo")
+	cfgPath := config.FsConfig(repoPath)
 	cfg, err := config.MinerFromFile(cfgPath)
 	if err != nil {
 		return apiinfo.APIInfo{}, err
 	}
+
 	cfg.ConfigPath = cfgPath
 
 	return apiinfo.APIInfo{

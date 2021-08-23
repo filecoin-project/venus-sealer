@@ -25,7 +25,7 @@ type StorageWorker struct {
 }
 
 func (cfg StorageWorker) LocalStorage() *LocalStorage {
-	return NewLocalStorage(cfg.DataDir, cfg.DataDir)
+	return NewLocalStorage(cfg.DataDir, cfg.ConfigPath)
 }
 
 // StorageMiner is a miner config

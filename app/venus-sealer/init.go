@@ -199,9 +199,8 @@ var initCmd = &cli.Command{
 
 		log.Info("Checking if repo exists")
 
-		cfgPath := cctx.String("config")
-		defaultCfg.ConfigPath = cfgPath
 
+		defaultCfg.ConfigPath = config.FsConfig(defaultCfg.DataDir)
 		exit, err := config.ConfigExist(defaultCfg.DataDir)
 		if err != nil {
 			return err
@@ -232,7 +231,7 @@ var initCmd = &cli.Command{
 
 		{
 			//write config
-			err = config.SaveConfig(cfgPath, defaultCfg)
+			err = config.SaveConfig(defaultCfg.ConfigPath, defaultCfg)
 			if err != nil {
 				return err
 			}
@@ -314,9 +313,7 @@ func setAuthToken(cctx *cli.Context) {
 }
 
 func parseFlag(cfg *config.StorageMiner, cctx *cli.Context) {
-	if cctx.IsSet("repo") {
-		cfg.DataDir = cctx.String("repo")
-	}
+	cfg.DataDir = cctx.String("repo")
 
 	if cctx.IsSet("messager-url") {
 		cfg.Messager.Url = cctx.String("messager-url")

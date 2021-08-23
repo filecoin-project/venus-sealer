@@ -61,16 +61,13 @@ var runCmd = &cli.Command{
 		}
 
 		//read config
-		cfgPath := cctx.String("config")
+		repoPath := cctx.String("repo")
+		cfgPath := config.FsConfig(repoPath)
 		cfg, err := config.MinerFromFile(cfgPath)
 		if err != nil {
 			return err
 		}
-
-		cfg.ConfigPath = cfgPath
-		if cctx.IsSet("repo") {
-			cfg.DataDir = cctx.String("repo")
-		}
+		cfg.DataDir = repoPath
 
 		//lock repo
 		dataDir, err := homedir.Expand(cfg.DataDir)

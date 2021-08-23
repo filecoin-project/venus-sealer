@@ -131,17 +131,14 @@ func GetConfigAPI(cctx *cli.Context, options GetStorageOptions) (string, http.He
 		apiInfo.Addr = options.Address
 		apiInfo.Token = []byte(options.Token)
 	} else {
-		cfgPath := cctx.String("config")
+		repoPath := cctx.String("repo")
+		cfgPath := config.FsConfig(repoPath)
 		cfg, err := config.MinerFromFile(cfgPath)
 		if err != nil {
 			return "", nil, err
 		}
 
-		if cctx.IsSet("repo") {
-			cfg.DataDir = cctx.String("repo")
-		}
-
-		ls := config.NewLocalStorage(cfg.DataDir, "")
+		ls := config.NewLocalStorage(cfg.DataDir, cfgPath)
 
 		ma, err := ls.APIEndpoint()
 		if err != nil {
