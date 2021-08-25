@@ -704,7 +704,12 @@ func (sm *StorageMinerAPI) CheckProvable(ctx context.Context, pp abi.RegisteredP
 		rg = func(ctx context.Context, id abi.SectorID) (cid.Cid, error) {
 			si, err := sm.Miner.GetSectorInfo(id.Number)
 			if err != nil {
-				return cid.Undef, err
+				log.Warnf("unable to get %d sector info  %v", id.Number, err)
+				onChainInfo, err := sm.Full.StateSectorGetInfo(ctx, sm.Miner.Address(), id.Number, types.EmptyTSK)
+				if err != nil {
+					return cid.Undef, err
+				}
+				return onChainInfo.SealedCID, nil
 			}
 			if si.CommR == nil {
 				return cid.Undef, xerrors.Errorf("commr is nil")
