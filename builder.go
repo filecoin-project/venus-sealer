@@ -47,6 +47,7 @@ const (
 
 	//proof
 	StartProofEventKey
+	WarmupKey
 	_nInvokes // keep this last
 )
 
@@ -148,6 +149,7 @@ func Online(cfg *config.StorageMiner) Option {
 		Override(AutoMigrateKey, models.AutoMigrate),
 		Override(SetNetParamsKey, SetupNetParams),
 		Override(StartProofEventKey, proof_client.StartProofEvent),
+		Override(WarmupKey, DoPoStWarmup),
 	)
 }
 

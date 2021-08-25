@@ -2,8 +2,12 @@ package venus_sealer
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"github.com/filecoin-project/go-bitfield"
+	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
+	"math"
 	"net/http"
 	"time"
 
@@ -301,6 +305,70 @@ func StorageMiner(fc config.MinerFeeConfig) func(params StorageMinerParams) (*st
 
 		return sm, nil
 	}
+}
+
+func DoPoStWarmup(ctx MetricsCtx, api api.FullNode, metadataService *service.MetadataService, prover storage.WinningPoStProver) error {
+	maddr, err := metadataService.GetMinerAddress()
+	if err != nil {
+		return err
+	}
+	deadlines, err := api.StateMinerDeadlines(ctx, maddr, types.EmptyTSK)
+	if err != nil {
+		return xerrors.Errorf("getting deadlines: %w", err)
+	}
+
+	var sector abi.SectorNumber = math.MaxUint64
+
+out:
+	for dlIdx := range deadlines {
+		partitions, err := api.StateMinerPartitions(ctx, maddr, uint64(dlIdx), types.EmptyTSK)
+		if err != nil {
+			return xerrors.Errorf("getting partitions for deadline %d: %w", dlIdx, err)
+		}
+
+		for _, partition := range partitions {
+			b, err := partition.ActiveSectors.First()
+			if err == bitfield.ErrNoBitsSet {
+				continue
+			}
+			if err != nil {
+				return err
+			}
+
+			sector = abi.SectorNumber(b)
+			break out
+		}
+	}
+
+	if sector == math.MaxUint64 {
+		log.Info("skipping winning PoSt warmup, no sectors")
+		return nil
+	}
+
+	log.Infow("starting winning PoSt warmup", "sector", sector)
+	start := time.Now()
+
+	var r abi.PoStRandomness = make([]byte, abi.RandomnessLength)
+	_, _ = rand.Read(r)
+
+	si, err := api.StateSectorGetInfo(ctx, maddr, sector, types.EmptyTSK)
+	if err != nil {
+		return xerrors.Errorf("getting sector info: %w", err)
+	}
+
+	_, err = prover.ComputeProof(ctx, []proof2.SectorInfo{
+		{
+			SealProof:    si.SealProof,
+			SectorNumber: sector,
+			SealedCID:    si.SealedCID,
+		},
+	}, r)
+	if err != nil {
+		return xerrors.Errorf("failed to compute proof: %w", err)
+	}
+
+	log.Infow("winning PoSt warmup successful", "took", time.Now().Sub(start))
+	return nil
 }
 
 func NewSetSealConfigFunc(r *config.StorageMiner) (types2.SetSealingConfigFunc, error) {
