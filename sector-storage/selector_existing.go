@@ -8,6 +8,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/specs-storage/storage"
 
 	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
@@ -30,7 +31,7 @@ func newExistingSelector(index stores.SectorIndex, sector abi.SectorID, alloc st
 	}
 }
 
-func (s *existingSelector) Ok(ctx context.Context, task types.TaskType, spt abi.RegisteredSealProof, whnd *workerHandle) (bool, error) {
+func (s *existingSelector) Ok(ctx context.Context, task types.TaskType, spt abi.RegisteredSealProof, sector storage.SectorRef, whnd *workerHandle) (bool, error) {
 	tasks, err := whnd.workerRpc.TaskTypes(ctx)
 	if err != nil {
 		return false, xerrors.Errorf("getting supported worker task types: %w", err)
@@ -39,17 +40,22 @@ func (s *existingSelector) Ok(ctx context.Context, task types.TaskType, spt abi.
 		return false, nil
 	}
 
+	// whether the task of the previous stage is on this machine
+	bExist, err := whnd.workerRpc.SectorExists(ctx, task, sector)
+	if err != nil {
+		return false, xerrors.Errorf("getting supported worker for same machine: %w", err)
+	}
+	if !bExist {
+		return false, nil
+	}
+
 	// Check the number of tasks
 	taskNum, err := whnd.workerRpc.TaskNumbers(ctx)
 	if err != nil {
 		return false, xerrors.Errorf("getting supported worker task number: %w", err)
 	}
-	info, err := whnd.workerRpc.Info(ctx)
-	if err != nil {
-		return false, xerrors.Errorf("getting supported worker info: %w", err)
-	}
 
-	log.Infof("tasks allocate: %s for %s", taskNum, info.Hostname)
+	log.Infof("tasks allocate: %s for %s", taskNum, whnd.info.Hostname)
 	nums := strings.Split(taskNum, "-")
 	if len(nums) == 2 {
 		curNum, _ := strconv.ParseInt(nums[0], 10, 64)

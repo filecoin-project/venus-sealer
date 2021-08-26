@@ -40,7 +40,8 @@ type WorkerConfig struct {
 	// with the local worker.
 	IgnoreResourceFiltering bool
 
-	TaskTotal int64
+	TaskTotal  int64
+	IsBindP1P2 bool
 }
 
 // used do provide custom proofs impl (mostly used in testing)
@@ -63,6 +64,8 @@ type LocalWorker struct {
 	taskLk      sync.Mutex
 	taskNumber  int64
 	taskTotal   int64
+
+	isBindP1P2 bool
 
 	session     uuid.UUID
 	testDisable int64
@@ -91,6 +94,7 @@ func newLocalWorker(executor ExecutorFunc, wcfg WorkerConfig, store stores.Store
 		ignoreResources: wcfg.IgnoreResourceFiltering,
 		session:         uuid.New(),
 		closing:         make(chan struct{}),
+		isBindP1P2:      wcfg.IsBindP1P2,
 	}
 
 	if w.executor == nil {
@@ -214,8 +218,8 @@ func (l *LocalWorker) asyncCall(ctx context.Context, sector storage.SectorRef, r
 	taskNumber := atomic.AddInt64(&l.taskNumber, 1)
 	if l.taskTotal >= 0 && taskNumber > l.taskTotal {
 		atomic.AddInt64(&l.taskNumber, -1)
-		log.Infof("task number [%d / %d]", taskNumber-1, l.taskTotal)
-		return types.CallID{}, xerrors.Errorf("task number [%d / %d]", taskNumber-1, l.taskTotal)
+		log.Errorf("task number [%d-%d]", taskNumber-1, l.taskTotal)
+		return types.CallID{}, xerrors.Errorf("The number of tasks has reached the upper limit [%d-%d] ", taskNumber-1, l.taskTotal)
 	}
 
 	ci := types.CallID{
@@ -229,9 +233,9 @@ func (l *LocalWorker) asyncCall(ctx context.Context, sector storage.SectorRef, r
 
 	l.running.Add(1)
 
-	log.Infof("task number: [%d - %d]", l.taskNumber, l.taskTotal)
 	go func() {
 		defer func() {
+			log.Infof("task [%s] complete for sector %d", rt, sector.ID.Number)
 			atomic.AddInt64(&l.taskNumber, -1)
 			l.running.Done()
 		}()
@@ -489,6 +493,28 @@ func (l *LocalWorker) TaskNumbers(context.Context) (string, error) {
 	return str, nil
 }
 
+func (l *LocalWorker) SectorExists(ctx context.Context, task types.TaskType, sector storage.SectorRef) (bool, error) {
+	if l.isBindP1P2 && task == types.TTPreCommit2 {
+		paths, _, err := l.storage.AcquireSector(ctx, sector, 0, storiface.FTSealed, storiface.PathSealing, storiface.AcquireMode(""))
+		if err != nil {
+			log.Errorf("try to find sector paths err: %s", err.Error())
+			return true, nil
+		}
+
+		log.Infof("find acquire sector paths: %v", paths)
+		bExist, err := storiface.FileExists(paths.Sealed)
+		if err != nil {
+			log.Errorf("check %s exist err: %s", paths.Sealed)
+			return true, nil
+		}
+
+		if !bExist {
+			return false, nil
+		}
+	}
+
+	return true, nil
+}
 
 func (l *LocalWorker) Info(context.Context) (storiface.WorkerInfo, error) {
 	hostname, err := os.Hostname() // TODO: allow overriding from config

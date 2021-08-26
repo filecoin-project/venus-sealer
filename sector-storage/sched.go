@@ -47,7 +47,7 @@ const mib = 1 << 20
 type WorkerAction func(ctx context.Context, w Worker) error
 
 type WorkerSelector interface {
-	Ok(ctx context.Context, task types.TaskType, spt abi.RegisteredSealProof, a *workerHandle) (bool, error) // true if worker is acceptable for performing a task
+	Ok(ctx context.Context, task types.TaskType, spt abi.RegisteredSealProof, sector storage.SectorRef, a *workerHandle) (bool, error) // true if worker is acceptable for performing a task
 
 	Cmp(ctx context.Context, task types.TaskType, a, b *workerHandle) (bool, error) // true if a is preferred over b
 }
@@ -399,7 +399,7 @@ func (sh *scheduler) trySched() {
 				}
 
 				rpcCtx, cancel := context.WithTimeout(task.ctx, SelectorTimeout)
-				ok, err := task.sel.Ok(rpcCtx, task.taskType, task.sector.ProofType, worker)
+				ok, err := task.sel.Ok(rpcCtx, task.taskType, task.sector.ProofType, task.sector, worker)
 				cancel()
 				if err != nil {
 					log.Errorf("trySched(1) req.sel.Ok error: %+v", err)
