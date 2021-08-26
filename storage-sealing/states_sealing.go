@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
 	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
 	"io/ioutil"
+	"strings"
 
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
@@ -24,6 +24,7 @@ import (
 	"github.com/filecoin-project/specs-actors/v5/actors/runtime/proof"
 
 	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
 	"github.com/filecoin-project/venus-sealer/types"
 )
 

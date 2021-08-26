@@ -261,6 +261,8 @@ func (m *Miner) runPreflightChecks(ctx context.Context) error {
 }
 
 func getDefaultSectorExpirationExtension(cfg types2.GetSealingConfigFunc) abi.ChainEpoch {
+	return policy.GetMaxSectorExpirationExtension()
+	//todo test
 	c, err := cfg()
 	if err != nil {
 		log.Warnf("failed to load sealing config, using default sector extension expiration")
