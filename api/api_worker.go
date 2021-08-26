@@ -18,6 +18,8 @@ type WorkerAPI interface {
 	Paths(context.Context) ([]stores.StoragePath, error)
 	Info(context.Context) (storiface.WorkerInfo, error)
 
+	TaskNumbers(context.Context) (string, error)
+
 	storiface.WorkerCalls
 
 	TaskDisable(ctx context.Context, tt types.TaskType) error

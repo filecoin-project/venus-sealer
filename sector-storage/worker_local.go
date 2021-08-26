@@ -3,6 +3,7 @@ package sectorstorage
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"reflect"
@@ -38,6 +39,8 @@ type WorkerConfig struct {
 	// worker regardless of its currently available resources. Used in testing
 	// with the local worker.
 	IgnoreResourceFiltering bool
+
+	TaskTotal int64
 }
 
 // used do provide custom proofs impl (mostly used in testing)
@@ -58,6 +61,8 @@ type LocalWorker struct {
 	acceptTasks map[types.TaskType]struct{}
 	running     sync.WaitGroup
 	taskLk      sync.Mutex
+	taskNumber  int64
+	taskTotal   int64
 
 	session     uuid.UUID
 	testDisable int64
@@ -80,6 +85,7 @@ func newLocalWorker(executor ExecutorFunc, wcfg WorkerConfig, store stores.Store
 			st: cst,
 		},
 		acceptTasks:     acceptTasks,
+		taskTotal:       wcfg.TaskTotal,
 		executor:        executor,
 		noSwap:          wcfg.NoSwap,
 		ignoreResources: wcfg.IgnoreResourceFiltering,
@@ -205,6 +211,13 @@ var returnFunc = map[types.ReturnType]func(context.Context, types.CallID, storif
 }
 
 func (l *LocalWorker) asyncCall(ctx context.Context, sector storage.SectorRef, rt types.ReturnType, work func(ctx context.Context, ci types.CallID) (interface{}, error)) (types.CallID, error) {
+	taskNumber := atomic.AddInt64(&l.taskNumber, 1)
+	if l.taskTotal >= 0 && taskNumber > l.taskTotal {
+		atomic.AddInt64(&l.taskNumber, -1)
+		log.Infof("task number [%d / %d]", taskNumber-1, l.taskTotal)
+		return types.CallID{}, xerrors.Errorf("task number [%d / %d]", taskNumber-1, l.taskTotal)
+	}
+
 	ci := types.CallID{
 		Sector: sector.ID,
 		ID:     uuid.New(),
@@ -216,8 +229,12 @@ func (l *LocalWorker) asyncCall(ctx context.Context, sector storage.SectorRef, r
 
 	l.running.Add(1)
 
+	log.Infof("task number: [%d - %d]", l.taskNumber, l.taskTotal)
 	go func() {
-		defer l.running.Done()
+		defer func() {
+			atomic.AddInt64(&l.taskNumber, -1)
+			l.running.Done()
+		}()
 
 		ctx := &wctx{
 			vals:    ctx,
@@ -466,6 +483,12 @@ func (l *LocalWorker) TaskEnable(ctx context.Context, tt types.TaskType) error {
 func (l *LocalWorker) Paths(ctx context.Context) ([]stores.StoragePath, error) {
 	return l.localStore.Local(ctx)
 }
+
+func (l *LocalWorker) TaskNumbers(context.Context) (string, error) {
+	str := fmt.Sprintf("%d-%d", l.taskNumber, l.taskTotal)
+	return str, nil
+}
+
 
 func (l *LocalWorker) Info(context.Context) (storiface.WorkerInfo, error) {
 	hostname, err := os.Hostname() // TODO: allow overriding from config

@@ -146,6 +146,11 @@ var runCmd = &cli.Command{
 			Usage: "used when 'listen' is unspecified. must be a valid duration recognized by golang's time.ParseDuration function",
 			Value: "30m",
 		},
+		&cli.IntFlag{
+			Name:  "task-total",
+			Usage: "total number of task",
+			Value: 100,
+		},
 	},
 	Action: func(cctx *cli.Context) error {
 		log.Info("Starting venus worker")
@@ -392,6 +397,7 @@ var runCmd = &cli.Command{
 			LocalWorker: sectorstorage.NewLocalWorker(sectorstorage.WorkerConfig{
 				TaskTypes: taskTypes,
 				NoSwap:    cctx.Bool("no-swap"),
+				TaskTotal: cctx.Int64("task-total"),
 			}, remote, localStore, nodeApi, nodeApi, wsts),
 			localStore: localStore,
 			ls:         localStorage,

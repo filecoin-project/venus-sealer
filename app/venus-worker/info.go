@@ -56,10 +56,16 @@ var infoCmd = &cli.Command{
 			return xerrors.Errorf("getting task types: %w", err)
 		}
 
+		tasks, err := workerApi.TaskNumbers(ctx)
+		if err != nil {
+			return xerrors.Errorf("getting tasks: %w", err)
+		}
+
 		fmt.Printf("Hostname: %s\n", info.Hostname)
 		fmt.Printf("CPUs: %d; GPUs: %v\n", info.Resources.CPUs, info.Resources.GPUs)
 		fmt.Printf("RAM: %s; Swap: %s\n", types.SizeStr(types.NewInt(info.Resources.MemPhysical)), types.SizeStr(types.NewInt(info.Resources.MemSwap)))
 		fmt.Printf("Reserved memory: %s\n", types.SizeStr(types.NewInt(info.Resources.MemReserved)))
+		fmt.Printf("Tasks: %s\n", tasks)
 
 		fmt.Printf("Task types: ")
 		for _, t := range ttList(tt) {

@@ -2,6 +2,8 @@ package sectorstorage
 
 import (
 	"context"
+	"strconv"
+	"strings"
 
 	"golang.org/x/xerrors"
 
@@ -34,6 +36,29 @@ func (s *allocSelector) Ok(ctx context.Context, task types.TaskType, spt abi.Reg
 	if _, supported := tasks[task]; !supported {
 		return false, nil
 	}
+
+	// Check the number of tasks
+	taskNum , err := whnd.workerRpc.TaskNumbers(ctx)
+	if err != nil {
+		return false, xerrors.Errorf("getting supported worker task number: %w", err)
+	}
+	
+	info , err := whnd.workerRpc.Info(ctx)
+	if err != nil {
+		return false, xerrors.Errorf("getting supported worker info: %w", err)
+	}
+
+	log.Infof("tasks allocate: %s for %s", taskNum,  info.Hostname)
+	nums := strings.Split(taskNum, "-")
+	if len(nums) == 2 {
+		curNum, _ := strconv.ParseInt(nums[0],10,64)
+		total, _ := strconv.ParseInt(nums[1],10,64)
+		if total > 0 && curNum >= total {
+			return false, nil
+		}
+	}
+
+
 
 	paths, err := whnd.workerRpc.Paths(ctx)
 	if err != nil {

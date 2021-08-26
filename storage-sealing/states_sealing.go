@@ -3,9 +3,11 @@ package sealing
 import (
 	"bytes"
 	"context"
-
+	"encoding/json"
+	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
 	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
+	"io/ioutil"
 
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
@@ -86,6 +88,24 @@ func (m *Sealing) padSector(ctx context.Context, sectorID storage.SectorRef, exi
 
 	log.Infof("Pledge %d, contains %+v", sectorID, existingPieceSizes)
 
+
+	pisFile := storiface.DefaultPieceInfosFile()
+	log.Infof("pisFile: %s", pisFile)
+	if bExist, _ := storiface.FileExists(pisFile); bExist {
+		bufs, err := ioutil.ReadFile(pisFile)
+		if err != nil {
+			return nil, err
+		}
+
+		var out []abi.PieceInfo
+		err = json.Unmarshal(bufs, &out)
+		if err != nil {
+			return nil, err
+		}
+
+		return out, nil
+	}
+
 	out := make([]abi.PieceInfo, len(sizes))
 	for i, size := range sizes {
 		ppi, err := m.sealer.AddPiece(ctx, sectorID, existingPieceSizes, size, NewNullReader(size))
@@ -96,6 +116,16 @@ func (m *Sealing) padSector(ctx context.Context, sectorID storage.SectorRef, exi
 		existingPieceSizes = append(existingPieceSizes, size)
 
 		out[i] = ppi
+	}
+
+	// save piece info to /var/tmp/s-piece-infos
+	buf, err := json.Marshal(out)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := ioutil.WriteFile(pisFile, buf, 0644); err != nil {
+		return nil, xerrors.Errorf("persisting  (%s): %w", pisFile, err)
 	}
 
 	return out, nil

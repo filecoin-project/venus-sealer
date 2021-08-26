@@ -36,7 +36,9 @@ type Worker interface {
 
 	TaskTypes(context.Context) (map[types.TaskType]struct{}, error)
 
-	// Returns paths accessible to the worker
+    TaskNumbers(context.Context) (string, error)
+
+// Returns paths accessible to the worker
 	Paths(context.Context) ([]stores.StoragePath, error)
 
 	Info(context.Context) (storiface.WorkerInfo, error)
@@ -172,6 +174,7 @@ func New(ctx context.Context, lstor *stores.Local, stor *stores.Remote, ls store
 	wcfg := WorkerConfig{
 		IgnoreResourceFiltering: sc.ResourceFiltering == ResourceFilteringDisabled,
 		TaskTypes:               localTasks,
+		TaskTotal:               100,
 	}
 	worker := NewLocalWorker(wcfg, stor, lstor, si, m, wss)
 	err = m.AddWorker(ctx, worker)
@@ -348,7 +351,7 @@ func (m *Manager) SealPreCommit1(ctx context.Context, sector storage.SectorRef, 
 
 	selector := newAllocSelector(m.index, storiface.FTCache|storiface.FTSealed, storiface.PathSealing)
 
-	err = m.sched.Schedule(ctx, sector, types.TTPreCommit1, selector, m.schedFetch(sector, storiface.FTUnsealed, storiface.PathSealing, storiface.AcquireMove), func(ctx context.Context, w Worker) error {
+	err = m.sched.Schedule(ctx, sector, types.TTPreCommit1, selector, schedNop /*m.schedFetch(sector, storiface.FTUnsealed, storiface.PathSealing, storiface.AcquireMove)*/, func(ctx context.Context, w Worker) error {
 		err := m.startWork(ctx, w, wk)(w.SealPreCommit1(ctx, sector, ticket, pieces))
 		if err != nil {
 			return err

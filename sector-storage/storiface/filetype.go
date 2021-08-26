@@ -2,6 +2,9 @@ package storiface
 
 import (
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
 
 	"golang.org/x/xerrors"
 
@@ -107,6 +110,42 @@ type SectorPaths struct {
 	Unsealed string
 	Sealed   string
 	Cache    string
+}
+
+func DefaultPieceInfosFile() string {
+	return filepath.Join("/var/tmp/", "s-piece-infos")
+}
+
+func FileExists(fPath string) (bool, error) {
+	_, err := os.Stat(fPath)
+	if err == nil {
+		return true, nil
+	}
+
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+
+	return false, err
+}
+
+
+func CopyFile(srcFile , dstFile string) error {
+	source, err := os.Open(srcFile)
+	if err != nil {
+		return err
+	}
+	defer source.Close()
+
+	destination, err := os.Create(dstFile)
+	if err != nil {
+		return err
+	}
+	defer destination.Close()
+
+	_, err = io.Copy(destination, source)
+
+	return nil
 }
 
 func ParseSectorID(baseName string) (abi.SectorID, error) {
