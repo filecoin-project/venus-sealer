@@ -2,15 +2,18 @@ package api
 
 import (
 	"context"
+	"io"
+
+	"github.com/google/uuid"
+	"github.com/ipfs/go-cid"
+
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/specs-storage/storage"
+
 	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
 	"github.com/filecoin-project/venus-sealer/types"
-	"github.com/google/uuid"
-	"github.com/ipfs/go-cid"
-	"io"
 )
 
 type WorkerStruct struct {
@@ -37,6 +40,9 @@ type WorkerStruct struct {
 
 		TaskDisable func(ctx context.Context, tt types.TaskType) error `perm:"admin"`
 		TaskEnable  func(ctx context.Context, tt types.TaskType) error `perm:"admin"`
+
+		TaskNumbers  func(context.Context) (string, error)                                  `perm:"admin"`
+		SectorExists func(context.Context, types.TaskType, storage.SectorRef) (bool, error) `perm:"admin"`
 
 		Remove          func(ctx context.Context, sector abi.SectorID) error `perm:"admin"`
 		StorageAddLocal func(ctx context.Context, path string) error         `perm:"admin"`
@@ -119,6 +125,14 @@ func (w *WorkerStruct) TaskDisable(ctx context.Context, tt types.TaskType) error
 
 func (w *WorkerStruct) TaskEnable(ctx context.Context, tt types.TaskType) error {
 	return w.Internal.TaskEnable(ctx, tt)
+}
+
+func (w *WorkerStruct) TaskNumbers(ctx context.Context) (string, error) {
+	return w.Internal.TaskNumbers(ctx)
+}
+
+func (w *WorkerStruct) SectorExists(ctx context.Context, task types.TaskType, sector storage.SectorRef) (bool, error) {
+	return w.Internal.SectorExists(ctx, task, sector)
 }
 
 func (w *WorkerStruct) Remove(ctx context.Context, sector abi.SectorID) error {

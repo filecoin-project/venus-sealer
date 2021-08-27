@@ -3,6 +3,7 @@ package sectorstorage
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"reflect"
@@ -38,6 +39,9 @@ type WorkerConfig struct {
 	// worker regardless of its currently available resources. Used in testing
 	// with the local worker.
 	IgnoreResourceFiltering bool
+
+	TaskTotal  int64
+	IsBindP1P2 bool
 }
 
 // used do provide custom proofs impl (mostly used in testing)
@@ -58,6 +62,10 @@ type LocalWorker struct {
 	acceptTasks map[types.TaskType]struct{}
 	running     sync.WaitGroup
 	taskLk      sync.Mutex
+	taskNumber  int64
+	taskTotal   int64
+
+	isBindP1P2 bool
 
 	session     uuid.UUID
 	testDisable int64
@@ -80,11 +88,13 @@ func newLocalWorker(executor ExecutorFunc, wcfg WorkerConfig, store stores.Store
 			st: cst,
 		},
 		acceptTasks:     acceptTasks,
+		taskTotal:       wcfg.TaskTotal,
 		executor:        executor,
 		noSwap:          wcfg.NoSwap,
 		ignoreResources: wcfg.IgnoreResourceFiltering,
 		session:         uuid.New(),
 		closing:         make(chan struct{}),
+		isBindP1P2:      wcfg.IsBindP1P2,
 	}
 
 	if w.executor == nil {
@@ -205,6 +215,13 @@ var returnFunc = map[types.ReturnType]func(context.Context, types.CallID, storif
 }
 
 func (l *LocalWorker) asyncCall(ctx context.Context, sector storage.SectorRef, rt types.ReturnType, work func(ctx context.Context, ci types.CallID) (interface{}, error)) (types.CallID, error) {
+	taskNumber := atomic.AddInt64(&l.taskNumber, 1)
+	if l.taskTotal >= 0 && taskNumber > l.taskTotal {
+		atomic.AddInt64(&l.taskNumber, -1)
+		log.Errorf("task number [%d-%d]", taskNumber-1, l.taskTotal)
+		return types.CallID{}, xerrors.Errorf("The number of tasks has reached the upper limit [%d-%d] ", taskNumber-1, l.taskTotal)
+	}
+
 	ci := types.CallID{
 		Sector: sector.ID,
 		ID:     uuid.New(),
@@ -217,7 +234,11 @@ func (l *LocalWorker) asyncCall(ctx context.Context, sector storage.SectorRef, r
 	l.running.Add(1)
 
 	go func() {
-		defer l.running.Done()
+		defer func() {
+			log.Infof("task [%s] complete for sector %d", rt, sector.ID.Number)
+			atomic.AddInt64(&l.taskNumber, -1)
+			l.running.Done()
+		}()
 
 		ctx := &wctx{
 			vals:    ctx,
@@ -465,6 +486,34 @@ func (l *LocalWorker) TaskEnable(ctx context.Context, tt types.TaskType) error {
 
 func (l *LocalWorker) Paths(ctx context.Context) ([]stores.StoragePath, error) {
 	return l.localStore.Local(ctx)
+}
+
+func (l *LocalWorker) TaskNumbers(context.Context) (string, error) {
+	str := fmt.Sprintf("%d-%d", l.taskNumber, l.taskTotal)
+	return str, nil
+}
+
+func (l *LocalWorker) SectorExists(ctx context.Context, task types.TaskType, sector storage.SectorRef) (bool, error) {
+	if l.isBindP1P2 && task == types.TTPreCommit2 {
+		paths, _, err := l.storage.AcquireSector(ctx, sector, 0, storiface.FTSealed, storiface.PathSealing, storiface.AcquireMode(""))
+		if err != nil {
+			log.Errorf("try to find sector paths err: %s", err.Error())
+			return true, nil
+		}
+
+		log.Infof("find acquire sector paths: %v", paths)
+		bExist, err := storiface.FileExists(paths.Sealed)
+		if err != nil {
+			log.Errorf("check %s exist err: %s", paths.Sealed)
+			return true, nil
+		}
+
+		if !bExist {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }
 
 func (l *LocalWorker) Info(context.Context) (storiface.WorkerInfo, error) {

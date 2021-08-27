@@ -120,6 +120,14 @@ func (s *schedTestWorker) TaskTypes(ctx context.Context) (map[types.TaskType]str
 	return s.taskTypes, nil
 }
 
+func (t *schedTestWorker) TaskNumbers(ctx context.Context) (string, error) {
+	return "0-0", nil
+}
+
+func (s *schedTestWorker) SectorExists(context.Context, types.TaskType, storage.SectorRef) (bool, error) {
+	return true, nil
+}
+
 func (s *schedTestWorker) Paths(ctx context.Context) ([]stores.StoragePath, error) {
 	return s.paths, nil
 }
@@ -535,7 +543,7 @@ func TestSched(t *testing.T) {
 
 type slowishSelector bool
 
-func (s slowishSelector) Ok(ctx context.Context, task types.TaskType, spt abi.RegisteredSealProof, a *workerHandle) (bool, error) {
+func (s slowishSelector) Ok(ctx context.Context, task types.TaskType, spt abi.RegisteredSealProof, sector storage.SectorRef, a *workerHandle) (bool, error) {
 	time.Sleep(200 * time.Microsecond)
 	return bool(s), nil
 }

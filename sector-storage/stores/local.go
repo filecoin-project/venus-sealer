@@ -114,7 +114,7 @@ func (p *path) stat(ls LocalStorage) (fsutil.FsStat, error) {
 				used, err = ls.DiskUsage(p)
 			}
 			if err != nil {
-				log.Warnf("getting disk usage of '%s': %+v", p.sectorPath(id, fileType), err)
+				// log.Warnf("getting disk usage of '%s': %+v", p.sectorPath(id, fileType), err)
 				continue
 			}
 
