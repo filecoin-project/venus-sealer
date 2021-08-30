@@ -145,12 +145,6 @@ func (m *Manager) getWork(ctx context.Context, method types.TaskType, params ...
 				return
 			}
 
-			if (types.WsStarted==ws.Status || types.WsDone==ws.Status) && ws.WorkerCall.Sector.Number == 0 && ws.WorkerCall.ID.String() == "00000000-0000-0000-0000-000000000000" {
-				st := m.work.Get(wid)
-				st.End()
-				return
-			}
-
 			switch ws.Status {
 			case types.WsStarted:
 				log.Warnf("canceling started (not running) work %s", wid)
@@ -162,6 +156,14 @@ func (m *Manager) getWork(ctx context.Context, method types.TaskType, params ...
 			case types.WsDone:
 				// TODO: still remove?
 				log.Warnf("cancel called on work %s in 'done' state", wid)
+
+				if ws.WorkerCall.Sector.Number == 0 && ws.WorkerCall.ID.String() == "00000000-0000-0000-0000-000000000000" {
+					if err := m.work.Get(wid).End(); err != nil {
+						log.Errorf("cancel: failed to cancel done work %s: %+v", wid, err)
+						return
+					}
+				}
+
 			case types.WsRunning:
 				log.Warnf("cancel called on work %s in 'running' state (manager shutting down?)", wid)
 			}
