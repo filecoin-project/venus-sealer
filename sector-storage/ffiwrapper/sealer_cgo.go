@@ -227,6 +227,17 @@ func (sb *Sealer) AddPiece(ctx context.Context, sector storage.SectorRef, existi
 		pieceCID = paddedCid
 	}
 
+	// generate /var/tmp/s-basic-unsealed
+	if offset.Padded()+pieceSize.Padded() == maxPieceSize {
+		tUnsealedFile := "/var/tmp/s-basic-unsealed"
+		if bExist, _ := storiface.FileExists(tUnsealedFile); !bExist {
+			err = storiface.CopyFile(stagedPath.Unsealed, tUnsealedFile)
+			if err != nil {
+				return abi.PieceInfo{}, err
+			}
+		}
+	}
+
 	return abi.PieceInfo{
 		Size:     pieceSize.Padded(),
 		PieceCID: pieceCID,
