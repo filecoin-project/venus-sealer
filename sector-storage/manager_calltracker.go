@@ -145,6 +145,12 @@ func (m *Manager) getWork(ctx context.Context, method types.TaskType, params ...
 				return
 			}
 
+			if (types.WsStarted==ws.Status || types.WsDone==ws.Status) && ws.WorkerCall.Sector.Number == 0 && ws.WorkerCall.ID.String() == "00000000-0000-0000-0000-000000000000" {
+				st := m.work.Get(wid)
+				st.End()
+				return
+			}
+
 			switch ws.Status {
 			case types.WsStarted:
 				log.Warnf("canceling started (not running) work %s", wid)
