@@ -63,7 +63,7 @@ func main() {
 			&cli.StringFlag{
 				Name:    "repo",
 				EnvVars: []string{"VENUS_WORKER_PATH"},
-				Hidden:  true,
+				Hidden:  false,
 				Value:   "~/.venusworker", // TODO: Consider XDG_DATA_HOME
 			},
 			&cli.BoolFlag{
