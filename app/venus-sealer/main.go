@@ -67,7 +67,7 @@ func main() {
 			&cli.StringFlag{
 				Name:    "repo",
 				EnvVars: []string{"VENUS_SEALER_PATH"},
-				Hidden:  true,
+				Hidden:  false,
 				Value:   "~/.venussealer", // TODO: Consider XDG_DATA_HOME
 			},
 		},
