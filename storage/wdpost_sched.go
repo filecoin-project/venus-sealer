@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"go.opencensus.io/trace"
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/go-address"
@@ -14,7 +13,6 @@ import (
 
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/config"
-	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus-sealer/journal"
 	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
 	"github.com/filecoin-project/venus-sealer/sector-storage/ffiwrapper"
@@ -69,9 +67,8 @@ func NewWindowedPoStScheduler(api fullNodeFilteredAPI,
 	}
 
 	return &WindowPoStScheduler{
-		Messager:      messager,
-		networkParams: networkParams,
-
+		Messager:         messager,
+		networkParams:    networkParams,
 		api:              api,
 		feeCfg:           fc,
 		addrSel:          as,
@@ -105,57 +102,28 @@ func (s *WindowPoStScheduler) Run(ctx context.Context) {
 	defer s.ch.shutdown()
 	s.ch.start()
 
-	var (
-		notifs <-chan []*chain.HeadChange
-		err    error
-		gotCur bool
-	)
+	latest, err := s.api.ChainHead(ctx)
+	if err != nil {
+		log.Errorf("error to get latest chain head %v", err)
+	}
+	s.update(ctx, nil, latest)
 
-	// not fine to panic after this point
+	tm := time.NewTicker(time.Duration(s.networkParams.BlockDelaySecs*2) * time.Second)
+	defer tm.Stop()
+
 	for {
-		if notifs == nil {
-			notifs, err = s.api.ChainNotify(ctx)
-			if err != nil {
-				log.Errorf("ChainNotify error: %+v", err)
-
-				constants.Clock.Sleep(10 * time.Second)
-				continue
-			}
-
-			gotCur = false
-			log.Infof("connect to venus success")
-		}
-
-
 		select {
-		case changes, ok := <-notifs:
-			if !ok {
-				log.Warn("window post scheduler notifs channel closed")
-				notifs = nil
+		case <-tm.C:
+			current, err := s.api.ChainHead(ctx)
+			if err != nil {
+				log.Errorf("error to get latest chain head %v", err)
 				continue
 			}
-
-			if !gotCur {
-				if len(changes) != 1 {
-					log.Errorf("expected first notif to have len = 1")
-					continue
-				}
-				chg := changes[0]
-				if chg.Type != chain.HCCurrent {
-					log.Errorf("expected first notif to tell current ts")
-					continue
-				}
-
-				ctx, span := trace.StartSpan(ctx, "WindowPoStScheduler.headChange")
-
-				s.update(ctx, nil, chg.Val)
-
-				span.End()
-				gotCur = true
+			changes, err := s.api.ChainGetPath(ctx, latest.Key(), current.Key())
+			if err != nil {
+				log.Errorf("error to get chain path %v", err)
 				continue
 			}
-
-			ctx, span := trace.StartSpan(ctx, "WindowPoStScheduler.headChange")
 
 			var lowest, highest *types.TipSet = nil, nil
 
@@ -172,9 +140,9 @@ func (s *WindowPoStScheduler) Run(ctx context.Context) {
 			}
 
 			s.update(ctx, lowest, highest)
-
-			span.End()
 		case <-ctx.Done():
+
+			log.Warnf("cancel windows post scheduler")
 			return
 		}
 	}
