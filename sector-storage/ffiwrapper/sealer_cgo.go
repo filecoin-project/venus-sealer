@@ -493,9 +493,11 @@ func (sb *Sealer) SealPreCommit1(ctx context.Context, sector storage.SectorRef, 
 	tUnsealedFile := "/var/tmp/s-basic-unsealed"
 	log.Infof("pre commit1 paths: %v", paths)
 	if bExist, _ := storiface.FileExists(tUnsealedFile); bExist {
-		err = storiface.CopyFile(tUnsealedFile, paths.Unsealed)
-		if err != nil {
-			return nil, err
+		if bExist, _ := storiface.FileExists(paths.Unsealed); !bExist {
+			err = storiface.CopyFile(tUnsealedFile, paths.Unsealed)
+			if err != nil {
+				return nil, err
+			}
 		}
 	} else {
 		return nil, xerrors.Errorf("The default unsealed does not exist,please copy a generated unsealed file to %s", tUnsealedFile)
