@@ -359,8 +359,8 @@ github.com/filecoin-project/specs-storage v0.1.1-0.20201105051918-5188d9774506 h
 github.com/filecoin-project/specs-storage v0.1.1-0.20201105051918-5188d9774506/go.mod h1:nJRRM7Aa9XVvygr3W9k6xGF46RWzr2zxF/iGoAIfA/g=
 github.com/filecoin-project/test-vectors/schema v0.0.5/go.mod h1:iQ9QXLpYWL3m7warwvK1JC/pTri8mnfEmKygNDqqY6E=
 github.com/filecoin-project/venus v1.0.1-0.20210707073618-62e8cf9a7834/go.mod h1:BVcA3ztDkxMbLPoMJKUKlkcbDUwI2dktfiu4rxhzYXc=
-github.com/filecoin-project/venus v1.0.5-0.20210811013123-0273eed7013d h1:K9mHmYeicOrqz1FwPS6FJ0lMIcmuC+kxYOnsg3Zjtjo=
-github.com/filecoin-project/venus v1.0.5-0.20210811013123-0273eed7013d/go.mod h1:EGbpv0h8rna7XRsH708QalFn3pSKcGft1s5gAsuamzk=
+github.com/filecoin-project/venus v1.0.5-0.20210903032001-3006ec6eb222 h1:BFLeipcjA7M1aTbjHUtKXIrNjmK2nPxb1WSkerfauYM=
+github.com/filecoin-project/venus v1.0.5-0.20210903032001-3006ec6eb222/go.mod h1:sXNTwBIfJKoMLYc3M/RXlIKMqyzYtZhmwv8nuhR584k=
 github.com/filecoin-project/venus-auth v1.1.0/go.mod h1:LXrT3H5dbcG/N+Ze5jMLGwAyGic9s1y3J/JV2/qM0sU=
 github.com/filecoin-project/venus-auth v1.1.1-0.20210601064545-55f3162444fd/go.mod h1:5tTtug4j0zXhaHBt731KyPpV5r8BG4z64huN4uZHmsE=
 github.com/filecoin-project/venus-auth v1.2.0/go.mod h1:m12HUiZhSWOB1UBs7rcRRXdm89J88aaNBnnLDle7UkI=
@@ -669,8 +669,9 @@ github.com/influxdata/line-protocol v0.0.0-20200327222509-2487e7298839 h1:W9WBk7
 github.com/influxdata/line-protocol v0.0.0-20200327222509-2487e7298839/go.mod h1:xaLFMmpvUxqXtVkUJfg9QmT88cDaCJ3ZKgdZ78oO8Qo=
 github.com/ipfs-force-community/go-ipfs-cmds v0.6.1-0.20210521090123-4587df7fa0ab/go.mod h1:ZgYiWVnCk43ChwoH8hAmI1IRbuVtq3GSTHwtRB/Kqhk=
 github.com/ipfs-force-community/metrics v0.0.0-20210714124606-3d65e2d7cec1/go.mod h1:mn40SioMuKtjmRumHFy/fJ26Pn028XuDjUJE9dorjyw=
-github.com/ipfs-force-community/metrics v1.0.0 h1:9YTmQCVcguY+hqWq5lwpSK41dhizk5IntBFvQ6YnYNI=
 github.com/ipfs-force-community/metrics v1.0.0/go.mod h1:mn40SioMuKtjmRumHFy/fJ26Pn028XuDjUJE9dorjyw=
+github.com/ipfs-force-community/metrics v1.0.1-0.20210827074542-cc8db7683f13 h1:ze9+S37kBGLwQuNJcyG+WyuPjgnC0w8DTfnMw6T5i6g=
+github.com/ipfs-force-community/metrics v1.0.1-0.20210827074542-cc8db7683f13/go.mod h1:mn40SioMuKtjmRumHFy/fJ26Pn028XuDjUJE9dorjyw=
 github.com/ipfs-force-community/venus-common-utils v0.0.0-20210714051450-5b18e20bb913/go.mod h1:AWIt7L1UiUeIzqQdjQ/quZcVcCdnr6GXabGLBgEIMzU=
 github.com/ipfs-force-community/venus-common-utils v0.0.0-20210714054928-2042a9040759 h1:dI1FSoq0C85B1Y+G2ZYrhf5TeIkumzmtz4tjakoqSxU=
 github.com/ipfs-force-community/venus-common-utils v0.0.0-20210714054928-2042a9040759/go.mod h1:AWIt7L1UiUeIzqQdjQ/quZcVcCdnr6GXabGLBgEIMzU=

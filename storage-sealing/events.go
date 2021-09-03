@@ -13,5 +13,5 @@ type HeightHandler func(ctx context.Context, tok types.TipSetToken, curH abi.Cha
 type RevertHandler func(ctx context.Context, tok types.TipSetToken) error
 
 type Events interface {
-	ChainAt(hnd HeightHandler, rev RevertHandler, confidence int, h abi.ChainEpoch) error
+	ChainAt(ctx context.Context, hnd HeightHandler, rev RevertHandler, confidence int, h abi.ChainEpoch) error
 }
