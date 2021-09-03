@@ -95,6 +95,7 @@ type FullNode interface {
 
 	// ChainTipSetWeight computes weight for the specified tipset.
 	ChainTipSetWeight(context.Context, types.TipSetKey) (types.BigInt, error)
+	ChainGetTipSetAfterHeight(context.Context, abi.ChainEpoch, types.TipSetKey) (*types.TipSet, error)
 	ChainGetNode(ctx context.Context, p string) (*IpldObject, error)
 
 	// ChainGetMessage reads a message referenced by the specified CID from the
@@ -539,6 +540,7 @@ type FullNodeStruct struct {
 		ChainGetParentReceipts        func(context.Context, cid.Cid) ([]*types.MessageReceipt, error)                                                    `perm:"read"`
 		ChainGetParentMessages        func(context.Context, cid.Cid) ([]apitypes.Message, error)                                                         `perm:"read"`
 		ChainGetTipSetByHeight        func(context.Context, abi.ChainEpoch, types.TipSetKey) (*types.TipSet, error)                                      `perm:"read"`
+		ChainGetTipSetAfterHeight     func(context.Context, abi.ChainEpoch, types.TipSetKey) (*types.TipSet, error)                                      `perm:"read"`
 		ChainReadObj                  func(context.Context, cid.Cid) ([]byte, error)                                                                     `perm:"read"`
 		ChainDeleteObj                func(context.Context, cid.Cid) error                                                                               `perm:"admin"`
 		ChainHasObj                   func(context.Context, cid.Cid) (bool, error)                                                                       `perm:"read"`
@@ -890,6 +892,10 @@ func (c *FullNodeStruct) ChainGetRandomnessFromBeacon(ctx context.Context, tsk t
 
 func (c *FullNodeStruct) ChainGetTipSetByHeight(ctx context.Context, h abi.ChainEpoch, tsk types.TipSetKey) (*types.TipSet, error) {
 	return c.Internal.ChainGetTipSetByHeight(ctx, h, tsk)
+}
+
+func (c *FullNodeStruct) ChainGetTipSetAfterHeight(ctx context.Context, h abi.ChainEpoch, tsk types.TipSetKey) (*types.TipSet, error) {
+	return c.Internal.ChainGetTipSetAfterHeight(ctx, h, tsk)
 }
 
 func (c *FullNodeStruct) WalletNew(ctx context.Context, typ types.KeyType) (address.Address, error) {

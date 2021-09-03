@@ -504,7 +504,7 @@ func (m *Sealing) handleWaitSeed(ctx statemachine.Context, sector types.SectorIn
 
 	randHeight := pci.PreCommitEpoch + policy.GetPreCommitChallengeDelay()
 
-	err = m.events.ChainAt(func(ectx context.Context, _ types.TipSetToken, curH abi.ChainEpoch) error {
+	err = m.events.ChainAt(ctx.Context(), func(ectx context.Context, _ types.TipSetToken, curH abi.ChainEpoch) error {
 		// in case of null blocks the randomness can land after the tipset we
 		// get from the events API
 		tok, _, err := m.api.ChainHead(ctx.Context())
