@@ -353,7 +353,15 @@ func (m *Manager) SealPreCommit1(ctx context.Context, sector storage.SectorRef, 
 
 	selector := newAllocSelector(m.index, storiface.FTCache|storiface.FTSealed, storiface.PathSealing)
 
-	err = m.sched.Schedule(ctx, sector, types.TTPreCommit1, selector, schedNop /*m.schedFetch(sector, storiface.FTUnsealed, storiface.PathSealing, storiface.AcquireMove)*/, func(ctx context.Context, w Worker) error {
+	var prepare WorkerAction = m.schedFetch(sector, storiface.FTUnsealed, storiface.PathSealing, storiface.AcquireMove)
+	if len(pieces) == 0 && ((pieces[0].Size == 34359738368 && pieces[0].PieceCID.String() == "baga6ea4seaqao7s73y24kcutaosvacpdjgfe5pw76ooefnyqw4ynr3d2y6x2mpq") ||
+		(pieces[0].Size == 68719476736 && pieces[0].PieceCID.String() == "baga6ea4seaqomqafu276g53zko4k23xzh4h4uecjwicbmvhsuqi7o4bhthhm4aq") ||
+		(pieces[0].Size == 536870912 && pieces[0].PieceCID.String() == "baga6ea4seaqdsvqopmj2soyhujb72jza76t4wpq5fzifvm3ctz47iyytkewnubq") ||
+		(pieces[0].Size == 8388608 && pieces[0].PieceCID.String() == "baga6ea4seaqgl4u6lwmnerwdrm4iz7ag3mpwwaqtapc2fciabpooqmvjypweeha") ||
+		(pieces[0].Size == 2048 && pieces[0].PieceCID.String() == "baga6ea4seaqpy7usqklokfx2vxuynmupslkeutzexe2uqurdg5vhtebhxqmpqmy")) {
+		prepare = schedNop // CC data
+	}
+	err = m.sched.Schedule(ctx, sector, types.TTPreCommit1, selector, prepare, func(ctx context.Context, w Worker) error {
 		err := m.startWork(ctx, w, wk)(w.SealPreCommit1(ctx, sector, ticket, pieces))
 		if err != nil {
 			return err
