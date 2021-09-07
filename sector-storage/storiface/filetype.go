@@ -112,8 +112,12 @@ type SectorPaths struct {
 	Cache    string
 }
 
-func DefaultPieceInfosFile() string {
-	return filepath.Join("/var/tmp/", "s-piece-infos")
+func DefaultPieceInfosFile(ssize abi.SectorSize) string {
+	return filepath.Join(fmt.Sprintf("/var/tmp/s-piece-infos-%d", ssize))
+}
+
+func DefaultUnsealedFile(ssize abi.SectorSize) string {
+	return filepath.Join(fmt.Sprintf("/var/tmp/s-basic-unsealed-%d", ssize))
 }
 
 func FileExists(fPath string) (bool, error) {

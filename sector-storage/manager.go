@@ -354,7 +354,7 @@ func (m *Manager) SealPreCommit1(ctx context.Context, sector storage.SectorRef, 
 	selector := newAllocSelector(m.index, storiface.FTCache|storiface.FTSealed, storiface.PathSealing)
 
 	var prepare WorkerAction = m.schedFetch(sector, storiface.FTUnsealed, storiface.PathSealing, storiface.AcquireMove)
-	if len(pieces) == 0 && ((pieces[0].Size == 34359738368 && pieces[0].PieceCID.String() == "baga6ea4seaqao7s73y24kcutaosvacpdjgfe5pw76ooefnyqw4ynr3d2y6x2mpq") ||
+	if len(pieces) == 1 && ((pieces[0].Size == 34359738368 && pieces[0].PieceCID.String() == "baga6ea4seaqao7s73y24kcutaosvacpdjgfe5pw76ooefnyqw4ynr3d2y6x2mpq") ||
 		(pieces[0].Size == 68719476736 && pieces[0].PieceCID.String() == "baga6ea4seaqomqafu276g53zko4k23xzh4h4uecjwicbmvhsuqi7o4bhthhm4aq") ||
 		(pieces[0].Size == 536870912 && pieces[0].PieceCID.String() == "baga6ea4seaqdsvqopmj2soyhujb72jza76t4wpq5fzifvm3ctz47iyytkewnubq") ||
 		(pieces[0].Size == 8388608 && pieces[0].PieceCID.String() == "baga6ea4seaqgl4u6lwmnerwdrm4iz7ag3mpwwaqtapc2fciabpooqmvjypweeha") ||
