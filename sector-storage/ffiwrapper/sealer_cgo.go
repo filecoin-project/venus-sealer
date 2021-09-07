@@ -227,9 +227,9 @@ func (sb *Sealer) AddPiece(ctx context.Context, sector storage.SectorRef, existi
 		pieceCID = paddedCid
 	}
 
-	// generate /var/tmp/s-basic-unsealed
+	// generate s-basic-unsealed
 	if offset.Padded()+pieceSize.Padded() == maxPieceSize {
-		tUnsealedFile := "/var/tmp/s-basic-unsealed"
+		tUnsealedFile := storiface.DefaultUnsealedFile(ssize)
 		if bExist, _ := storiface.FileExists(tUnsealedFile); !bExist {
 			err = storiface.CopyFile(stagedPath.Unsealed, tUnsealedFile)
 			if err != nil {
@@ -489,8 +489,13 @@ func (sb *Sealer) SealPreCommit1(ctx context.Context, sector storage.SectorRef, 
 	}
 	defer done()
 
-	// Copy /var/tmp/s-basic-unsealed to the sealed directory
-	tUnsealedFile := "/var/tmp/s-basic-unsealed"
+	// Copy basic unsealed to the sealed directory
+	ssize, err := sector.ProofType.SectorSize()
+	if err != nil {
+		return nil, err
+	}
+
+	tUnsealedFile := storiface.DefaultUnsealedFile(ssize)
 	log.Infof("pre commit1 paths: %v", paths)
 	if bExist, _ := storiface.FileExists(tUnsealedFile); bExist {
 		if bExist, _ := storiface.FileExists(paths.Unsealed); !bExist {
@@ -530,10 +535,6 @@ func (sb *Sealer) SealPreCommit1(ctx context.Context, sector storage.SectorRef, 
 	var sum abi.UnpaddedPieceSize
 	for _, piece := range pieces {
 		sum += piece.Size.Unpadded()
-	}
-	ssize, err := sector.ProofType.SectorSize()
-	if err != nil {
-		return nil, err
 	}
 	ussize := abi.PaddedPieceSize(ssize).Unpadded()
 	if sum != ussize {

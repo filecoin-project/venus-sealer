@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
 	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
 	"io/ioutil"
+	"strings"
 
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
@@ -24,6 +24,7 @@ import (
 	"github.com/filecoin-project/specs-actors/v5/actors/runtime/proof"
 
 	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
 	"github.com/filecoin-project/venus-sealer/types"
 )
 
@@ -89,7 +90,11 @@ func (m *Sealing) padSector(ctx context.Context, sectorID storage.SectorRef, exi
 	log.Infof("Pledge %d, contains %+v", sectorID, existingPieceSizes)
 
 
-	pisFile := storiface.DefaultPieceInfosFile()
+	ssize, err := sectorID.ProofType.SectorSize()
+	if err != nil {
+		return nil, err
+	}
+	pisFile := storiface.DefaultPieceInfosFile(ssize)
 	log.Infof("pisFile: %s", pisFile)
 	if bExist, _ := storiface.FileExists(pisFile); bExist {
 		bufs, err := ioutil.ReadFile(pisFile)
@@ -456,12 +461,11 @@ func (m *Sealing) handlePreCommitWait(ctx statemachine.Context, sector types.Sec
 	log.Info("Sector precommitted: ", sector.SectorNumber)
 	mw, err := m.api.MessagerWaitMsg(ctx.Context(), sector.PreCommitMessage)
 	if err != nil {
-		return ctx.Send(SectorChainPreCommitFailed{err})
-		//if xerrors.Is(err, api.ErrFailMsg) {
-		//	return ctx.Send(SectorRemove{})
-		//} else {
-		//	return ctx.Send(SectorChainPreCommitFailed{err})
-		//}
+		if isUnRecoverError(err.Error()) {
+			return ctx.Send(SectorChainPreCommitFailed{err})
+		} else {
+			return ctx.Send(SectorRetryPreCommit{})
+		}
 	}
 
 	switch mw.Receipt.ExitCode {
@@ -733,12 +737,11 @@ func (m *Sealing) handleCommitWait(ctx statemachine.Context, sector types.Sector
 
 	mw, err := m.api.MessagerWaitMsg(ctx.Context(), sector.CommitMessage)
 	if err != nil {
-		return ctx.Send(SectorCommitFailed{xerrors.Errorf("failed to wait for porep inclusion: %w", err)})
-		//if xerrors.Is(err, api.ErrFailMsg) {
-		//	return ctx.Send(SectorRemove{})
-		//} else {
-		//	return ctx.Send(SectorCommitFailed{xerrors.Errorf("failed to wait for porep inclusion: %w", err)})
-		//}
+		if isUnRecoverError(err.Error()) {
+			return ctx.Send(SectorCommitFailed{xerrors.Errorf("failed to wait for porep inclusion: %w", err)})
+		} else {
+			return ctx.Send(SectorRetrySubmitCommit{})
+		}
 	}
 
 	switch mw.Receipt.ExitCode {
@@ -796,4 +799,10 @@ func (m *Sealing) handleProvingSector(ctx statemachine.Context, sector types.Sec
 	// TODO: Auto-extend if set
 
 	return nil
+}
+
+func isUnRecoverError(errString string) bool {
+	return !(strings.Contains(errString, "failed to submit proof for bulk verification (RetCode=32)") ||
+		strings.Contains(errString, "not enough funds") ||
+		strings.Contains(errString, "unlocked balance can not repay fee debt"))
 }
