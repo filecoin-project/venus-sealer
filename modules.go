@@ -364,7 +364,8 @@ out:
 		},
 	}, r)
 	if err != nil {
-		return xerrors.Errorf("failed to compute proof: %w", err)
+		log.Errorw("failed to compute proof: %w, please check your storage and restart sealer after fixed", err)
+		return nil
 	}
 
 	log.Infow("winning PoSt warmup successful", "took", time.Now().Sub(start))
