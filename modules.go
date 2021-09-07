@@ -364,7 +364,7 @@ out:
 		},
 	}, r)
 	if err != nil {
-		log.Errorw("failed to compute proof: %w, please check your storage and restart sealer after fixed", err)
+		log.Errorf("failed to compute proof: %w, please check your storage and restart sealer after fixed", err)
 		return nil
 	}
 
