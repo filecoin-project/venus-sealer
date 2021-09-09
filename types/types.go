@@ -13,8 +13,8 @@ import (
 
 	"github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
 
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
-	"github.com/filecoin-project/venus/pkg/specactors/policy"
+	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
 
 	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 )

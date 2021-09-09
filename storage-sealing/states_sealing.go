@@ -17,9 +17,9 @@ import (
 	"github.com/filecoin-project/go-statemachine"
 	"github.com/filecoin-project/specs-storage/storage"
 
-	actors "github.com/filecoin-project/venus/pkg/specactors"
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
-	"github.com/filecoin-project/venus/pkg/specactors/policy"
+	actors "github.com/filecoin-project/venus/pkg/types/specactors"
+	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
 
 	"github.com/filecoin-project/specs-actors/v5/actors/runtime/proof"
 
@@ -88,7 +88,6 @@ func (m *Sealing) padSector(ctx context.Context, sectorID storage.SectorRef, exi
 	}
 
 	log.Infof("Pledge %d, contains %+v", sectorID, existingPieceSizes)
-
 
 	ssize, err := sectorID.ProofType.SectorSize()
 	if err != nil {

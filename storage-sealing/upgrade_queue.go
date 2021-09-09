@@ -3,7 +3,7 @@ package sealing
 import (
 	"context"
 
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
 
 	"golang.org/x/xerrors"
 

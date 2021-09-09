@@ -57,10 +57,25 @@ type StorageMinerAPI struct {
 
 	AddrSel *storage.AddressSelector
 
+	Stor *stores.Remote
+
 	LogService           *service.LogService
 	NetParams            *config.NetParamsConfig
 	SetSealingConfigFunc types2.SetSealingConfigFunc
 	GetSealingConfigFunc types2.GetSealingConfigFunc
+}
+
+func (sm *StorageMinerAPI) IsUnsealed(ctx context.Context, sector sto.SectorRef, offset storiface.UnpaddedByteIndex, size abi.UnpaddedPieceSize) (bool, error) {
+	return sm.Stor.CheckIsUnsealed(ctx, sector, abi.PaddedPieceSize(offset.Padded()), abi.PaddedPieceSize(offset.Padded()))
+}
+
+func (sm *StorageMinerAPI) SectorsUnsealPiece(ctx context.Context, sector sto.SectorRef, offset storiface.UnpaddedByteIndex, size abi.UnpaddedPieceSize, randomness abi.SealRandomness, commd *cid.Cid) error {
+	sectorInfo, err := sm.SectorBlocks.GetSectorInfo(sector.ID.Number)
+	if err != nil {
+		return err
+	}
+	sector.ProofType = sectorInfo.SectorType
+	return sm.StorageMgr.SectorsUnsealPiece(ctx, sector, offset, size, sectorInfo.TicketValue, sectorInfo.CommD)
 }
 
 func (sm *StorageMinerAPI) ServeRemote(w http.ResponseWriter, r *http.Request) {
@@ -754,7 +769,7 @@ func (sm *StorageMinerAPI) MessagerWaitMessage(ctx context.Context, uuid string,
 		Message: *msg.SignedCid,
 		Receipt: *msg.Receipt,
 		//	ReturnDec interface{}
-		//TipSet   :msg.
+		TipSet: msg.TipSetKey,
 		Height: abi.ChainEpoch(msg.Height),
 	}, nil
 }

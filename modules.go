@@ -36,9 +36,9 @@ import (
 	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 	types2 "github.com/filecoin-project/venus-sealer/types"
 	"github.com/filecoin-project/venus/fixtures/asset"
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
-	"github.com/filecoin-project/venus/pkg/specactors/policy"
 	"github.com/filecoin-project/venus/pkg/types"
+	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
 )
 
 func OpenFilesystemJournal(homeDir config.HomeDir, lc fx.Lifecycle, disabled journal.DisabledEvents) (journal.Journal, error) {

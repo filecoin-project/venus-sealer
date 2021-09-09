@@ -27,10 +27,10 @@ import (
 
 	"github.com/filecoin-project/venus/app/submodule/apitypes"
 	"github.com/filecoin-project/venus/pkg/messagepool"
-	actors "github.com/filecoin-project/venus/pkg/specactors"
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
-	"github.com/filecoin-project/venus/pkg/specactors/policy"
 	"github.com/filecoin-project/venus/pkg/types"
+	actors "github.com/filecoin-project/venus/pkg/types/specactors"
+	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
 )
 
 // recordPoStFailure records a failure in the journal.

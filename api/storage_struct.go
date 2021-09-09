@@ -14,11 +14,10 @@ import (
 	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 	"github.com/filecoin-project/specs-storage/storage"
 
+	types3 "github.com/filecoin-project/venus-messager/types"
 	"github.com/filecoin-project/venus/app/submodule/apitypes"
 	"github.com/filecoin-project/venus/pkg/chain"
 	types2 "github.com/filecoin-project/venus/pkg/types"
-
-	types3 "github.com/filecoin-project/venus-messager/types"
 
 	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/sector-storage/fsutil"
@@ -43,9 +42,6 @@ type StorageMiner interface {
 
 	// Temp api for testing
 	PledgeSector(context.Context) (abi.SectorID, error)
-
-	// Get the status of a given sector by ID
-	SectorsStatus(ctx context.Context, sid abi.SectorNumber, showOnChainInfo bool) (SectorInfo, error)
 
 	// List all staged sectors
 	SectorsList(context.Context) ([]abi.SectorNumber, error)
@@ -150,6 +146,12 @@ type StorageMiner interface {
 	MessagerWaitMessage(ctx context.Context, uuid string, confidence uint64) (*chain.MsgLookup, error)
 	MessagerPushMessage(ctx context.Context, msg *types2.Message, meta *types3.MsgMeta) (string, error)
 	MessagerGetMessage(ctx context.Context, uuid string) (*types3.Message, error)
+
+	//for market
+	IsUnsealed(ctx context.Context, sector storage.SectorRef, offset storiface.UnpaddedByteIndex, size abi.UnpaddedPieceSize) (bool, error)
+	SectorsStatus(ctx context.Context, sid abi.SectorNumber, showOnChainInfo bool) (SectorInfo, error)
+	// SectorsUnsealPiece will Unseal a Sealed sector file for the given sector.
+	SectorsUnsealPiece(ctx context.Context, sector storage.SectorRef, offset storiface.UnpaddedByteIndex, size abi.UnpaddedPieceSize, randomness abi.SealRandomness, commd *cid.Cid) error
 }
 
 // StorageMinerStruct
@@ -165,7 +167,6 @@ type StorageMinerStruct struct {
 
 		PledgeSector func(context.Context) (abi.SectorID, error) `perm:"write"`
 
-		SectorsStatus                 func(ctx context.Context, sid abi.SectorNumber, showOnChainInfo bool) (SectorInfo, error)        `perm:"read"`
 		SectorsList                   func(context.Context) ([]abi.SectorNumber, error)                                                `perm:"read"`
 		SectorsListInStates           func(context.Context, []SectorState) ([]abi.SectorNumber, error)                                 `perm:"read"`
 		SectorsInfoListInStates       func(ctx context.Context, ss []SectorState, showOnChainInfo, skipLog bool) ([]SectorInfo, error) `perm:"read"`
@@ -247,10 +248,23 @@ type StorageMinerStruct struct {
 
 		CheckProvable func(ctx context.Context, pp abi.RegisteredPoStProof, sectors []storage.SectorRef, expensive bool) (map[abi.SectorNumber]string, error) `perm:"admin"`
 
-		MessagerWaitMessage func(ctx context.Context, uuid string, confidence uint64) (*chain.MsgLookup, error)
-		MessagerPushMessage func(ctx context.Context, msg *types2.Message, meta *types3.MsgMeta) (string, error)
-		MessagerGetMessage  func(ctx context.Context, uuid string) (*types3.Message, error)
+		MessagerWaitMessage func(ctx context.Context, uuid string, confidence uint64) (*chain.MsgLookup, error)  `perm:"read"`
+		MessagerPushMessage func(ctx context.Context, msg *types2.Message, meta *types3.MsgMeta) (string, error) `perm:"sign"`
+		MessagerGetMessage  func(ctx context.Context, uuid string) (*types3.Message, error)                      `perm:"write"`
+
+		IsUnsealed    func(ctx context.Context, sector storage.SectorRef, offset storiface.UnpaddedByteIndex, size abi.UnpaddedPieceSize) (bool, error)
+		SectorsStatus func(ctx context.Context, sid abi.SectorNumber, showOnChainInfo bool) (SectorInfo, error)
+		// SectorsUnsealPiece will Unseal a Sealed sector file for the given sector.
+		SectorsUnsealPiece func(ctx context.Context, sector storage.SectorRef, offset storiface.UnpaddedByteIndex, size abi.UnpaddedPieceSize, randomness abi.SealRandomness, commd *cid.Cid) error
 	}
+}
+
+func (c *StorageMinerStruct) IsUnsealed(ctx context.Context, sector storage.SectorRef, offset storiface.UnpaddedByteIndex, size abi.UnpaddedPieceSize) (bool, error) {
+	return c.Internal.IsUnsealed(ctx, sector, offset, size)
+}
+
+func (c *StorageMinerStruct) SectorsUnsealPiece(ctx context.Context, sector storage.SectorRef, offset storiface.UnpaddedByteIndex, size abi.UnpaddedPieceSize, randomness abi.SealRandomness, commd *cid.Cid) error {
+	return c.Internal.SectorsUnsealPiece(ctx, sector, offset, size, randomness, commd)
 }
 
 func (c *StorageMinerStruct) NetParamsConfig(ctx context.Context) (*config.NetParamsConfig, error) {

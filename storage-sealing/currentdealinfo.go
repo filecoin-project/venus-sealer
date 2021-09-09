@@ -14,8 +14,8 @@ import (
 
 	"github.com/filecoin-project/venus/app/submodule/apitypes"
 	"github.com/filecoin-project/venus/pkg/constants"
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/market"
 	"github.com/filecoin-project/venus/pkg/types"
+	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/market"
 
 	types2 "github.com/filecoin-project/venus-sealer/types"
 )

@@ -8,8 +8,8 @@ import (
 
 	miner5 "github.com/filecoin-project/specs-actors/v5/actors/builtin/miner"
 
-	"github.com/filecoin-project/venus/pkg/specactors/policy"
 	"github.com/filecoin-project/venus/pkg/types"
+	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
 
 	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
 )

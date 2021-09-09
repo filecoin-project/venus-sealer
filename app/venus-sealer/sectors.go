@@ -19,10 +19,10 @@ import (
 
 	miner3 "github.com/filecoin-project/specs-actors/v3/actors/builtin/miner"
 
-	actors "github.com/filecoin-project/venus/pkg/specactors"
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
-	"github.com/filecoin-project/venus/pkg/specactors/policy"
 	"github.com/filecoin-project/venus/pkg/types"
+	actors "github.com/filecoin-project/venus/pkg/types/specactors"
+	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
 
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/lib/tablewriter"

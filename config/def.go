@@ -41,6 +41,7 @@ type StorageMiner struct {
 	Node          NodeConfig
 	JWT           JWTConfig
 	Messager      MessagerConfig
+	Market        MarketConfig
 	RegisterProof RegisterProofConfig
 
 	ConfigPath string `toml:"-"`
@@ -60,6 +61,11 @@ type NodeConfig struct {
 }
 
 type MessagerConfig struct {
+	Url   string
+	Token string
+}
+
+type MarketConfig struct {
 	Url   string
 	Token string
 }

@@ -12,7 +12,7 @@ import (
 
 	"github.com/filecoin-project/venus-sealer/types"
 
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
 )
 
 type mutator interface {
@@ -98,7 +98,7 @@ func (evt SectorPieceAdded) apply(state *types.SectorInfo) {
 type SectorAddPieceFailed struct{ error }
 
 func (evt SectorAddPieceFailed) FormatError(xerrors.Printer) (next error) { return evt.error }
-func (evt SectorAddPieceFailed) apply(si *types.SectorInfo)                     {}
+func (evt SectorAddPieceFailed) apply(si *types.SectorInfo)               {}
 
 type SectorStartPacking struct{}
 

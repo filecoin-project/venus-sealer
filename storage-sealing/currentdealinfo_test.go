@@ -23,8 +23,8 @@ import (
 
 	"github.com/filecoin-project/venus/app/submodule/apitypes"
 	evtmock "github.com/filecoin-project/venus/pkg/events/state/mock"
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/market"
 	"github.com/filecoin-project/venus/pkg/types"
+	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/market"
 
 	types2 "github.com/filecoin-project/venus-sealer/types"
 )

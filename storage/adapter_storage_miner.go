@@ -21,10 +21,10 @@ import (
 	"github.com/filecoin-project/venus/app/submodule/apitypes"
 	chain2 "github.com/filecoin-project/venus/pkg/chain"
 	constants2 "github.com/filecoin-project/venus/pkg/constants"
-	actors "github.com/filecoin-project/venus/pkg/specactors"
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/market"
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
 	"github.com/filecoin-project/venus/pkg/types"
+	actors "github.com/filecoin-project/venus/pkg/types/specactors"
+	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/market"
+	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
 
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/constants"

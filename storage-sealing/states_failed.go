@@ -7,13 +7,13 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/market"
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/market"
+	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
 
+	"github.com/filecoin-project/go-commp-utils/zerocomm"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/exitcode"
 	"github.com/filecoin-project/go-statemachine"
-	"github.com/filecoin-project/go-commp-utils/zerocomm"
 
 	"github.com/filecoin-project/venus-sealer/types"
 )
