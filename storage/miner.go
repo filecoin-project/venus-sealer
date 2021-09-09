@@ -3,6 +3,8 @@ package storage
 import (
 	"context"
 	"errors"
+	api2 "github.com/filecoin-project/venus-market/api"
+	"github.com/filecoin-project/venus-market/piece"
 	"time"
 
 	"github.com/ipfs/go-cid"
@@ -22,10 +24,10 @@ import (
 	"github.com/filecoin-project/venus/app/submodule/apitypes"
 	"github.com/filecoin-project/venus/pkg/chain"
 	"github.com/filecoin-project/venus/pkg/events"
-	"github.com/filecoin-project/venus/pkg/specactors/builtin"
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
-	"github.com/filecoin-project/venus/pkg/specactors/policy"
 	"github.com/filecoin-project/venus/pkg/types"
+	"github.com/filecoin-project/venus/pkg/types/specactors/builtin"
+	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
 
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/config"
@@ -50,10 +52,12 @@ var log = logging.Logger("storageminer")
 // Miner#Run starts the sealing FSM.
 type Miner struct {
 	messager          api.IMessager
+	marketClient      api2.MarketFullNode
 	metadataService   *service.MetadataService
 	sectorInfoService *service.SectorInfoService
 	logService        *service.LogService
 	networkParams     *config.NetParamsConfig
+	pieceStorage      piece.IPieceStorage
 
 	api    fullNodeFilteredAPI
 	feeCfg config.MinerFeeConfig
@@ -87,7 +91,7 @@ type SealingStateEvt struct {
 // a Lotus full node.
 type fullNodeFilteredAPI interface {
 	// Call a read only method on actors (no interaction with the chain required)
-	StateCall(context.Context, *types.Message, types.TipSetKey) (*apitypes.InvocResult, error)
+	StateCall(context.Context, *types.Message, types.TipSetKey) (*types.InvocResult, error)
 	StateMinerSectors(context.Context, address.Address, *bitfield.BitField, types.TipSetKey) ([]*miner.SectorOnChainInfo, error)
 	StateSectorPreCommitInfo(context.Context, address.Address, abi.SectorNumber, types.TipSetKey) (miner.SectorPreCommitOnChainInfo, error)
 	StateSectorGetInfo(context.Context, address.Address, abi.SectorNumber, types.TipSetKey) (*miner.SectorOnChainInfo, error)
@@ -118,7 +122,7 @@ type fullNodeFilteredAPI interface {
 	GasEstimateGasPremium(_ context.Context, nblocksincl uint64, sender address.Address, gaslimit int64, tsk types.TipSetKey) (types.BigInt, error)
 
 	ChainHead(context.Context) (*types.TipSet, error)
-	ChainNotify(context.Context) (<-chan []*chain.HeadChange, error)
+	ChainNotify(context.Context) <-chan []*chain.HeadChange
 	ChainGetRandomnessFromTickets(ctx context.Context, tsk types.TipSetKey, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte) (abi.Randomness, error)
 	ChainGetRandomnessFromBeacon(ctx context.Context, tsk types.TipSetKey, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte) (abi.Randomness, error)
 	ChainGetTipSetByHeight(context.Context, abi.ChainEpoch, types.TipSetKey) (*types.TipSet, error)
@@ -137,10 +141,12 @@ type fullNodeFilteredAPI interface {
 
 func NewMiner(api fullNodeFilteredAPI,
 	messager api.IMessager,
+	marketClient api2.MarketFullNode,
 	maddr address.Address,
 	metaService *service.MetadataService,
 	sectorInfoService *service.SectorInfoService,
 	logService *service.LogService,
+	pieceStorage piece.IPieceStorage,
 	sealer sectorstorage.SectorManager,
 	sc types2.SectorIDCounter,
 	verif ffiwrapper.Verifier,
@@ -153,6 +159,7 @@ func NewMiner(api fullNodeFilteredAPI,
 	m := &Miner{
 		api:               api,
 		messager:          messager,
+		marketClient:      marketClient,
 		feeCfg:            feeCfg,
 		sealer:            sealer,
 		metadataService:   metaService,
@@ -166,6 +173,7 @@ func NewMiner(api fullNodeFilteredAPI,
 		getSealConfig:     gsd,
 		journal:           journal,
 		logService:        logService,
+		pieceStorage:      pieceStorage,
 		sealingEvtType:    journal.RegisterEventType("storage", "sealing_states"),
 	}
 
@@ -197,7 +205,7 @@ func (m *Miner) Run(ctx context.Context) error {
 		// with the API that Lotus is capable of providing.
 		// The shim translates between "tipset tokens" and tipset keys, and
 		// provides extra methods.
-		adaptedAPI = NewSealingAPIAdapter(m.api, m.messager)
+		adaptedAPI = NewSealingAPIAdapter(m.api, m.messager, m.marketClient)
 
 		// Instantiate a precommit policy.
 		defaultDuration = getDefaultSectorExpirationExtension(m.getSealConfig) - (md.WPoStProvingPeriod * 2)
@@ -216,7 +224,7 @@ func (m *Miner) Run(ctx context.Context) error {
 	)
 
 	// Instantiate the sealing FSM.
-	m.sealing = sealing.New(ctx, adaptedAPI, m.feeCfg, evtsAdapter, m.maddr, m.metadataService, m.sectorInfoService, m.logService, m.sealer, m.sc, m.verif, m.prover,
+	m.sealing = sealing.New(ctx, adaptedAPI, m.feeCfg, evtsAdapter, m.maddr, m.pieceStorage, m.metadataService, m.sectorInfoService, m.logService, m.sealer, m.sc, m.verif, m.prover,
 		&pcp, cfg, m.handleSealingNotifications, as, m.networkParams)
 
 	// Run the sealing FSM.

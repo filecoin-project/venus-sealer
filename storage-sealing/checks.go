@@ -13,8 +13,8 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/crypto"
 
-	"github.com/filecoin-project/venus/pkg/specactors/policy"
-	
+	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
+
 	"github.com/filecoin-project/venus-sealer/types"
 )
 

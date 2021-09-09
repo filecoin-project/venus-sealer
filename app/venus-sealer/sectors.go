@@ -19,10 +19,10 @@ import (
 
 	miner3 "github.com/filecoin-project/specs-actors/v3/actors/builtin/miner"
 
-	actors "github.com/filecoin-project/venus/pkg/specactors"
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
-	"github.com/filecoin-project/venus/pkg/specactors/policy"
 	"github.com/filecoin-project/venus/pkg/types"
+	actors "github.com/filecoin-project/venus/pkg/types/specactors"
+	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
 
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/lib/tablewriter"
@@ -38,6 +38,7 @@ var sectorsCmd = &cli.Command{
 		sectorsRefsCmd,
 		sectorsUpdateCmd,
 		sectorsPledgeCmd,
+		sectorsDealCmd,
 		sectorsExtendCmd,
 		sectorsTerminateCmd,
 		sectorsRemoveCmd,
@@ -67,6 +68,29 @@ var sectorsPledgeCmd = &cli.Command{
 
 		fmt.Println("Created CC sector: ", id.Number)
 
+		return nil
+	},
+}
+
+var sectorsDealCmd = &cli.Command{
+	Name:  "deal",
+	Usage: "store deal data in a sector",
+	Action: func(cctx *cli.Context) error {
+		nodeApi, closer, err := api.GetStorageMinerAPI(cctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+		ctx := api.ReqContext(cctx)
+
+		assignedDeals, err := nodeApi.DealSector(ctx)
+		if err != nil {
+			return err
+		}
+
+		for _, assignedDeal := range assignedDeals {
+			fmt.Println("Assign Deals %d sector %d piece %s offset %d length ", assignedDeal.DealId, assignedDeal.SectorId, assignedDeal.PieceCid, assignedDeal.Offset, assignedDeal.Size)
+		}
 		return nil
 	},
 }
