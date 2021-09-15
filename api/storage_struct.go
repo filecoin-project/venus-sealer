@@ -2,7 +2,7 @@ package api
 
 import (
 	"context"
-
+	"github.com/filecoin-project/venus-market/piece"
 	"time"
 
 	"github.com/google/uuid"
@@ -148,6 +148,11 @@ type StorageMiner interface {
 	MessagerGetMessage(ctx context.Context, uuid string) (*types3.Message, error)
 
 	//for market
+	GetDeals(ctx context.Context, pageIndex, pageSize int) ([]*piece.DealInfo, error)
+	MarkDealsAsPacking(ctx context.Context, deals []abi.DealID) error
+	UpdateDealStatus(ctx context.Context, dealId abi.DealID, status string) error
+
+	DealSector(ctx context.Context) ([]types.DealAssign, error)
 	IsUnsealed(ctx context.Context, sector storage.SectorRef, offset storiface.UnpaddedByteIndex, size abi.UnpaddedPieceSize) (bool, error)
 	SectorsStatus(ctx context.Context, sid abi.SectorNumber, showOnChainInfo bool) (SectorInfo, error)
 	// SectorsUnsealPiece will Unseal a Sealed sector file for the given sector.
@@ -252,10 +257,16 @@ type StorageMinerStruct struct {
 		MessagerPushMessage func(ctx context.Context, msg *types2.Message, meta *types3.MsgMeta) (string, error) `perm:"sign"`
 		MessagerGetMessage  func(ctx context.Context, uuid string) (*types3.Message, error)                      `perm:"write"`
 
-		IsUnsealed    func(ctx context.Context, sector storage.SectorRef, offset storiface.UnpaddedByteIndex, size abi.UnpaddedPieceSize) (bool, error)
-		SectorsStatus func(ctx context.Context, sid abi.SectorNumber, showOnChainInfo bool) (SectorInfo, error)
+		IsUnsealed    func(ctx context.Context, sector storage.SectorRef, offset storiface.UnpaddedByteIndex, size abi.UnpaddedPieceSize) (bool, error) `perm:"read"`
+		SectorsStatus func(ctx context.Context, sid abi.SectorNumber, showOnChainInfo bool) (SectorInfo, error)                                         `perm:"read"`
 		// SectorsUnsealPiece will Unseal a Sealed sector file for the given sector.
-		SectorsUnsealPiece func(ctx context.Context, sector storage.SectorRef, offset storiface.UnpaddedByteIndex, size abi.UnpaddedPieceSize, randomness abi.SealRandomness, commd *cid.Cid) error
+		SectorsUnsealPiece func(ctx context.Context, sector storage.SectorRef, offset storiface.UnpaddedByteIndex, size abi.UnpaddedPieceSize, randomness abi.SealRandomness, commd *cid.Cid) error `perm:"write"`
+
+		DealSector func(ctx context.Context) ([]types.DealAssign, error) `perm:"admin"`
+
+		GetDeals           func(ctx context.Context, pageIndex, pageSize int) ([]*piece.DealInfo, error) `perm:"admin"`
+		MarkDealsAsPacking func(ctx context.Context, deals []abi.DealID) error                           `perm:"admin"`
+		UpdateDealStatus   func(ctx context.Context, dealId abi.DealID, status string) error             `perm:"admin"`
 	}
 }
 
@@ -592,4 +603,20 @@ func (c *StorageMinerStruct) MessagerPushMessage(ctx context.Context, msg *types
 
 func (c *StorageMinerStruct) MessagerGetMessage(ctx context.Context, uuid string) (*types3.Message, error) {
 	return c.Internal.MessagerGetMessage(ctx, uuid)
+}
+
+func (c *StorageMinerStruct) DealSector(ctx context.Context) ([]types.DealAssign, error) {
+	return c.Internal.DealSector(ctx)
+}
+
+func (c *StorageMinerStruct) GetDeals(ctx context.Context, pageIndex, pageSize int) ([]*piece.DealInfo, error) {
+	return c.Internal.GetDeals(ctx, pageIndex, pageSize)
+}
+
+func (c *StorageMinerStruct) MarkDealsAsPacking(ctx context.Context, deals []abi.DealID) error {
+	return c.Internal.MarkDealsAsPacking(ctx, deals)
+}
+
+func (c *StorageMinerStruct) UpdateDealStatus(ctx context.Context, dealId abi.DealID, status string) error {
+	return c.Internal.UpdateDealStatus(ctx, dealId, status)
 }

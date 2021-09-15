@@ -361,7 +361,7 @@ func (m *Sealing) handleRecoverDealIDs(ctx statemachine.Context, sector types.Se
 		}
 
 		if proposal.PieceCID != p.Piece.PieceCID {
-			log.Warnf("piece %d (of %d) of sector %d refers deal %d with wrong PieceCID: %x != %x", i, len(sector.Pieces), sector.SectorNumber, p.DealInfo.DealID, p.Piece.PieceCID, proposal.PieceCID)
+			log.Warnf("piece %d (of %d) of sector %d refers deal %d with wrong PieceCID: %s != %s", i, len(sector.Pieces), sector.SectorNumber, p.DealInfo.DealID, p.Piece.PieceCID, proposal.PieceCID)
 			toFix = append(toFix, i)
 			continue
 		}

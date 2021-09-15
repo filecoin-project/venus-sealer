@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"github.com/filecoin-project/venus-market/config"
 	"time"
 
 	miner5 "github.com/filecoin-project/specs-actors/v5/actors/builtin/miner"
@@ -52,6 +53,7 @@ func DefaultMainnetStorageMiner() *StorageMiner {
 			ListenAddress: "/ip4/127.0.0.1/tcp/38491/http",
 			Timeout:       Duration(30 * time.Second),
 		},
+		PieceStorage: deferPieceStorage,
 		Sealing: SealingConfig{
 			MaxWaitDealsSectors:       2, // 64G with 32G sectors
 			MaxSealingSectors:         0,
@@ -154,6 +156,7 @@ func DefaultNerpaStorageMiner() *StorageMiner {
 			ListenAddress: "/ip4/127.0.0.1/tcp/38491/http",
 			Timeout:       Duration(30 * time.Second),
 		},
+		PieceStorage: deferPieceStorage,
 		Sealing: SealingConfig{
 			MaxWaitDealsSectors:       2, // 64G with 32G sectors
 			MaxSealingSectors:         0,
@@ -257,6 +260,7 @@ func DefaultCalibrationStorageMiner() *StorageMiner {
 			ListenAddress: "/ip4/127.0.0.1/tcp/38491/http",
 			Timeout:       Duration(30 * time.Second),
 		},
+		PieceStorage: deferPieceStorage,
 		Sealing: SealingConfig{
 			MaxWaitDealsSectors:       2, // 64G with 32G sectors
 			MaxSealingSectors:         0,
@@ -359,6 +363,7 @@ func Default2kStorageMiner() *StorageMiner {
 			ListenAddress: "/ip4/127.0.0.1/tcp/38491/http",
 			Timeout:       Duration(30 * time.Second),
 		},
+		PieceStorage: deferPieceStorage,
 		Sealing: SealingConfig{
 			MaxWaitDealsSectors:       2, // 64G with 32G sectors
 			MaxSealingSectors:         0,
@@ -456,4 +461,9 @@ func Default2kStorageMiner() *StorageMiner {
 	cfg.API.ListenAddress = "/ip4/127.0.0.1/tcp/2345/http"
 	cfg.API.RemoteListenAddress = "127.0.0.1:2345"
 	return cfg
+}
+
+var deferPieceStorage = config.PieceStorage{
+	Type: "local",
+	Path: "/Users/lijunlong/.venusmarket",
 }

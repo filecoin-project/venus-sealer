@@ -2,6 +2,7 @@ package sealing
 
 import (
 	"context"
+	types2 "github.com/filecoin-project/venus/pkg/types"
 	"sort"
 	"time"
 
@@ -257,14 +258,24 @@ func (m *Sealing) AddPieceToAnySector(ctx context.Context, size abi.UnpaddedPiec
 		return 0, 0, xerrors.Errorf("piece cannot fit into a sector")
 	}
 
-	if _, err := deal.DealProposal.Cid(); err != nil {
+	id, err := deal.DealProposal.Cid()
+	if err != nil {
 		return 0, 0, xerrors.Errorf("getting proposal CID: %w", err)
 	}
 
+	onChainDealInfo, err := m.api.StateMarketStorageDeal(ctx, deal.DealID, types2.EmptyTSK.Bytes())
+	if err != nil {
+		return 0, 0, xerrors.Errorf("get deal on chain proposal CID: %w", err)
+	}
+
+	if onChainDealInfo.Proposal.PieceCID != deal.DealProposal.PieceCID {
+		return 0, 0, xerrors.Errorf("deal %d piece %d not match piece cid %d on chain", deal.DealID, deal.DealProposal.PieceCID, onChainDealInfo.Proposal.PieceCID)
+	}
+
 	m.inputLk.Lock()
-	if _, exist := m.pendingPieces[proposalCID(deal)]; exist {
+	if _, exist := m.pendingPieces[id]; exist {
 		m.inputLk.Unlock()
-		return 0, 0, xerrors.Errorf("piece for deal %s already pending", proposalCID(deal))
+		return 0, 0, xerrors.Errorf("piece for deal %s already pending", id)
 	}
 
 	resCh := make(chan struct {

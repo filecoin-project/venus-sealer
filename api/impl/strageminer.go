@@ -3,6 +3,8 @@ package impl
 import (
 	"context"
 	"encoding/json"
+	api2 "github.com/filecoin-project/venus-market/api"
+	"github.com/filecoin-project/venus-market/piece"
 	"net/http"
 	"strconv"
 	"time"
@@ -59,10 +61,27 @@ type StorageMinerAPI struct {
 
 	Stor *stores.Remote
 
+	MarketClient         api2.MarketFullNode
 	LogService           *service.LogService
 	NetParams            *config.NetParamsConfig
 	SetSealingConfigFunc types2.SetSealingConfigFunc
 	GetSealingConfigFunc types2.GetSealingConfigFunc
+}
+
+func (sm *StorageMinerAPI) GetDeals(ctx context.Context, pageIndex, pageSize int) ([]*piece.DealInfo, error) {
+	addr := sm.Miner.Address()
+	deals, err := sm.MarketClient.GetDeals(addr, pageIndex, pageSize)
+	return deals, err
+}
+
+func (sm *StorageMinerAPI) MarkDealsAsPacking(ctx context.Context, deals []abi.DealID) error {
+	addr := sm.Miner.Address()
+	return sm.MarketClient.MarkDealsAsPacking(addr, deals)
+}
+
+func (sm *StorageMinerAPI) UpdateDealStatus(ctx context.Context, dealId abi.DealID, status string) error {
+	addr := sm.Miner.Address()
+	return sm.MarketClient.UpdateDealStatus(addr, dealId, status)
 }
 
 func (sm *StorageMinerAPI) IsUnsealed(ctx context.Context, sector sto.SectorRef, offset storiface.UnpaddedByteIndex, size abi.UnpaddedPieceSize) (bool, error) {
@@ -74,7 +93,6 @@ func (sm *StorageMinerAPI) SectorsUnsealPiece(ctx context.Context, sector sto.Se
 	if err != nil {
 		return err
 	}
-	sector.ProofType = sectorInfo.SectorType
 	return sm.StorageMgr.SectorsUnsealPiece(ctx, sector, offset, size, sectorInfo.TicketValue, sectorInfo.CommD)
 }
 
@@ -132,6 +150,10 @@ func (sm *StorageMinerAPI) PledgeSector(ctx context.Context) (abi.SectorID, erro
 			return abi.SectorID{}, ctx.Err()
 		}
 	}
+}
+
+func (sm *StorageMinerAPI) DealSector(ctx context.Context) ([]types2.DealAssign, error) {
+	return sm.Miner.DealSector(ctx)
 }
 
 func (sm *StorageMinerAPI) SectorsStatus(ctx context.Context, sid abi.SectorNumber, showOnChainInfo bool) (api.SectorInfo, error) {

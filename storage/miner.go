@@ -3,6 +3,8 @@ package storage
 import (
 	"context"
 	"errors"
+	api2 "github.com/filecoin-project/venus-market/api"
+	"github.com/filecoin-project/venus-market/piece"
 	"time"
 
 	"github.com/ipfs/go-cid"
@@ -50,10 +52,12 @@ var log = logging.Logger("storageminer")
 // Miner#Run starts the sealing FSM.
 type Miner struct {
 	messager          api.IMessager
+	marketClient      api2.MarketFullNode
 	metadataService   *service.MetadataService
 	sectorInfoService *service.SectorInfoService
 	logService        *service.LogService
 	networkParams     *config.NetParamsConfig
+	pieceStorage      piece.IPieceStorage
 
 	api    fullNodeFilteredAPI
 	feeCfg config.MinerFeeConfig
@@ -137,10 +141,12 @@ type fullNodeFilteredAPI interface {
 
 func NewMiner(api fullNodeFilteredAPI,
 	messager api.IMessager,
+	marketClient api2.MarketFullNode,
 	maddr address.Address,
 	metaService *service.MetadataService,
 	sectorInfoService *service.SectorInfoService,
 	logService *service.LogService,
+	pieceStorage piece.IPieceStorage,
 	sealer sectorstorage.SectorManager,
 	sc types2.SectorIDCounter,
 	verif ffiwrapper.Verifier,
@@ -153,6 +159,7 @@ func NewMiner(api fullNodeFilteredAPI,
 	m := &Miner{
 		api:               api,
 		messager:          messager,
+		marketClient:      marketClient,
 		feeCfg:            feeCfg,
 		sealer:            sealer,
 		metadataService:   metaService,
@@ -166,6 +173,7 @@ func NewMiner(api fullNodeFilteredAPI,
 		getSealConfig:     gsd,
 		journal:           journal,
 		logService:        logService,
+		pieceStorage:      pieceStorage,
 		sealingEvtType:    journal.RegisterEventType("storage", "sealing_states"),
 	}
 
@@ -197,7 +205,7 @@ func (m *Miner) Run(ctx context.Context) error {
 		// with the API that Lotus is capable of providing.
 		// The shim translates between "tipset tokens" and tipset keys, and
 		// provides extra methods.
-		adaptedAPI = NewSealingAPIAdapter(m.api, m.messager)
+		adaptedAPI = NewSealingAPIAdapter(m.api, m.messager, m.marketClient)
 
 		// Instantiate a precommit policy.
 		defaultDuration = getDefaultSectorExpirationExtension(m.getSealConfig) - (md.WPoStProvingPeriod * 2)
@@ -216,7 +224,7 @@ func (m *Miner) Run(ctx context.Context) error {
 	)
 
 	// Instantiate the sealing FSM.
-	m.sealing = sealing.New(ctx, adaptedAPI, m.feeCfg, evtsAdapter, m.maddr, m.metadataService, m.sectorInfoService, m.logService, m.sealer, m.sc, m.verif, m.prover,
+	m.sealing = sealing.New(ctx, adaptedAPI, m.feeCfg, evtsAdapter, m.maddr, m.pieceStorage, m.metadataService, m.sectorInfoService, m.logService, m.sealer, m.sc, m.verif, m.prover,
 		&pcp, cfg, m.handleSealingNotifications, as, m.networkParams)
 
 	// Run the sealing FSM.

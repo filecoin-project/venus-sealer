@@ -3,6 +3,8 @@ package storage
 import (
 	"bytes"
 	"context"
+	api2 "github.com/filecoin-project/venus-market/api"
+	"github.com/filecoin-project/venus-market/piece"
 
 	"github.com/ipfs/go-cid"
 	cbg "github.com/whyrusleeping/cbor-gen"
@@ -37,12 +39,13 @@ import (
 var _ sealing.SealingAPI = new(SealingAPIAdapter)
 
 type SealingAPIAdapter struct {
-	delegate fullNodeFilteredAPI
-	messager api.IMessager
+	delegate  fullNodeFilteredAPI
+	messager  api.IMessager
+	marketAPI api2.MarketFullNode
 }
 
-func NewSealingAPIAdapter(api fullNodeFilteredAPI, messager api.IMessager) SealingAPIAdapter {
-	return SealingAPIAdapter{delegate: api, messager: messager}
+func NewSealingAPIAdapter(api fullNodeFilteredAPI, messager api.IMessager, marketAPI api2.MarketFullNode) SealingAPIAdapter {
+	return SealingAPIAdapter{delegate: api, messager: messager, marketAPI: marketAPI}
 }
 
 func (s SealingAPIAdapter) StateMinerSectorSize(ctx context.Context, maddr address.Address, tok types2.TipSetToken) (abi.SectorSize, error) {
@@ -458,4 +461,16 @@ func (s SealingAPIAdapter) MessagerSendMsg(ctx context.Context, from, to address
 		MaxFee: maxFee,
 		//MaxFeeCap:        big.NewInt(10000000000000),
 	})
+}
+
+func (s SealingAPIAdapter) GetUnPackedDeals(miner address.Address, spec *piece.GetDealSpec) ([]*piece.DealInfo, error) {
+	return s.marketAPI.GetUnPackedDeals(miner, spec)
+}
+
+func (s SealingAPIAdapter) MarkDealsAsPacking(miner address.Address, deals []abi.DealID) error {
+	return s.marketAPI.MarkDealsAsPacking(miner, deals)
+}
+
+func (s SealingAPIAdapter) UpdateDealOnPacking(miner address.Address, pieceCID cid.Cid, dealId abi.DealID, sectorid abi.SectorNumber, offset abi.PaddedPieceSize) error {
+	return s.marketAPI.UpdateDealOnPacking(miner, pieceCID, dealId, sectorid, offset)
 }

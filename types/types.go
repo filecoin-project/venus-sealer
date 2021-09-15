@@ -220,3 +220,11 @@ type GetSealingConfigFunc func() (sealiface.Config, error)
 func (mr *MessageReceipt) Equals(o *MessageReceipt) bool {
 	return mr.ExitCode == o.ExitCode && bytes.Equal(mr.Return, o.Return) && mr.GasUsed == o.GasUsed
 }
+
+type DealAssign struct {
+	DealId   abi.DealID
+	SectorId abi.SectorNumber
+	PieceCid cid.Cid
+	Offset   abi.PaddedPieceSize
+	Size     abi.PaddedPieceSize
+}

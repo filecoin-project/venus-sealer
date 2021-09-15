@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding"
+	"github.com/filecoin-project/venus-market/config"
 	"net/http"
 	"strings"
 	"time"
@@ -43,6 +44,7 @@ type StorageMiner struct {
 	Messager      MessagerConfig
 	Market        MarketConfig
 	RegisterProof RegisterProofConfig
+	PieceStorage  config.PieceStorage
 
 	ConfigPath string `toml:"-"`
 }

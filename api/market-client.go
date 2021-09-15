@@ -9,7 +9,7 @@ import (
 	"go.uber.org/fx"
 )
 
-func NewMarketRPC(ctx context.Context, lc fx.Lifecycle, marketCfg *config.MarketConfig) (api.MarketFullNode, error) {
+func NewMarketRPC(lc fx.Lifecycle, marketCfg *config.MarketConfig) (api.MarketFullNode, error) {
 	apiInfo := apiinfo.APIInfo{
 		Addr:  marketCfg.Url,
 		Token: []byte(marketCfg.Token),
@@ -20,7 +20,7 @@ func NewMarketRPC(ctx context.Context, lc fx.Lifecycle, marketCfg *config.Market
 		return nil, err
 	}
 	var res api.MarketFullNodeStruct
-	closer, err := jsonrpc.NewMergeClient(ctx, addr, "Filecoin",
+	closer, err := jsonrpc.NewMergeClient(context.Background(), addr, "VENUS_MARKET",
 		[]interface{}{
 			&res.Internal,
 		},
