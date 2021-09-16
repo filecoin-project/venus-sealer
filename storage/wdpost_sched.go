@@ -140,6 +140,7 @@ func (s *WindowPoStScheduler) Run(ctx context.Context) {
 			}
 
 			s.update(ctx, lowest, highest)
+			latest = current
 		case <-ctx.Done():
 
 			log.Warnf("cancel windows post scheduler")
