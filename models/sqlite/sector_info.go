@@ -20,7 +20,8 @@ type sectorInfo struct {
 	SectorType   int64  `gorm:"column:sector_type;type:bigint;" json:"sector_type"`
 
 	// Packing  []Piece
-	Pieces []byte `gorm:"column:pieces;type:blob;" json:"pieces"`
+	CreationTime int64  `gorm:"column:create_time;type:bigint;" json:"create_time"`
+	Pieces       []byte `gorm:"column:pieces;type:blob;" json:"pieces"`
 
 	// PreCommit1
 	TicketValue   []byte `gorm:"column:ticket_value;type:blob;" json:"ticket_value"`
@@ -77,7 +78,8 @@ func (sectorInfo *sectorInfo) SectorInfo() (*types.SectorInfo, error) {
 		PreCommit1Out: sectorInfo.PreCommit1Out,
 		//	CommD:            &commD,
 		//CommR:            &commR,
-		Proof: sectorInfo.Proof,
+		Proof:        sectorInfo.Proof,
+		CreationTime: sectorInfo.CreationTime,
 		//PreCommitInfo:    sectorInfo.PreCommitInfo,
 		//	PreCommitDeposit: deposit,
 		PreCommitMessage: sectorInfo.PreCommitMessage,
@@ -158,6 +160,7 @@ func FromSectorInfo(sector *types.SectorInfo) (*sectorInfo, error) {
 		SectorNumber: uint64(sector.SectorNumber),
 		State:        string(sector.State),
 		SectorType:   int64(sector.SectorType),
+		CreationTime: sector.CreationTime,
 		//	Pieces:           nil,
 		TicketValue:   sector.TicketValue,
 		TicketEpoch:   int64(sector.TicketEpoch),

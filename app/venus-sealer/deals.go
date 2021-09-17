@@ -7,6 +7,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"math"
 	"os"
+	"strconv"
 )
 
 var dealsCmd = &cli.Command{
@@ -71,13 +72,10 @@ var dealListCmd = &cli.Command{
 }
 
 var updateDealStatusListCmd = &cli.Command{
-	Name:  "update-status",
-	Usage: "update deal status",
+	Name:      "update-status",
+	Usage:     "update deal status",
+	ArgsUsage: "[deal id]",
 	Flags: []cli.Flag{
-		&cli.Uint64Flag{
-			Name:     "id",
-			Required: true,
-		},
 		&cli.StringFlag{
 			Name:     "status",
 			Required: true,
@@ -91,8 +89,17 @@ var updateDealStatusListCmd = &cli.Command{
 		defer closer()
 		ctx := api.ReqContext(cctx)
 
-		uid := cctx.Uint64("id")
-		status := cctx.String("status")
-		return nodeApi.UpdateDealStatus(ctx, abi.DealID(uid), status)
+		for _, dealIdStr := range cctx.Args().Slice() {
+			status := cctx.String("status")
+			dealId, err := strconv.ParseInt(dealIdStr, 10, 64)
+			if err != nil {
+				return err
+			}
+			err = nodeApi.UpdateDealStatus(ctx, abi.DealID(dealId), status)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
 	},
 }
