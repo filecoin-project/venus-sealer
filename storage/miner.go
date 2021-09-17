@@ -276,7 +276,6 @@ func (m *Miner) runPreflightChecks(ctx context.Context) error {
 }
 
 func getDefaultSectorExpirationExtension(cfg types2.GetSealingConfigFunc) abi.ChainEpoch {
-	return policy.GetMaxSectorExpirationExtension()
 	//todo test
 	c, err := cfg()
 	if err != nil {
@@ -284,7 +283,7 @@ func getDefaultSectorExpirationExtension(cfg types2.GetSealingConfigFunc) abi.Ch
 		log.Errorf("sealing config load error: %s", err.Error())
 		return policy.GetMaxSectorExpirationExtension()
 	}
-	return abi.ChainEpoch(c.CommittedCapacityDefaultLifetime.Truncate(builtin.EpochDurationSeconds))
+	return abi.ChainEpoch(c.CommittedCapacityDefaultLifetime.Seconds() / builtin.EpochDurationSeconds)
 }
 
 type StorageWpp struct {
