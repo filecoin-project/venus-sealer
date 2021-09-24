@@ -9,7 +9,7 @@ import (
 func (m *Sealing) DealSector(ctx context.Context) ([]types.DealAssign, error) {
 	m.startupWait.Wait()
 
-	deals, err := m.api.GetUnPackedDeals(m.maddr, &piece.GetDealSpec{MaxNumber: 50})
+	deals, err := m.api.GetUnPackedDeals(ctx, m.maddr, &piece.GetDealSpec{MaxPiece: 50})
 	if err != nil {
 		return nil, err
 	}
@@ -17,8 +17,7 @@ func (m *Sealing) DealSector(ctx context.Context) ([]types.DealAssign, error) {
 	//read from file
 	var assigned []types.DealAssign
 	for _, deal := range deals {
-		//todo check if deal has received
-		r, err := m.pieceStorage.Read(ctx, deal.Proposal.PieceCID.String())
+		r, err := piece.Read(deal.PieceStorage)
 		if err != nil {
 			log.Errorf("read piece from piece storage %v", err)
 			continue
@@ -37,7 +36,7 @@ func (m *Sealing) DealSector(ctx context.Context) ([]types.DealAssign, error) {
 			continue
 		}
 
-		err = m.api.UpdateDealOnPacking(m.maddr, deal.Proposal.PieceCID, deal.DealId, sid, offset)
+		err = m.api.UpdateDealOnPacking(ctx, m.maddr, deal.Proposal.PieceCID, deal.DealId, sid, offset)
 		if err != nil {
 			log.Errorf("update deal status on chain ", err)
 			//if error how to fix this problems

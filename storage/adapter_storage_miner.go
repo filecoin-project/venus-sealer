@@ -463,14 +463,14 @@ func (s SealingAPIAdapter) MessagerSendMsg(ctx context.Context, from, to address
 	})
 }
 
-func (s SealingAPIAdapter) GetUnPackedDeals(miner address.Address, spec *piece.GetDealSpec) ([]*piece.DealInfo, error) {
-	return s.marketAPI.GetUnPackedDeals(miner, spec)
+func (s SealingAPIAdapter) GetUnPackedDeals(ctx context.Context, miner address.Address, spec *piece.GetDealSpec) ([]*piece.DealInfoIncludePath, error) {
+	return s.marketAPI.GetUnPackedDeals(ctx, miner, spec)
 }
 
-func (s SealingAPIAdapter) MarkDealsAsPacking(miner address.Address, deals []abi.DealID) error {
-	return s.marketAPI.MarkDealsAsPacking(miner, deals)
+func (s SealingAPIAdapter) MarkDealsAsPacking(ctx context.Context, miner address.Address, deals []abi.DealID) error {
+	return s.marketAPI.MarkDealsAsPacking(ctx, miner, deals)
 }
 
-func (s SealingAPIAdapter) UpdateDealOnPacking(miner address.Address, pieceCID cid.Cid, dealId abi.DealID, sectorid abi.SectorNumber, offset abi.PaddedPieceSize) error {
-	return s.marketAPI.UpdateDealOnPacking(miner, pieceCID, dealId, sectorid, offset)
+func (s SealingAPIAdapter) UpdateDealOnPacking(ctx context.Context, miner address.Address, pieceCID cid.Cid, dealId abi.DealID, sectorid abi.SectorNumber, offset abi.PaddedPieceSize) error {
+	return s.marketAPI.UpdateDealOnPacking(ctx, miner, pieceCID, dealId, sectorid, offset)
 }

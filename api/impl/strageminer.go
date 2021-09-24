@@ -70,18 +70,18 @@ type StorageMinerAPI struct {
 
 func (sm *StorageMinerAPI) GetDeals(ctx context.Context, pageIndex, pageSize int) ([]*piece.DealInfo, error) {
 	addr := sm.Miner.Address()
-	deals, err := sm.MarketClient.GetDeals(addr, pageIndex, pageSize)
+	deals, err := sm.MarketClient.GetDeals(ctx, addr, pageIndex, pageSize)
 	return deals, err
 }
 
 func (sm *StorageMinerAPI) MarkDealsAsPacking(ctx context.Context, deals []abi.DealID) error {
 	addr := sm.Miner.Address()
-	return sm.MarketClient.MarkDealsAsPacking(addr, deals)
+	return sm.MarketClient.MarkDealsAsPacking(ctx, addr, deals)
 }
 
 func (sm *StorageMinerAPI) UpdateDealStatus(ctx context.Context, dealId abi.DealID, status string) error {
 	addr := sm.Miner.Address()
-	return sm.MarketClient.UpdateDealStatus(addr, dealId, status)
+	return sm.MarketClient.UpdateDealStatus(ctx, addr, dealId, status)
 }
 
 func (sm *StorageMinerAPI) IsUnsealed(ctx context.Context, sector sto.SectorRef, offset storiface.UnpaddedByteIndex, size abi.UnpaddedPieceSize) (bool, error) {

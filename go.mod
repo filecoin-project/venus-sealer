@@ -31,8 +31,8 @@ require (
 	github.com/filecoin-project/specs-actors/v3 v3.1.1
 	github.com/filecoin-project/specs-actors/v5 v5.0.4
 	github.com/filecoin-project/specs-storage v0.1.1-0.20201105051918-5188d9774506
-	github.com/filecoin-project/venus v1.0.5-0.20210909070643-3b6880ab3faa
-	github.com/filecoin-project/venus-market v0.0.0-20210910061345-5950258b876f
+	github.com/filecoin-project/venus v1.0.5-0.20210917074359-37359d1aa9f7
+	github.com/filecoin-project/venus-market v0.0.0-20210924100022-4d43ab20c041
 	github.com/filecoin-project/venus-messager v1.1.1
 	github.com/gbrlsnchs/jwt/v3 v3.0.0
 	github.com/golang/mock v1.6.0
@@ -40,8 +40,8 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/hako/durafmt v0.0.0-20200710122514-c0fb7b4da026
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/ipfs-force-community/venus-common-utils v0.0.0-20210817020216-e774586a8875
-	github.com/ipfs-force-community/venus-gateway v1.1.0
+	github.com/ipfs-force-community/venus-common-utils v0.0.0-20210924063144-1d3a5b30de87
+	github.com/ipfs-force-community/venus-gateway v1.1.2-0.20210924083450-c55d3300dfc9
 	github.com/ipfs/go-block-format v0.0.3
 	github.com/ipfs/go-cid v0.1.0
 	github.com/ipfs/go-datastore v0.4.5
@@ -56,6 +56,7 @@ require (
 	github.com/libp2p/go-libp2p-core v0.8.6
 	github.com/libp2p/go-libp2p-pubsub v0.5.4
 	github.com/mitchellh/go-homedir v1.1.0
+	github.com/modern-go/reflect2 v1.0.1
 	github.com/multiformats/go-base32 v0.0.3
 	github.com/multiformats/go-multiaddr v0.3.3
 	github.com/polydawn/refmt v0.0.0-20201211092308-30ac6d18308e
@@ -80,6 +81,8 @@ require (
 replace github.com/filecoin-project/filecoin-ffi => ./extern/filecoin-ffi
 
 replace github.com/ipfs/go-ipfs-cmds => github.com/ipfs-force-community/go-ipfs-cmds v0.6.1-0.20210521090123-4587df7fa0ab
+
+replace github.com/filecoin-project/go-jsonrpc => github.com/ipfs-force-community/go-jsonrpc v0.1.4-0.20210721095535-a67dff16de21
 
 replace github.com/filecoin-project/go-statemachine => github.com/hunjixin/go-statemachine v0.0.0-20210309063909-a65119041e93
 

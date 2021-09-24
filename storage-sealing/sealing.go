@@ -82,9 +82,9 @@ type SealingAPI interface {
 	MessagerSendMsg(ctx context.Context, from, to address.Address, method abi.MethodNum, value, maxFee abi.TokenAmount, params []byte) (string, error)
 
 	//for market
-	GetUnPackedDeals(miner address.Address, spec *piece.GetDealSpec) ([]*piece.DealInfo, error)                                                  //perm:read
-	MarkDealsAsPacking(miner address.Address, deals []abi.DealID) error                                                                          //perm:write
-	UpdateDealOnPacking(miner address.Address, pieceCID cid.Cid, dealId abi.DealID, sectorid abi.SectorNumber, offset abi.PaddedPieceSize) error //perm:write
+	GetUnPackedDeals(ctx context.Context, miner address.Address, spec *piece.GetDealSpec) ([]*piece.DealInfoIncludePath, error)                                       //perm:read
+	MarkDealsAsPacking(ctx context.Context, miner address.Address, deals []abi.DealID) error                                                                          //perm:write
+	UpdateDealOnPacking(ctx context.Context, miner address.Address, pieceCID cid.Cid, dealId abi.DealID, sectorid abi.SectorNumber, offset abi.PaddedPieceSize) error //perm:write
 }
 
 type SectorStateNotifee func(before, after types2.SectorInfo)
@@ -130,8 +130,7 @@ type Sealing struct {
 	dealInfo  *CurrentDealInfoManager
 
 	//service
-	logService   *service.LogService
-	pieceStorage piece.IPieceStorage
+	logService *service.LogService
 }
 
 type openSector struct {
@@ -150,7 +149,7 @@ type pendingPiece struct {
 	accepted func(abi.SectorNumber, abi.UnpaddedPieceSize, error)
 }
 
-func New(mctx context.Context, api SealingAPI, fc config.MinerFeeConfig, events Events, maddr address.Address, pieceStorage piece.IPieceStorage, metaDataService *service.MetadataService, sectorInfoService *service.SectorInfoService, logService *service.LogService, sealer sectorstorage.SectorManager, sc types2.SectorIDCounter, verif ffiwrapper.Verifier, prov ffiwrapper.Prover, pcp PreCommitPolicy, gc types2.GetSealingConfigFunc, notifee SectorStateNotifee, as AddrSel, networkParams *config.NetParamsConfig) *Sealing {
+func New(mctx context.Context, api SealingAPI, fc config.MinerFeeConfig, events Events, maddr address.Address, metaDataService *service.MetadataService, sectorInfoService *service.SectorInfoService, logService *service.LogService, sealer sectorstorage.SectorManager, sc types2.SectorIDCounter, verif ffiwrapper.Verifier, prov ffiwrapper.Prover, pcp PreCommitPolicy, gc types2.GetSealingConfigFunc, notifee SectorStateNotifee, as AddrSel, networkParams *config.NetParamsConfig) *Sealing {
 	s := &Sealing{
 		api:    api,
 		feeCfg: fc,
@@ -163,7 +162,6 @@ func New(mctx context.Context, api SealingAPI, fc config.MinerFeeConfig, events 
 		verif:         verif,
 		pcp:           pcp,
 		logService:    logService,
-		pieceStorage:  pieceStorage,
 
 		openSectors:    map[abi.SectorID]*openSector{},
 		sectorTimers:   map[abi.SectorID]*time.Timer{},
