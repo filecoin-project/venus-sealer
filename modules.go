@@ -8,7 +8,6 @@ import (
 	"github.com/filecoin-project/go-bitfield"
 	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 	api2 "github.com/filecoin-project/venus-market/api"
-	"github.com/filecoin-project/venus-market/piece"
 	"math"
 	"net/http"
 	"time"
@@ -259,7 +258,6 @@ type StorageMinerParams struct {
 	Journal            journal.Journal
 	AddrSel            *storage.AddressSelector
 	NetworkParams      *config.NetParamsConfig
-	PieceStorage       piece.IPieceStorage
 }
 
 func StorageMiner(fc config.MinerFeeConfig) func(params StorageMinerParams) (*storage.Miner, error) {
@@ -281,7 +279,6 @@ func StorageMiner(fc config.MinerFeeConfig) func(params StorageMinerParams) (*st
 			j                 = params.Journal
 			as                = params.AddrSel
 			np                = params.NetworkParams
-			ps                = params.PieceStorage
 		)
 
 		maddr, err := metadataService.GetMinerAddress()
@@ -296,7 +293,7 @@ func StorageMiner(fc config.MinerFeeConfig) func(params StorageMinerParams) (*st
 			return nil, err
 		}
 
-		sm, err := storage.NewMiner(api, messager, marketClient, maddr, metadataService, sectorinfoService, logService, ps, sealer, sc, verif, prover, gsd, fc, j, as, np)
+		sm, err := storage.NewMiner(api, messager, marketClient, maddr, metadataService, sectorinfoService, logService, sealer, sc, verif, prover, gsd, fc, j, as, np)
 		if err != nil {
 			return nil, err
 		}

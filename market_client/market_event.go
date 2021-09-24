@@ -2,6 +2,7 @@ package market_client
 
 import (
 	"context"
+	"github.com/filecoin-project/venus-market/piece"
 	"github.com/modern-go/reflect2"
 
 	"encoding/json"
@@ -29,6 +30,7 @@ type MarketEvent struct {
 	stor         *stores.Remote
 	sectorBlocks *sectorblocks.SectorBlocks
 	storageMgr   *sectorstorage.Manager
+	index        stores.SectorIndex
 }
 
 func (e *MarketEvent) listenMarketRequest(ctx context.Context) {
@@ -124,6 +126,26 @@ func (e *MarketEvent) processSectorUnsealed(ctx context.Context, reqId uuid.UUID
 		return
 	}
 
+	if err := e.index.StorageLock(ctx, req.Sector.ID, storiface.FTUnsealed, storiface.FTNone); err != nil {
+		e.error(ctx, reqId, err)
+		return
+	}
+
+	// Reader returns a reader for an unsealed piece at the given offset in the given sector.
+	// The returned reader will be nil if none of the workers has an unsealed sector file containing
+	// the unsealed piece.
+	r, err := e.stor.Reader(ctx, req.Sector, abi.PaddedPieceSize(req.Offset), req.Size)
+	if err != nil {
+		log.Debugf("did not get storage reader;sector=%+v, err:%s", req.Sector.ID, err)
+		e.error(ctx, reqId, err)
+		return
+	}
+
+	_, err = piece.ReWrite(req.Dest, r)
+	if err != nil {
+		e.error(ctx, reqId, err)
+		return
+	}
 	e.val(ctx, reqId, nil)
 }
 
