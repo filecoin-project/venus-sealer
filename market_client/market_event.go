@@ -3,6 +3,7 @@ package market_client
 import (
 	"context"
 	"github.com/filecoin-project/venus-market/piece"
+	"github.com/filecoin-project/venus-sealer/sector-storage/fr32"
 	"github.com/modern-go/reflect2"
 
 	"encoding/json"
@@ -38,12 +39,12 @@ func (e *MarketEvent) listenMarketRequest(ctx context.Context) {
 		if err := e.listenMarketRequestOnce(ctx); err != nil {
 			log.Errorf("listen market event errored: %s", err)
 		} else {
-			log.Warn("listenHeadChanges quit")
+			log.Warn("list market quit")
 		}
 		select {
 		case <-time.After(time.Second):
 		case <-ctx.Done():
-			log.Warnf("not restarting listenHeadChanges: context error: %s", ctx.Err())
+			log.Warnf("not restarting market listen: context error: %s", ctx.Err())
 			return
 		}
 
@@ -60,7 +61,7 @@ func (e *MarketEvent) listenMarketRequestOnce(ctx context.Context) error {
 	marketEventCh, err := e.client.ListenMarketEvent(ctx, policy)
 	if err != nil {
 		// Retry is handled by caller
-		return xerrors.Errorf("listenHeadChanges ChainNotify call failed: %w", err)
+		return xerrors.Errorf("listen market event call failed: %w", err)
 	}
 
 	for marketEvent := range marketEventCh {
@@ -141,7 +142,13 @@ func (e *MarketEvent) processSectorUnsealed(ctx context.Context, reqId uuid.UUID
 		return
 	}
 
-	_, err = piece.ReWrite(req.Dest, r)
+	upr, err := fr32.NewUnpadReader(r, req.Size)
+	if err != nil {
+		e.error(ctx, reqId, err)
+		return
+	}
+
+	_, err = piece.ReWrite(req.Dest, upr)
 	if err != nil {
 		e.error(ctx, reqId, err)
 		return
