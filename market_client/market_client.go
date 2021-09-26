@@ -14,7 +14,7 @@ type MarketEventClient struct {
 	ListenMarketEvent   func(ctx context.Context, policy *marketevent.MarketRegisterPolicy) (<-chan *types.RequestEvent, error)
 }
 
-func NewProofEventClient(lc fx.Lifecycle, url, token string) (*MarketEventClient, error) {
+func NewMarketEventClient(lc fx.Lifecycle, url, token string) (*MarketEventClient, error) {
 	pvc := &MarketEventClient{}
 	apiInfo := apiinfo.APIInfo{
 		Addr:  url,
@@ -24,7 +24,7 @@ func NewProofEventClient(lc fx.Lifecycle, url, token string) (*MarketEventClient
 	if err != nil {
 		return nil, err
 	}
-	closer, err := jsonrpc.NewMergeClient(context.Background(), addr, "Gateway", []interface{}{pvc}, apiInfo.AuthHeader())
+	closer, err := jsonrpc.NewMergeClient(context.Background(), addr, "VENUS_MARKET", []interface{}{pvc}, apiInfo.AuthHeader())
 	if err != nil {
 		return nil, err
 	}

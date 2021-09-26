@@ -25,9 +25,9 @@ func (m *Sealing) DealSector(ctx context.Context) ([]types.DealAssign, error) {
 
 		sid, offset, err := m.AddPieceToAnySector(ctx, deal.Length.Unpadded(), r, types.DealInfo{
 			PublishCid:   &deal.PublishCid,
-			DealID:       deal.DealId,
-			DealProposal: &deal.Proposal,
-			DealSchedule: types.DealSchedule{StartEpoch: deal.Proposal.StartEpoch, EndEpoch: deal.Proposal.EndEpoch},
+			DealID:       deal.DealID,
+			DealProposal: &deal.DealProposal,
+			DealSchedule: types.DealSchedule{StartEpoch: deal.StartEpoch, EndEpoch: deal.EndEpoch},
 			KeepUnsealed: deal.FastRetrieval,
 		})
 		_ = r.Close()
@@ -36,18 +36,18 @@ func (m *Sealing) DealSector(ctx context.Context) ([]types.DealAssign, error) {
 			continue
 		}
 
-		err = m.api.UpdateDealOnPacking(ctx, m.maddr, deal.Proposal.PieceCID, deal.DealId, sid, offset)
+		err = m.api.UpdateDealOnPacking(ctx, m.maddr, deal.DealProposal.PieceCID, deal.DealID, sid, offset)
 		if err != nil {
 			log.Errorf("update deal status on chain ", err)
 			//if error how to fix this problems
 			continue
 		}
 		assigned = append(assigned, types.DealAssign{
-			DealId:   deal.DealId,
-			SectorId: deal.SectorID,
-			PieceCid: deal.Proposal.PieceCID,
+			DealId:   deal.DealID,
+			SectorId: sid,
+			PieceCid: deal.PieceCID,
 			Offset:   offset,
-			Size:     deal.Proposal.PieceSize,
+			Size:     deal.PieceSize,
 		})
 	}
 	return assigned, err

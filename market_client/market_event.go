@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-var log = logging.Logger("proof_event")
+var log = logging.Logger("market_event")
 
 type MarketEvent struct {
 	client       *MarketEventClient
@@ -57,47 +57,47 @@ func (e *MarketEvent) listenMarketRequestOnce(ctx context.Context) error {
 	policy := &marketevent.MarketRegisterPolicy{
 		Miner: address.Address(e.mAddr),
 	}
-	proofEventCh, err := e.client.ListenMarketEvent(ctx, policy)
+	marketEventCh, err := e.client.ListenMarketEvent(ctx, policy)
 	if err != nil {
 		// Retry is handled by caller
 		return xerrors.Errorf("listenHeadChanges ChainNotify call failed: %w", err)
 	}
 
-	for proofEvent := range proofEventCh {
-		switch proofEvent.Method {
+	for marketEvent := range marketEventCh {
+		switch marketEvent.Method {
 		case "InitConnect":
 			req := types.ConnectedCompleted{}
-			err := json.Unmarshal(proofEvent.Payload, &req)
+			err := json.Unmarshal(marketEvent.Payload, &req)
 			if err != nil {
 				return xerrors.Errorf("odd error in connect %v", err)
 			}
-			log.Infof("success to connect with proof %s", req.ChannelId)
+			log.Infof("success to connect with market %s", req.ChannelId)
 		case "IsUnsealed":
 			req := marketevent.IsUnsealRequest{}
-			err := json.Unmarshal(proofEvent.Payload, &req)
+			err := json.Unmarshal(marketEvent.Payload, &req)
 			if err != nil {
 				_ = e.client.ResponseMarketEvent(ctx, &types.ResponseEvent{
-					Id:      proofEvent.Id,
+					Id:      marketEvent.Id,
 					Payload: nil,
 					Error:   err.Error(),
 				})
 				continue
 			}
-			e.processIsUnsealed(ctx, proofEvent.Id, req)
+			e.processIsUnsealed(ctx, marketEvent.Id, req)
 		case "SectorsUnsealPiece":
 			req := marketevent.UnsealRequest{}
-			err := json.Unmarshal(proofEvent.Payload, &req)
+			err := json.Unmarshal(marketEvent.Payload, &req)
 			if err != nil {
 				_ = e.client.ResponseMarketEvent(ctx, &types.ResponseEvent{
-					Id:      proofEvent.Id,
+					Id:      marketEvent.Id,
 					Payload: nil,
 					Error:   err.Error(),
 				})
 				continue
 			}
-			e.processSectorUnsealed(ctx, proofEvent.Id, req)
+			e.processSectorUnsealed(ctx, marketEvent.Id, req)
 		default:
-			log.Errorf("unexpect proof event type %s", proofEvent.Method)
+			log.Errorf("unexpect market event type %s", marketEvent.Method)
 		}
 	}
 

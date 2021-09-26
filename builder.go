@@ -170,11 +170,13 @@ func Repo(cfg *config.StorageMiner) Option {
 			Override(new(*config.StorageMiner), cfg),
 			Override(new(*config.MessagerConfig), &cfg.Messager),
 			Override(new(*config.MarketConfig), &cfg.Market),
+			Override(new(*config.RegisterMarketConfig), &cfg.RegisterMarket),
 			Override(new(*config.RegisterProofConfig), &cfg.RegisterProof),
 			ConfigAPI(cfg),
 
 			Override(new(api.IMessager), api.NewMessageRPC),
 			Override(new(api2.MarketFullNode), api.NewMarketRPC),
+			Override(new(*market_client.MarketEventClient), market_client.NewMarketEventClient),
 			Override(new(*proof_client.ProofEventClient), proof_client.NewProofEventClient),
 			Override(new(repo.Repo), models.SetDataBase),
 			Providers(

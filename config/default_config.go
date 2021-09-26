@@ -138,6 +138,7 @@ func DefaultMainnetStorageMiner() *StorageMiner {
 		JWT: JWTConfig{
 			Secret: "",
 		},
+		RegisterMarket: defMarket,
 	}
 	var secret [32]byte
 	_, _ = rand.Read(secret[:])
@@ -241,6 +242,7 @@ func DefaultNerpaStorageMiner() *StorageMiner {
 		JWT: JWTConfig{
 			Secret: "",
 		},
+		RegisterMarket: defMarket,
 	}
 	var secret [32]byte
 	_, _ = rand.Read(secret[:])
@@ -343,6 +345,7 @@ func DefaultCalibrationStorageMiner() *StorageMiner {
 		JWT: JWTConfig{
 			Secret: "",
 		},
+		RegisterMarket: defMarket,
 	}
 	var secret [32]byte
 	_, _ = rand.Read(secret[:])
@@ -449,6 +452,7 @@ func Default2kStorageMiner() *StorageMiner {
 		JWT: JWTConfig{
 			Secret: "",
 		},
+		RegisterMarket: defMarket,
 	}
 	var secret [32]byte
 	_, _ = rand.Read(secret[:])
@@ -456,4 +460,9 @@ func Default2kStorageMiner() *StorageMiner {
 	cfg.API.ListenAddress = "/ip4/127.0.0.1/tcp/2345/http"
 	cfg.API.RemoteListenAddress = "127.0.0.1:2345"
 	return cfg
+}
+
+var defMarket = RegisterMarketConfig{
+	Urls:  []string{},
+	Token: "",
 }

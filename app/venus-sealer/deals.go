@@ -53,7 +53,7 @@ var dealListCmd = &cli.Command{
 
 		for _, deal := range deals {
 			tw.Write(map[string]interface{}{
-				"DealId":        deal.DealId,
+				"DealId":        deal.DealID,
 				"PieceCID":      deal.Proposal.PieceCID,
 				"PieceSize":     deal.Proposal.PieceSize,
 				"Client":        deal.Proposal.Client,
