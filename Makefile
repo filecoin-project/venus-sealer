@@ -26,6 +26,15 @@ deps:
 	git submodule update --init
 	./extern/filecoin-ffi/install-filcrypto
 
+# TOOLS
+
+lotus-fix:
+	rm -f lotus-fix
+	go build -o lotus-fix ./tool/to-lotus
+
+.PHONY: lotus-fix
+BINS+=lotus-fix
+
 lint:
 	go run github.com/golangci/golangci-lint/cmd/golangci-lint run
 
