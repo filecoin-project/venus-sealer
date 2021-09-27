@@ -22,10 +22,10 @@ import (
 	"github.com/filecoin-project/venus-sealer/lib/blockstore"
 	"github.com/filecoin-project/venus-sealer/lib/bufbstore"
 	types2 "github.com/filecoin-project/venus-sealer/types"
-	"github.com/filecoin-project/venus/pkg/specactors/adt"
-	"github.com/filecoin-project/venus/pkg/specactors/builtin"
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
 	"github.com/filecoin-project/venus/pkg/types"
+	"github.com/filecoin-project/venus/pkg/types/specactors/adt"
+	"github.com/filecoin-project/venus/pkg/types/specactors/builtin"
+	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
 )
 
 var infoCmd = &cli.Command{

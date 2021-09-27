@@ -12,7 +12,7 @@ import (
 	abi "github.com/filecoin-project/go-state-types/abi"
 	big "github.com/filecoin-project/go-state-types/big"
 	types "github.com/filecoin-project/venus-sealer/types"
-	miner "github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
+	miner "github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
 	gomock "github.com/golang/mock/gomock"
 )
 

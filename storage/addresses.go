@@ -7,8 +7,8 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 
 	"github.com/filecoin-project/venus-sealer/api"
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
 	"github.com/filecoin-project/venus/pkg/types"
+	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
 )
 
 type addrMessager interface {
@@ -80,7 +80,7 @@ func (as *AddressSelector) AddressFor(ctx context.Context, a addrSelectApi, am a
 		addrs = append(addrs, mi.Owner)
 	}
 	if !as.DisableOwnerFallback {
-		addrs = append(addrs,  mi.Worker)
+		addrs = append(addrs, mi.Worker)
 	}
 	log.Infof("pick address: %v", addrs)
 

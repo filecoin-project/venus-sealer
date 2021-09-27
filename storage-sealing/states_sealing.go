@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
 	"io/ioutil"
@@ -17,9 +18,9 @@ import (
 	"github.com/filecoin-project/go-statemachine"
 	"github.com/filecoin-project/specs-storage/storage"
 
-	actors "github.com/filecoin-project/venus/pkg/specactors"
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
-	"github.com/filecoin-project/venus/pkg/specactors/policy"
+	actors "github.com/filecoin-project/venus/pkg/types/specactors"
+	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
 
 	"github.com/filecoin-project/specs-actors/v5/actors/runtime/proof"
 
@@ -69,9 +70,13 @@ func (m *Sealing) handlePacking(ctx statemachine.Context, sector types.SectorInf
 	if err != nil {
 		return err
 	}
-
+	totalSize := allocated
 	if len(fillerSizes) > 0 {
-		log.Warnf("Creating %d filler pieces for sector %d", len(fillerSizes), sector.SectorNumber)
+		for _, xxx := range fillerSizes {
+			totalSize += xxx
+			fmt.Println("allocate size: ", xxx)
+		}
+		log.Warnf("Creating %d filler pieces for sector %d  pieces %d, sectorsize %d allocated %d total: %d", len(fillerSizes), sector.SectorNumber, len(sector.Pieces), ubytes, allocated, totalSize)
 	}
 
 	fillerPieces, err := m.padSector(sector.SealingCtx(ctx.Context()), m.minerSector(sector.SectorType, sector.SectorNumber), sector.ExistingPieceSizes(), fillerSizes...)
@@ -89,26 +94,29 @@ func (m *Sealing) padSector(ctx context.Context, sectorID storage.SectorRef, exi
 
 	log.Infof("Pledge %d, contains %+v", sectorID, existingPieceSizes)
 
-
 	ssize, err := sectorID.ProofType.SectorSize()
 	if err != nil {
 		return nil, err
 	}
+
 	pisFile := storiface.DefaultPieceInfosFile(ssize)
-	log.Infof("pisFile: %s", pisFile)
-	if bExist, _ := storiface.FileExists(pisFile); bExist {
-		bufs, err := ioutil.ReadFile(pisFile)
-		if err != nil {
-			return nil, err
-		}
+	if len(existingPieceSizes) == 0 {
+		//hack for cc sector
+		log.Infof("pisFile: %s", pisFile)
+		if bExist, _ := storiface.FileExists(pisFile); bExist {
+			bufs, err := ioutil.ReadFile(pisFile)
+			if err != nil {
+				return nil, err
+			}
 
-		var out []abi.PieceInfo
-		err = json.Unmarshal(bufs, &out)
-		if err != nil {
-			return nil, err
-		}
+			var out []abi.PieceInfo
+			err = json.Unmarshal(bufs, &out)
+			if err != nil {
+				return nil, err
+			}
 
-		return out, nil
+			return out, nil
+		}
 	}
 
 	out := make([]abi.PieceInfo, len(sizes))
@@ -123,14 +131,17 @@ func (m *Sealing) padSector(ctx context.Context, sectorID storage.SectorRef, exi
 		out[i] = ppi
 	}
 
-	// save piece info to /var/tmp/s-piece-infos
-	buf, err := json.Marshal(out)
-	if err != nil {
-		return nil, err
-	}
+	if len(existingPieceSizes) == 0 {
+		//hack for cc sector
+		// save piece info to /var/tmp/s-piece-infos
+		buf, err := json.Marshal(out)
+		if err != nil {
+			return nil, err
+		}
 
-	if err := ioutil.WriteFile(pisFile, buf, 0644); err != nil {
-		return nil, xerrors.Errorf("persisting  (%s): %w", pisFile, err)
+		if err := ioutil.WriteFile(pisFile, buf, 0644); err != nil {
+			return nil, xerrors.Errorf("persisting  (%s): %w", pisFile, err)
+		}
 	}
 
 	return out, nil

@@ -13,8 +13,8 @@ import (
 
 	"github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
 
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
-	"github.com/filecoin-project/venus/pkg/specactors/policy"
+	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
 
 	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 )
@@ -219,4 +219,12 @@ type GetSealingConfigFunc func() (sealiface.Config, error)
 
 func (mr *MessageReceipt) Equals(o *MessageReceipt) bool {
 	return mr.ExitCode == o.ExitCode && bytes.Equal(mr.Return, o.Return) && mr.GasUsed == o.GasUsed
+}
+
+type DealAssign struct {
+	DealId   abi.DealID
+	SectorId abi.SectorNumber
+	PieceCid cid.Cid
+	Offset   abi.PaddedPieceSize
+	Size     abi.PaddedPieceSize
 }

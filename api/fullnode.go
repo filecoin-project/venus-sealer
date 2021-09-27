@@ -7,7 +7,6 @@ import (
 	"github.com/filecoin-project/go-bitfield"
 	"github.com/filecoin-project/go-jsonrpc/auth"
 	"github.com/filecoin-project/go-state-types/abi"
-	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/go-state-types/crypto"
 	"github.com/filecoin-project/go-state-types/dline"
 	stnetwork "github.com/filecoin-project/go-state-types/network"
@@ -20,12 +19,10 @@ import (
 	protocol "github.com/libp2p/go-libp2p-core/protocol"
 
 	"github.com/filecoin-project/venus/app/submodule/apitypes"
-	paych2 "github.com/filecoin-project/venus/app/submodule/paych"
 	"github.com/filecoin-project/venus/pkg/chain"
 	"github.com/filecoin-project/venus/pkg/messagepool"
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/paych"
 	"github.com/filecoin-project/venus/pkg/types"
+	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
 
 	types2 "github.com/filecoin-project/venus-sealer/types"
 )
@@ -40,7 +37,7 @@ type FullNode interface {
 
 	// ChainNotify returns channel with chain head updates.
 	// First message is guaranteed to be of len == 1, and type == 'current'.
-	ChainNotify(context.Context) (<-chan []*chain.HeadChange, error)
+	ChainNotify(context.Context) <-chan []*chain.HeadChange
 
 	// ChainHead returns the current head of the chain.
 	ChainHead(context.Context) (*types.TipSet, error)
@@ -271,10 +268,10 @@ type FullNode interface {
 	// A nil TipSetKey can be provided as a param, this will cause the heaviest tipset in the chain to be used.
 
 	// StateCall runs the given message and returns its result without any persisted changes.
-	StateCall(context.Context, *types.Message, types.TipSetKey) (*apitypes.InvocResult, error)
+	StateCall(context.Context, *types.Message, types.TipSetKey) (*types.InvocResult, error)
 	// StateReplay replays a given message, assuming it was included in a block in the specified tipset.
 	// If no tipset key is provided, the appropriate tipset is looked up.
-	StateReplay(context.Context, types.TipSetKey, cid.Cid) (*apitypes.InvocResult, error)
+	StateReplay(context.Context, types.TipSetKey, cid.Cid) (*types.InvocResult, error)
 	// StateGetActor returns the indicated actor's nonce and balance.
 	StateGetActor(ctx context.Context, actor address.Address, tsk types.TipSetKey) (*types.Actor, error)
 	// StateReadState returns the indicated actor's state.
@@ -464,26 +461,6 @@ type FullNode interface {
 	// MarketWithdraw withdraws unlocked funds from the market actor
 	MarketWithdraw(ctx context.Context, wallet, addr address.Address, amt types.BigInt) (cid.Cid, error)
 
-	// MethodGroup: Paych
-	// The Paych methods are for interacting with and managing payment channels
-
-	PaychGet(ctx context.Context, from, to address.Address, amt types.BigInt) (*apitypes.ChannelInfo, error)
-	PaychGetWaitReady(context.Context, cid.Cid) (address.Address, error)
-	PaychAvailableFunds(ctx context.Context, ch address.Address) (*apitypes.ChannelAvailableFunds, error)
-	PaychAvailableFundsByFromTo(ctx context.Context, from, to address.Address) (*apitypes.ChannelAvailableFunds, error)
-	PaychList(context.Context) ([]address.Address, error)
-	PaychStatus(context.Context, address.Address) (*types.PaychStatus, error)
-	PaychSettle(context.Context, address.Address) (cid.Cid, error)
-	PaychCollect(context.Context, address.Address) (cid.Cid, error)
-	PaychAllocateLane(ctx context.Context, ch address.Address) (uint64, error)
-	PaychNewPayment(ctx context.Context, from, to address.Address, vouchers []apitypes.VoucherSpec) (*apitypes.PaymentInfo, error)
-	PaychVoucherCheckValid(context.Context, address.Address, *paych.SignedVoucher) error
-	PaychVoucherCheckSpendable(context.Context, address.Address, *paych.SignedVoucher, []byte, []byte) (bool, error)
-	PaychVoucherCreate(context.Context, address.Address, types.BigInt, uint64) (*apitypes.VoucherCreateResult, error)
-	PaychVoucherAdd(context.Context, address.Address, *paych.SignedVoucher, []byte, types.BigInt) (types.BigInt, error)
-	PaychVoucherList(context.Context, address.Address) ([]*paych.SignedVoucher, error)
-	PaychVoucherSubmit(context.Context, address.Address, *paych.SignedVoucher, []byte, []byte) (cid.Cid, error)
-
 	// CreateBackup creates node backup onder the specified file name. The
 	// method requires that the venus daemon is running with the
 	// LOTUS_BACKUP_BASE_PATH environment variable set to some path, and that
@@ -530,7 +507,7 @@ type FullNodeStruct struct {
 	CommonStruct
 
 	Internal struct {
-		ChainNotify                   func(context.Context) (<-chan []*chain.HeadChange, error)                                                          `perm:"read"`
+		ChainNotify                   func(context.Context) <-chan []*chain.HeadChange                                                                   `perm:"read"`
 		ChainHead                     func(context.Context) (*types.TipSet, error)                                                                       `perm:"read"`
 		ChainGetRandomnessFromTickets func(context.Context, types.TipSetKey, crypto.DomainSeparationTag, abi.ChainEpoch, []byte) (abi.Randomness, error) `perm:"read"`
 		ChainGetRandomnessFromBeacon  func(context.Context, types.TipSetKey, crypto.DomainSeparationTag, abi.ChainEpoch, []byte) (abi.Randomness, error) `perm:"read"`
@@ -623,8 +600,8 @@ type FullNodeStruct struct {
 		StateSectorGetInfo                 func(context.Context, address.Address, abi.SectorNumber, types.TipSetKey) (*miner.SectorOnChainInfo, error)         `perm:"read"`
 		StateSectorExpiration              func(context.Context, address.Address, abi.SectorNumber, types.TipSetKey) (*miner.SectorExpiration, error)          `perm:"read"`
 		StateSectorPartition               func(context.Context, address.Address, abi.SectorNumber, types.TipSetKey) (*miner.SectorLocation, error)            `perm:"read"`
-		StateCall                          func(context.Context, *types.Message, types.TipSetKey) (*apitypes.InvocResult, error)                               `perm:"read"`
-		StateReplay                        func(context.Context, types.TipSetKey, cid.Cid) (*apitypes.InvocResult, error)                                      `perm:"read"`
+		StateCall                          func(context.Context, *types.Message, types.TipSetKey) (*types.InvocResult, error)                                  `perm:"read"`
+		StateReplay                        func(context.Context, types.TipSetKey, cid.Cid) (*types.InvocResult, error)                                         `perm:"read"`
 		StateGetActor                      func(context.Context, address.Address, types.TipSetKey) (*types.Actor, error)                                       `perm:"read"`
 		StateReadState                     func(context.Context, address.Address, types.TipSetKey) (*ActorState, error)                                        `perm:"read"`
 		StateWaitMsg                       func(context.Context, cid.Cid, uint64, abi.ChainEpoch, bool) (*apitypes.MsgLookup, error)                           `perm:"read"`
@@ -674,24 +651,6 @@ type FullNodeStruct struct {
 		MarketReserveFunds func(ctx context.Context, wallet address.Address, addr address.Address, amt types.BigInt) (cid.Cid, error) `perm:"sign"`
 		MarketReleaseFunds func(ctx context.Context, addr address.Address, amt types.BigInt) error                                    `perm:"sign"`
 		MarketWithdraw     func(ctx context.Context, wallet, addr address.Address, amt types.BigInt) (cid.Cid, error)                 `perm:"sign"`
-
-		PaychGet                    func(ctx context.Context, from, to address.Address, amt types.BigInt) (*apitypes.ChannelInfo, error)                `perm:"sign"`
-		PaychGetWaitReady           func(context.Context, cid.Cid) (address.Address, error)                                                             `perm:"sign"`
-		PaychAvailableFunds         func(context.Context, address.Address) (*paych2.ChannelAvailableFunds, error)                                       `perm:"sign"`
-		PaychAvailableFundsByFromTo func(context.Context, address.Address, address.Address) (*paych2.ChannelAvailableFunds, error)                      `perm:"sign"`
-		PaychList                   func(context.Context) ([]address.Address, error)                                                                    `perm:"read"`
-		PaychStatus                 func(context.Context, address.Address) (*paych2.PaychStatus, error)                                                 `perm:"read"`
-		PaychSettle                 func(context.Context, address.Address) (cid.Cid, error)                                                             `perm:"sign"`
-		PaychCollect                func(context.Context, address.Address) (cid.Cid, error)                                                             `perm:"sign"`
-		PaychAllocateLane           func(context.Context, address.Address) (uint64, error)                                                              `perm:"sign"`
-		PaychNewPayment             func(ctx context.Context, from, to address.Address, vouchers []apitypes.VoucherSpec) (*apitypes.PaymentInfo, error) `perm:"sign"`
-		PaychVoucherCheck           func(context.Context, *paych.SignedVoucher) error                                                                   `perm:"read"`
-		PaychVoucherCheckValid      func(context.Context, address.Address, *paych.SignedVoucher) error                                                  `perm:"read"`
-		PaychVoucherCheckSpendable  func(context.Context, address.Address, *paych.SignedVoucher, []byte, []byte) (bool, error)                          `perm:"read"`
-		PaychVoucherAdd             func(context.Context, address.Address, *paych.SignedVoucher, []byte, types.BigInt) (types.BigInt, error)            `perm:"write"`
-		PaychVoucherCreate          func(context.Context, address.Address, big.Int, uint64) (*apitypes.VoucherCreateResult, error)                      `perm:"sign"`
-		PaychVoucherList            func(context.Context, address.Address) ([]*paych.SignedVoucher, error)                                              `perm:"write"`
-		PaychVoucherSubmit          func(context.Context, address.Address, *paych.SignedVoucher, []byte, []byte) (cid.Cid, error)                       `perm:"sign"`
 
 		CreateBackup func(ctx context.Context, fpath string) error `perm:"admin"`
 	}
@@ -966,7 +925,7 @@ func (c *FullNodeStruct) ChainGetParentMessages(ctx context.Context, b cid.Cid) 
 	return c.Internal.ChainGetParentMessages(ctx, b)
 }
 
-func (c *FullNodeStruct) ChainNotify(ctx context.Context) (<-chan []*chain.HeadChange, error) {
+func (c *FullNodeStruct) ChainNotify(ctx context.Context) <-chan []*chain.HeadChange {
 	return c.Internal.ChainNotify(ctx)
 }
 
@@ -1130,11 +1089,11 @@ func (c *FullNodeStruct) StateSectorPartition(ctx context.Context, maddr address
 	return c.Internal.StateSectorPartition(ctx, maddr, sectorNumber, tok)
 }
 
-func (c *FullNodeStruct) StateCall(ctx context.Context, msg *types.Message, tsk types.TipSetKey) (*apitypes.InvocResult, error) {
+func (c *FullNodeStruct) StateCall(ctx context.Context, msg *types.Message, tsk types.TipSetKey) (*types.InvocResult, error) {
 	return c.Internal.StateCall(ctx, msg, tsk)
 }
 
-func (c *FullNodeStruct) StateReplay(ctx context.Context, tsk types.TipSetKey, mc cid.Cid) (*apitypes.InvocResult, error) {
+func (c *FullNodeStruct) StateReplay(ctx context.Context, tsk types.TipSetKey, mc cid.Cid) (*types.InvocResult, error) {
 	return c.Internal.StateReplay(ctx, tsk, mc)
 }
 
@@ -1320,70 +1279,6 @@ func (c *FullNodeStruct) MarketReleaseFunds(ctx context.Context, addr address.Ad
 
 func (c *FullNodeStruct) MarketWithdraw(ctx context.Context, wallet, addr address.Address, amt types.BigInt) (cid.Cid, error) {
 	return c.Internal.MarketWithdraw(ctx, wallet, addr, amt)
-}
-
-func (c *FullNodeStruct) PaychGet(ctx context.Context, from, to address.Address, amt types.BigInt) (*apitypes.ChannelInfo, error) {
-	return c.Internal.PaychGet(ctx, from, to, amt)
-}
-
-func (c *FullNodeStruct) PaychGetWaitReady(ctx context.Context, sentinel cid.Cid) (address.Address, error) {
-	return c.Internal.PaychGetWaitReady(ctx, sentinel)
-}
-
-func (c *FullNodeStruct) PaychAvailableFunds(ctx context.Context, ch address.Address) (*paych2.ChannelAvailableFunds, error) {
-	return c.Internal.PaychAvailableFunds(ctx, ch)
-}
-
-func (c *FullNodeStruct) PaychAvailableFundsByFromTo(ctx context.Context, from, to address.Address) (*paych2.ChannelAvailableFunds, error) {
-	return c.Internal.PaychAvailableFundsByFromTo(ctx, from, to)
-}
-
-func (c *FullNodeStruct) PaychList(ctx context.Context) ([]address.Address, error) {
-	return c.Internal.PaychList(ctx)
-}
-
-func (c *FullNodeStruct) PaychStatus(ctx context.Context, pch address.Address) (*paych2.PaychStatus, error) {
-	return c.Internal.PaychStatus(ctx, pch)
-}
-
-func (c *FullNodeStruct) PaychVoucherCheckValid(ctx context.Context, addr address.Address, sv *paych.SignedVoucher) error {
-	return c.Internal.PaychVoucherCheckValid(ctx, addr, sv)
-}
-
-func (c *FullNodeStruct) PaychVoucherCheckSpendable(ctx context.Context, addr address.Address, sv *paych.SignedVoucher, secret []byte, proof []byte) (bool, error) {
-	return c.Internal.PaychVoucherCheckSpendable(ctx, addr, sv, secret, proof)
-}
-
-func (c *FullNodeStruct) PaychVoucherAdd(ctx context.Context, addr address.Address, sv *paych.SignedVoucher, proof []byte, minDelta types.BigInt) (types.BigInt, error) {
-	return c.Internal.PaychVoucherAdd(ctx, addr, sv, proof, minDelta)
-}
-
-func (c *FullNodeStruct) PaychVoucherCreate(ctx context.Context, pch address.Address, amt types.BigInt, lane uint64) (*apitypes.VoucherCreateResult, error) {
-	return c.Internal.PaychVoucherCreate(ctx, pch, amt, lane)
-}
-
-func (c *FullNodeStruct) PaychVoucherList(ctx context.Context, pch address.Address) ([]*paych.SignedVoucher, error) {
-	return c.Internal.PaychVoucherList(ctx, pch)
-}
-
-func (c *FullNodeStruct) PaychSettle(ctx context.Context, a address.Address) (cid.Cid, error) {
-	return c.Internal.PaychSettle(ctx, a)
-}
-
-func (c *FullNodeStruct) PaychCollect(ctx context.Context, a address.Address) (cid.Cid, error) {
-	return c.Internal.PaychCollect(ctx, a)
-}
-
-func (c *FullNodeStruct) PaychAllocateLane(ctx context.Context, ch address.Address) (uint64, error) {
-	return c.Internal.PaychAllocateLane(ctx, ch)
-}
-
-func (c *FullNodeStruct) PaychNewPayment(ctx context.Context, from, to address.Address, vouchers []apitypes.VoucherSpec) (*apitypes.PaymentInfo, error) {
-	return c.Internal.PaychNewPayment(ctx, from, to, vouchers)
-}
-
-func (c *FullNodeStruct) PaychVoucherSubmit(ctx context.Context, ch address.Address, sv *paych.SignedVoucher, secret []byte, proof []byte) (cid.Cid, error) {
-	return c.Internal.PaychVoucherSubmit(ctx, ch, sv, secret, proof)
 }
 
 func (c *FullNodeStruct) CreateBackup(ctx context.Context, fpath string) error {

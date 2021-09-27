@@ -34,9 +34,9 @@ import (
 	type2 "github.com/filecoin-project/venus-messager/types"
 	"github.com/filecoin-project/venus/app/submodule/apitypes"
 	"github.com/filecoin-project/venus/pkg/chain"
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
-	"github.com/filecoin-project/venus/pkg/specactors/policy"
 	"github.com/filecoin-project/venus/pkg/types"
+	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
 
 	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus-sealer/journal"
@@ -224,9 +224,9 @@ func TestWDPostDoPost(t *testing.T) {
 		Messager: &mockMessagerAPI{pushedMessages: mockStgMinerAPI.pushedMessages},
 		api:      mockStgMinerAPI,
 		networkParams: &config.NetParamsConfig{
-			UpgradeIgnitionHeight:  94000,
-			ForkLengthThreshold:    policy.ChainFinality,
-			BlockDelaySecs:         30,
+			UpgradeIgnitionHeight: 94000,
+			ForkLengthThreshold:   policy.ChainFinality,
+			BlockDelaySecs:        30,
 		},
 		prover:       &mockProver{},
 		verifier:     &mockVerif{},
@@ -415,7 +415,7 @@ func (m *mockStorageMinerAPI) WalletHas(ctx context.Context, address address.Add
 
 var _ fullNodeFilteredAPI = &mockStorageMinerAPI{}
 
-type mockMessagerAPI struct{
+type mockMessagerAPI struct {
 	pushedMessages chan *types.Message
 }
 

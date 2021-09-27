@@ -4,10 +4,12 @@ import (
 	"context"
 	"github.com/filecoin-project/go-state-types/abi"
 	storage2 "github.com/filecoin-project/specs-storage/storage"
+	api2 "github.com/filecoin-project/venus-market/api"
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/api/impl"
 	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/journal"
+	"github.com/filecoin-project/venus-sealer/market_client"
 	"github.com/filecoin-project/venus-sealer/models"
 	"github.com/filecoin-project/venus-sealer/models/repo"
 	"github.com/filecoin-project/venus-sealer/proof_client"
@@ -47,6 +49,7 @@ const (
 
 	//proof
 	StartProofEventKey
+	StartWalletEventKey
 	WarmupKey
 	_nInvokes // keep this last
 )
@@ -149,6 +152,7 @@ func Online(cfg *config.StorageMiner) Option {
 		Override(AutoMigrateKey, models.AutoMigrate),
 		Override(SetNetParamsKey, SetupNetParams),
 		Override(StartProofEventKey, proof_client.StartProofEvent),
+		Override(StartWalletEventKey, market_client.StartMarketEvent),
 		Override(WarmupKey, DoPoStWarmup),
 	)
 }
@@ -165,10 +169,14 @@ func Repo(cfg *config.StorageMiner) Option {
 			Override(new(*config.DbConfig), &cfg.DB),
 			Override(new(*config.StorageMiner), cfg),
 			Override(new(*config.MessagerConfig), &cfg.Messager),
+			Override(new(*config.MarketConfig), &cfg.Market),
+			Override(new(*config.RegisterMarketConfig), &cfg.RegisterMarket),
 			Override(new(*config.RegisterProofConfig), &cfg.RegisterProof),
 			ConfigAPI(cfg),
 
 			Override(new(api.IMessager), api.NewMessageRPC),
+			Override(new(api2.MarketFullNode), api.NewMarketRPC),
+			Override(new(*market_client.MarketEventClient), market_client.NewMarketEventClient),
 			Override(new(*proof_client.ProofEventClient), proof_client.NewProofEventClient),
 			Override(new(repo.Repo), models.SetDataBase),
 			Providers(

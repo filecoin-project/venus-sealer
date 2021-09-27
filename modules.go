@@ -7,6 +7,7 @@ import (
 	"errors"
 	"github.com/filecoin-project/go-bitfield"
 	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
+	api2 "github.com/filecoin-project/venus-market/api"
 	"math"
 	"net/http"
 	"time"
@@ -36,9 +37,9 @@ import (
 	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 	types2 "github.com/filecoin-project/venus-sealer/types"
 	"github.com/filecoin-project/venus/fixtures/asset"
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
-	"github.com/filecoin-project/venus/pkg/specactors/policy"
 	"github.com/filecoin-project/venus/pkg/types"
+	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
 )
 
 func OpenFilesystemJournal(homeDir config.HomeDir, lc fx.Lifecycle, disabled journal.DisabledEvents) (journal.Journal, error) {
@@ -245,6 +246,7 @@ type StorageMinerParams struct {
 	MetricsCtx         MetricsCtx
 	API                api.FullNode
 	Messager           api.IMessager
+	MarketClient       api2.MarketFullNode
 	MetadataService    *service.MetadataService
 	LogService         *service.LogService
 	SectorInfoService  *service.SectorInfoService
@@ -268,6 +270,7 @@ func StorageMiner(fc config.MinerFeeConfig) func(params StorageMinerParams) (*st
 			lc                = params.Lifecycle
 			api               = params.API
 			messager          = params.Messager
+			marketClient      = params.MarketClient
 			sealer            = params.Sealer
 			sc                = params.SectorIDCounter
 			verif             = params.Verifier
@@ -290,7 +293,7 @@ func StorageMiner(fc config.MinerFeeConfig) func(params StorageMinerParams) (*st
 			return nil, err
 		}
 
-		sm, err := storage.NewMiner(api, messager, maddr, metadataService, sectorinfoService, logService, sealer, sc, verif, prover, gsd, fc, j, as, np)
+		sm, err := storage.NewMiner(api, messager, marketClient, maddr, metadataService, sectorinfoService, logService, sealer, sc, verif, prover, gsd, fc, j, as, np)
 		if err != nil {
 			return nil, err
 		}

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/filecoin-project/venus/pkg/specactors/policy"
+	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -27,7 +27,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/storage-sealing/mocks"
 	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 	types2 "github.com/filecoin-project/venus-sealer/types"
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
 )
 
 var fc = config.MinerFeeConfig{
@@ -230,9 +230,9 @@ func TestPrecommitBatcher(t *testing.T) {
 			pcapi := mocks.NewMockPreCommitBatcherApi(mockCtrl)
 
 			pcb := sealing.NewPreCommitBatcher(ctx, &config.NetParamsConfig{
-				UpgradeIgnitionHeight:  94000,
-				ForkLengthThreshold:    policy.ChainFinality,
-				BlockDelaySecs:         30,
+				UpgradeIgnitionHeight: 94000,
+				ForkLengthThreshold:   policy.ChainFinality,
+				BlockDelaySecs:        30,
 			}, t0123, pcapi, as, fc, cfg)
 
 			var promises []promise

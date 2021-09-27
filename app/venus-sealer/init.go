@@ -30,11 +30,11 @@ import (
 
 	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
 
-	actors "github.com/filecoin-project/venus/pkg/specactors"
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/miner"
-	"github.com/filecoin-project/venus/pkg/specactors/builtin/power"
-	"github.com/filecoin-project/venus/pkg/specactors/policy"
 	"github.com/filecoin-project/venus/pkg/types"
+	actors "github.com/filecoin-project/venus/pkg/types/specactors"
+	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/power"
+	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
 
 	types3 "github.com/filecoin-project/venus-messager/types"
 
@@ -198,7 +198,6 @@ var initCmd = &cli.Command{
 		}
 
 		log.Info("Checking if repo exists")
-
 
 		defaultCfg.ConfigPath = config.FsConfig(defaultCfg.DataDir)
 		exit, err := config.ConfigExist(defaultCfg.DataDir)

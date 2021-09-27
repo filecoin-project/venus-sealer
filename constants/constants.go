@@ -15,7 +15,7 @@ var InsecurePoStValidation = false
 
 const (
 	NewestNetworkVersion = network.Version13
-	MessageConfidence    = uint64(5)
+	MessageConfidence    = uint64(2)
 )
 
 // /////
