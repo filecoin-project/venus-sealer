@@ -193,7 +193,20 @@ func (sb *Sealer) AddPiece(ctx context.Context, sector storage.SectorRef, existi
 	stagedFile = nil
 
 	if len(piecePromises) == 1 {
-		return piecePromises[0]()
+		pinfo, err := piecePromises[0]()
+		if err == nil {
+			// generate s-basic-unsealed
+			if offset.Padded()+pieceSize.Padded() == maxPieceSize {
+				tUnsealedFile := storiface.DefaultUnsealedFile(ssize)
+				if bExist, _ := storiface.FileExists(tUnsealedFile); !bExist {
+					err = storiface.CopyFile(stagedPath.Unsealed, tUnsealedFile)
+					if err != nil {
+						return abi.PieceInfo{}, err
+					}
+				}
+			}
+		}
+		return pinfo, err
 	}
 
 	var payloadRoundedBytes abi.PaddedPieceSize
