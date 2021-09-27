@@ -124,6 +124,7 @@ func (e *MarketEvent) processSectorUnsealed(ctx context.Context, reqId uuid.UUID
 	err = e.storageMgr.SectorsUnsealPiece(ctx, req.Sector, storiface.UnpaddedByteIndex(abi.PaddedPieceSize(req.Offset).Unpadded()), req.Size.Unpadded(), sectorInfo.TicketValue, sectorInfo.CommD)
 	if err != nil {
 		e.error(ctx, reqId, err)
+		log.Debugf("unsealer piece file from sector %d %w", req.Sector.ID.Number, err)
 		return
 	}
 

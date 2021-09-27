@@ -10,7 +10,7 @@ import (
 	"go.uber.org/fx"
 )
 
-func StartMarketEvent(lc fx.Lifecycle, stor *stores.Remote, sectorBlocks *sectorblocks.SectorBlocks, storageMgr *sectorstorage.Manager, mCfg *config.MarketConfig, cfg *config.RegisterMarketConfig, mAddr types2.MinerAddress) error {
+func StartMarketEvent(lc fx.Lifecycle, stor *stores.Remote, sectorBlocks *sectorblocks.SectorBlocks, storageMgr *sectorstorage.Manager, index stores.SectorIndex, mCfg *config.MarketConfig, cfg *config.RegisterMarketConfig, mAddr types2.MinerAddress) error {
 	if len(cfg.Urls) == 0 {
 		cfg.Urls = []string{mCfg.Url}
 		cfg.Token = mCfg.Token
@@ -26,6 +26,7 @@ func StartMarketEvent(lc fx.Lifecycle, stor *stores.Remote, sectorBlocks *sector
 			stor:         stor,
 			sectorBlocks: sectorBlocks,
 			storageMgr:   storageMgr,
+			index:        index,
 		}
 		go marketEvent.listenMarketRequest(context.Background())
 	}
