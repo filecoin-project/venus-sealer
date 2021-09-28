@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/filecoin-project/venus-sealer/api"
-	"github.com/filecoin-project/venus/pkg/chain"
 	"os"
 	"strconv"
 	"text/tabwriter"
+
+	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus/pkg/chain"
 
 	"github.com/fatih/color"
 	"github.com/urfave/cli/v2"
@@ -22,6 +23,11 @@ import (
 var provingCmd = &cli.Command{
 	Name:  "proving",
 	Usage: "View proving information",
+	Flags: []cli.Flag{
+		&cli.StringFlag{
+			Name: "actor",
+		},
+	},
 	Subcommands: []*cli.Command{
 		provingInfoCmd,
 		provingDeadlinesCmd,
@@ -228,6 +234,16 @@ var provingDeadlinesCmd = &cli.Command{
 
 		ctx := api.ReqContext(cctx)
 
+		networkParams, err := storageAPI.NetParamsConfig(ctx)
+		if err != nil {
+			return err
+		}
+
+		head, err := nodeAPI.ChainHead(ctx)
+		if err != nil {
+			return err
+		}
+
 		maddr, err := getActorAddress(ctx, storageAPI, cctx.String("actor"))
 		if err != nil {
 			return err
@@ -246,7 +262,7 @@ var provingDeadlinesCmd = &cli.Command{
 		fmt.Printf("Sealer: %s\n", color.BlueString("%s", maddr))
 
 		tw := tabwriter.NewWriter(os.Stdout, 2, 4, 2, ' ', 0)
-		_, _ = fmt.Fprintln(tw, "deadline\tpartitions\tsectors (faults)\tproven partitions")
+		_, _ = fmt.Fprintln(tw, "deadline\topen\tpartitions\tsectors (faults)\tproven partitions")
 
 		for dlIdx, deadline := range deadlines {
 			partitions, err := nodeAPI.StateMinerPartitions(ctx, maddr, uint64(dlIdx), types.EmptyTSK)
@@ -282,7 +298,13 @@ var provingDeadlinesCmd = &cli.Command{
 			if di.Index == uint64(dlIdx) {
 				cur += "\t(current)"
 			}
-			_, _ = fmt.Fprintf(tw, "%d\t%d\t%d (%d)\t%d%s\n", dlIdx, len(partitions), sectors, faults, provenPartitions, cur)
+
+			gapIdx := uint64(dlIdx) - di.Index
+			// 30 minutes a deadline
+			gapHeight := uint64(30*60) / networkParams.BlockDelaySecs * gapIdx
+			open := HeightToTime(head, di.Open+abi.ChainEpoch(gapHeight), networkParams.BlockDelaySecs)
+
+			_, _ = fmt.Fprintf(tw, "%d\t%s\t%d\t%d (%d)\t%d%s\n", dlIdx, open, len(partitions), sectors, faults, provenPartitions, cur)
 		}
 
 		return tw.Flush()
@@ -318,6 +340,16 @@ var provingDeadlineInfoCmd = &cli.Command{
 
 		ctx := api.ReqContext(cctx)
 
+		networkParams, err := storageAPI.NetParamsConfig(ctx)
+		if err != nil {
+			return err
+		}
+
+		head, err := nodeAPI.ChainHead(ctx)
+		if err != nil {
+			return err
+		}
+
 		maddr, err := getActorAddress(ctx, storageAPI, cctx.String("actor"))
 		if err != nil {
 			return err
@@ -343,7 +375,12 @@ var provingDeadlineInfoCmd = &cli.Command{
 			return err
 		}
 
+		gapIdx := dlIdx - di.Index
+		// 30 minutes a deadline
+		gapHeight := uint64(30*60) / networkParams.BlockDelaySecs * gapIdx
+
 		fmt.Printf("Deadline Index:           %d\n", dlIdx)
+		fmt.Printf("Deadline Open:            %s\n", HeightToTime(head, di.Open+abi.ChainEpoch(gapHeight), networkParams.BlockDelaySecs))
 		fmt.Printf("Partitions:               %d\n", len(partitions))
 		fmt.Printf("Proven Partitions:        %d\n", provenPartitions)
 		fmt.Printf("Current:                  %t\n\n", di.Index == dlIdx)
