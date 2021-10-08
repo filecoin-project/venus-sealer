@@ -14,14 +14,12 @@ This project is a mining system supporting venus, is currently under active deve
 
 ### init miner 
 ```shell script
-./venus-sealer init \
+# --network: Choose from nerpa, calibration for testnets. Leave out this flag for mainnet
+./venus-sealer --network <network type> init \
 --worker <WORKER_ADDRESS> \
 --owner <OWNER_ADDRESS>  \
 # Choose between 32G or 64G for mainnet
 --sector-size <sector size> \
-# Choose from nerpa, calibration for testnets
-# Leave out this flag for mainnet
---network <network type> \
 # Config for different shared venus modules
 --node-url /ip4/<IP_ADDRESS_OF_VENUS>/tcp/3453 \
 --messager-url /ip4/<IP_ADDRESS_OF_VENUS_MESSAGER>/tcp/<PORT_OF_VENUS_MESSAGER> \

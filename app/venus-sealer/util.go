@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/fatih/color"
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
@@ -11,7 +13,8 @@ import (
 	"github.com/hako/durafmt"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
-	"time"
+
+	venustypes "github.com/filecoin-project/venus/pkg/types"
 )
 
 type PrintHelpErr struct {
@@ -46,6 +49,14 @@ func EpochTime(curr, e abi.ChainEpoch, blockDelay uint64) string {
 	}
 
 	panic("math broke")
+}
+
+func HeightToTime(ts *venustypes.TipSet, openHeight abi.ChainEpoch, blockDelay uint64) string {
+	if ts.Len() == 0 {
+		return ""
+	}
+	firstBlkTime := ts.Blocks()[0].Timestamp - uint64(ts.Height())*blockDelay
+	return time.Unix(int64(firstBlkTime+blockDelay*uint64(openHeight)), 0).Format("15:04:05")
 }
 
 type stateMeta struct {
