@@ -5,11 +5,15 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"syscall"
 
 	"golang.org/x/xerrors"
+	logging "github.com/ipfs/go-log/v2"
 
 	"github.com/filecoin-project/go-state-types/abi"
 )
+
+var log = logging.Logger("storiface")
 
 const (
 	FTUnsealed SectorFileType = 1 << iota
@@ -147,7 +151,18 @@ func CopyFile(srcFile , dstFile string) error {
 	}
 	defer destination.Close()
 
+	err = syscall.Flock(int(destination.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
+	if err != nil {
+		log.Errorf("cannot flock [%s], %s", dstFile, err)
+		return nil
+	}
+
 	_, err = io.Copy(destination, source)
+
+	err = syscall.Flock(int(destination.Fd()), syscall.LOCK_UN)
+	if err != nil {
+		log.Errorf("cannot unlock [%s], %s", dstFile, err)
+	}
 
 	return nil
 }
