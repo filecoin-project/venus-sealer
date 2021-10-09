@@ -11,6 +11,11 @@ import (
 )
 
 func StartMarketEvent(lc fx.Lifecycle, stor *stores.Remote, sectorBlocks *sectorblocks.SectorBlocks, storageMgr *sectorstorage.Manager, index stores.SectorIndex, mCfg *config.MarketConfig, cfg *config.RegisterMarketConfig, mAddr types2.MinerAddress) error {
+	if len(cfg.Urls) == 0 && mCfg.Url == "" {
+		log.Warnf("register market config is empty ...")
+		return nil
+	}
+
 	if len(cfg.Urls) == 0 {
 		cfg.Urls = []string{mCfg.Url}
 		cfg.Token = mCfg.Token
