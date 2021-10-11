@@ -53,32 +53,7 @@ func DefaultMainnetStorageMiner() *StorageMiner {
 			ListenAddress: "/ip4/127.0.0.1/tcp/38491/http",
 			Timeout:       Duration(30 * time.Second),
 		},
-		Sealing: SealingConfig{
-			MaxWaitDealsSectors:       2, // 64G with 32G sectors
-			MaxSealingSectors:         0,
-			MaxSealingSectorsForDeals: 0,
-			WaitDealsDelay:            Duration(time.Hour * 6),
-			AlwaysKeepUnsealedCopy:    false, // todo
-			FinalizeEarly:             false,
-
-			BatchPreCommits:     false,                              // todo
-			MaxPreCommitBatch:   miner5.PreCommitSectorBatchMaxSize, // up to 256 sectors
-			PreCommitBatchWait:  Duration(24 * time.Hour),           // this should be less than 31.5 hours, which is the expiration of a precommit ticket
-			PreCommitBatchSlack: Duration(3 * time.Hour),            // time buffer for forceful batch submission before sectors/deals in batch would start expiring, higher value will lower the chances for message fail due to expiration
-
-			AggregateCommits: false,                       // todo
-			MinCommitBatch:   miner5.MinAggregatedSectors, // per FIP13, we must have at least four proofs to aggregate, where 4 is the cross over point where aggregation wins out on single provecommit gas costs
-			MaxCommitBatch:   miner5.MaxAggregatedSectors, // maximum 819 sectors, this is the maximum aggregation per FIP13
-			CommitBatchWait:  Duration(24 * time.Hour),    // this can be up to 30 days
-			CommitBatchSlack: Duration(1 * time.Hour),     // time buffer for forceful batch submission before sectors/deals in batch would start expiring, higher value will lower the chances for message fail due to expiration
-
-			AggregateAboveBaseFee: types.FIL(types.BigMul(types.PicoFil, types.NewInt(150))), // 0.15 nFIL
-
-			TerminateBatchMin:                1,
-			TerminateBatchMax:                100,
-			TerminateBatchWait:               Duration(5 * time.Minute),
-			CommittedCapacityDefaultLifetime: Duration(time.Duration(policy.GetMaxSectorExpirationExtension()*30) * time.Second),
-		},
+		Sealing: defSealing,
 		Storage: sectorstorage.SealerConfig{
 			AllowAddPiece:   true,
 			AllowPreCommit1: true,
