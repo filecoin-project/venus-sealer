@@ -75,6 +75,7 @@ type SealingAPI interface {
 	ChainGetRandomnessFromBeacon(ctx context.Context, tok types2.TipSetToken, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte) (abi.Randomness, error)
 	ChainGetRandomnessFromTickets(ctx context.Context, tok types2.TipSetToken, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte) (abi.Randomness, error)
 	ChainReadObj(context.Context, cid.Cid) ([]byte, error)
+	StateMinerAvailableBalance(context.Context, address.Address, types2.TipSetToken) (big.Int, error)
 
 	//for messager
 	MessagerWaitMsg(context.Context, string) (types2.MsgLookup, error)

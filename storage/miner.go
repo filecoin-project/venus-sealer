@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"errors"
+	fbig "github.com/filecoin-project/go-state-types/big"
 	api2 "github.com/filecoin-project/venus-market/api"
 	"time"
 
@@ -131,6 +132,7 @@ type fullNodeFilteredAPI interface {
 	ChainHasObj(context.Context, cid.Cid) (bool, error)
 	ChainGetTipSet(ctx context.Context, key types.TipSetKey) (*types.TipSet, error)
 	ChainGetPath(ctx context.Context, from types.TipSetKey, to types.TipSetKey) ([]*chain.HeadChange, error)
+	StateMinerAvailableBalance(context.Context, address.Address, types.TipSetKey) (fbig.Int, error)
 
 	WalletSign(context.Context, address.Address, []byte) (*crypto.Signature, error)
 	WalletBalance(context.Context, address.Address) (types.BigInt, error)

@@ -59,7 +59,7 @@ func main() {
 			},
 			&cli.StringFlag{
 				Name:  "network",
-				Usage: "network type: one of mainnet,calibration,2k, force &nerpa, Default: mainnet",
+				Usage: "network type: one of mainnet,calibration,2k, force, Default: mainnet",
 			},
 			&cli.BoolFlag{
 				Name: "color",

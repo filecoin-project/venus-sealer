@@ -401,6 +401,16 @@ func (m *Sealing) handleRecoverDealIDs(ctx statemachine.Context, sector types.Se
 			failed[i] = xerrors.Errorf("getting current deal info for piece %d: %w", i, err)
 		}
 
+		if res.MarketDeal == nil {
+			failed[i] = xerrors.Errorf("nil market deal (%d,%d,%d,%s)", i, sector.SectorNumber, p.DealInfo.DealID, p.Piece.PieceCID)
+			continue
+		}
+
+		if res.MarketDeal.Proposal.PieceCID != p.Piece.PieceCID {
+			failed[i] = xerrors.Errorf("recovered piece (%d) deal in sector %d (dealid %d) has different PieceCID %s != %s", i, sector.SectorNumber, p.DealInfo.DealID, p.Piece.PieceCID, res.MarketDeal.Proposal.PieceCID)
+			continue
+		}
+
 		updates[i] = res.DealID
 	}
 
@@ -416,7 +426,11 @@ func (m *Sealing) handleRecoverDealIDs(ctx statemachine.Context, sector types.Se
 		}
 
 		// todo: try to remove bad pieces (hard; see the todo above)
-		return xerrors.Errorf("failed to recover some deals: %w", merr)
+
+		// for now removing sectors is probably better than having them stuck in RecoverDealIDs
+		// and expire anyways
+		log.Errorf("removing sector %d: deals expired or unrecoverable: %+v", sector.SectorNumber, merr)
+		return ctx.Send(SectorRemove{})
 	}
 
 	// Not much to do here, we can't go back in time to commit this sector

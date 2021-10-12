@@ -48,6 +48,14 @@ func NewSealingAPIAdapter(api fullNodeFilteredAPI, messager api.IMessager, marke
 	return SealingAPIAdapter{delegate: api, messager: messager, marketAPI: marketAPI}
 }
 
+func (s SealingAPIAdapter) StateMinerAvailableBalance(ctx context.Context, addr address.Address, tok types2.TipSetToken) (big.Int, error) {
+	tsk, err := types.TipSetKeyFromBytes(tok)
+	if err != nil {
+		return big.Zero(), xerrors.Errorf("failed to unmarshal TipSetToken to TipSetKey: %w", err)
+	}
+	return s.delegate.StateMinerAvailableBalance(ctx, addr, tsk)
+}
+
 func (s SealingAPIAdapter) StateMinerSectorSize(ctx context.Context, maddr address.Address, tok types2.TipSetToken) (abi.SectorSize, error) {
 	// TODO: update storage-fsm to just StateMinerInfo
 	mi, err := s.StateMinerInfo(ctx, maddr, tok)

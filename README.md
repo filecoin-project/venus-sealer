@@ -14,7 +14,7 @@ This project is a mining system supporting venus, is currently under active deve
 
 ### init miner 
 ```shell script
-# --network: Choose from nerpa, calibration for testnets. Leave out this flag for mainnet
+# --network: Choose from calibration for testnets. Leave out this flag for mainnet
 ./venus-sealer --network <network type> init \
 --worker <WORKER_ADDRESS> \
 --owner <OWNER_ADDRESS>  \

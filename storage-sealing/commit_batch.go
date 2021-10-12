@@ -3,6 +3,7 @@ package sealing
 import (
 	"bytes"
 	"context"
+	types2 "github.com/filecoin-project/venus/pkg/types"
 	"sort"
 	"sync"
 	"time"
@@ -46,6 +47,7 @@ type CommitBatcherApi interface {
 	StateSectorPreCommitInfo(ctx context.Context, maddr address.Address, sectorNumber abi.SectorNumber, tok types.TipSetToken) (*miner.SectorPreCommitOnChainInfo, error)
 	StateMinerInitialPledgeCollateral(context.Context, address.Address, miner.SectorPreCommitInfo, types.TipSetToken) (big.Int, error)
 	StateNetworkVersion(ctx context.Context, tok types.TipSetToken) (network.Version, error)
+	StateMinerAvailableBalance(context.Context, address.Address, types.TipSetToken) (big.Int, error)
 }
 
 type AggregateInput struct {
@@ -92,8 +94,6 @@ func NewCommitBatcher(mctx context.Context, networkParams *config.NetParamsConfi
 		force:   make(chan chan []sealiface.CommitBatchRes),
 		stop:    make(chan struct{}),
 		stopped: make(chan struct{}),
-
-		networkParams: networkParams,
 	}
 
 	go b.run()
@@ -229,10 +229,15 @@ func (b *CommitBatcher) maybeStartBatch(notif bool) ([]sealiface.CommitBatchRes,
 	}
 
 	if individual {
-		res, err = b.processIndividually()
+		res, err = b.processIndividually(cfg)
 	} else {
 		res, err = b.processBatch(cfg)
 	}
+
+	if err != nil {
+		log.Warnf("CommitBatcher maybeStartBatch individual:%v processBatch %v", individual, err)
+	}
+
 	if err != nil && len(res) == 0 {
 		return nil, err
 	}
@@ -296,6 +301,10 @@ func (b *CommitBatcher) processBatch(cfg sealiface.Config) ([]sealiface.CommitBa
 		infos = append(infos, p.Info)
 	}
 
+	if len(infos) == 0 {
+		return nil, nil
+	}
+
 	sort.Slice(infos, func(i, j int) bool {
 		return infos[i].Number < infos[j].Number
 	})
@@ -342,9 +351,19 @@ func (b *CommitBatcher) processBatch(cfg sealiface.Config) ([]sealiface.CommitBa
 		return []sealiface.CommitBatchRes{res}, xerrors.Errorf("getting network version: %s", err)
 	}
 
-	aggFee := big.Div(big.Mul(policy.AggregateNetworkFee(nv, len(infos), bf), aggFeeNum), aggFeeDen)
+	aggFeeRaw, err := policy.AggregateProveCommitNetworkFee(nv, len(infos), bf)
+	if err != nil {
+		log.Errorf("getting aggregate commit network fee: %s", err)
+		return []sealiface.CommitBatchRes{res}, xerrors.Errorf("getting aggregate commit network fee: %s", err)
+	}
+
+	aggFee := big.Div(big.Mul(aggFeeRaw, aggFeeNum), aggFeeDen)
 
 	needFunds := big.Add(collateral, aggFee)
+	needFunds, err = collateralSendAmount(b.mctx, b.api, b.maddr, cfg, needFunds)
+	if err != nil {
+		return []sealiface.CommitBatchRes{res}, err
+	}
 
 	goodFunds := big.Add(maxFee, needFunds)
 
@@ -365,10 +384,24 @@ func (b *CommitBatcher) processBatch(cfg sealiface.Config) ([]sealiface.CommitBa
 	return []sealiface.CommitBatchRes{res}, nil
 }
 
-func (b *CommitBatcher) processIndividually() ([]sealiface.CommitBatchRes, error) {
+func (b *CommitBatcher) processIndividually(cfg sealiface.Config) ([]sealiface.CommitBatchRes, error) {
 	mi, err := b.api.StateMinerInfo(b.mctx, b.maddr, nil)
 	if err != nil {
 		return nil, xerrors.Errorf("couldn't get miner info: %w", err)
+	}
+
+	avail := types2.TotalFilecoinInt
+
+	if cfg.CollateralFromMinerBalance && !cfg.DisableCollateralFallback {
+		avail, err = b.api.StateMinerAvailableBalance(b.mctx, b.maddr, nil)
+		if err != nil {
+			return nil, xerrors.Errorf("getting available miner balance: %w", err)
+		}
+
+		avail = big.Sub(avail, cfg.AvailableBalanceBuffer)
+		if avail.LessThan(big.Zero()) {
+			avail = big.Zero()
+		}
 	}
 
 	tok, _, err := b.api.ChainHead(b.mctx)
@@ -384,7 +417,7 @@ func (b *CommitBatcher) processIndividually() ([]sealiface.CommitBatchRes, error
 			FailedSectors: map[abi.SectorNumber]string{},
 		}
 
-		uid, err := b.processSingle(mi, sn, info, tok)
+		uid, err := b.processSingle(cfg, mi, &avail, sn, info, tok)
 		if err != nil {
 			log.Errorf("process single error: %+v", err) // todo: return to user
 			r.FailedSectors[sn] = err.Error()
@@ -398,7 +431,7 @@ func (b *CommitBatcher) processIndividually() ([]sealiface.CommitBatchRes, error
 	return res, nil
 }
 
-func (b *CommitBatcher) processSingle(mi miner.MinerInfo, sn abi.SectorNumber, info AggregateInput, tok types.TipSetToken) (string, error) {
+func (b *CommitBatcher) processSingle(cfg sealiface.Config, mi miner.MinerInfo, avail *abi.TokenAmount, sn abi.SectorNumber, info AggregateInput, tok types.TipSetToken) (string, error) {
 	enc := new(bytes.Buffer)
 	params := &miner.ProveCommitSectorParams{
 		SectorNumber: sn,
@@ -412,6 +445,19 @@ func (b *CommitBatcher) processSingle(mi miner.MinerInfo, sn abi.SectorNumber, i
 	collateral, err := b.getSectorCollateral(sn, tok)
 	if err != nil {
 		return "", err
+	}
+
+	if cfg.CollateralFromMinerBalance {
+		c := big.Sub(collateral, *avail)
+		*avail = big.Sub(*avail, collateral)
+		collateral = c
+
+		if collateral.LessThan(big.Zero()) {
+			collateral = big.Zero()
+		}
+		if (*avail).LessThan(big.Zero()) {
+			*avail = big.Zero()
+		}
 	}
 
 	goodFunds := big.Add(collateral, big.Int(b.feeCfg.MaxCommitGasFee))
@@ -531,8 +577,18 @@ func (b *CommitBatcher) getCommitCutoff(si types.SectorInfo) (time.Time, error) 
 		log.Errorf("getting precommit info: %s", err)
 		return time.Now(), err
 	}
+	av, err := actors.VersionForNetwork(nv)
+	if err != nil {
+		log.Errorf("unsupported network vrsion: %s", err)
+		return time.Now(), err
+	}
+	mpcd, err := policy.GetMaxProveCommitDuration(av, si.SectorType)
+	if err != nil {
+		log.Errorf("getting max prove commit duration: %s", err)
+		return time.Now(), err
+	}
 
-	cutoffEpoch := pci.PreCommitEpoch + policy.GetMaxProveCommitDuration(actors.VersionForNetwork(nv), si.SectorType)
+	cutoffEpoch := pci.PreCommitEpoch + mpcd
 
 	for _, p := range si.Pieces {
 		if p.DealInfo == nil {

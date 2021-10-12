@@ -37,9 +37,14 @@ type Config struct {
 	CommitBatchWait  time.Duration
 	CommitBatchSlack time.Duration
 
-	AggregateAboveBaseFee abi.TokenAmount
+	AggregateAboveBaseFee      abi.TokenAmount
+	BatchPreCommitAboveBaseFee abi.TokenAmount
 
 	TerminateBatchMax  uint64
 	TerminateBatchMin  uint64
 	TerminateBatchWait time.Duration
+
+	CollateralFromMinerBalance bool
+	AvailableBalanceBuffer     abi.TokenAmount
+	DisableCollateralFallback  bool
 }

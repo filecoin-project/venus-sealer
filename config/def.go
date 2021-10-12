@@ -178,14 +178,19 @@ type SealingConfig struct {
 	// time buffer for forceful batch submission before sectors/deals in batch would start expiring
 	CommitBatchSlack Duration
 
-	// network BaseFee below which to stop doing commit aggregation, instead
-	// submitting proofs to the chain individually
-	AggregateAboveBaseFee types.FIL
+	AggregateAboveBaseFee      types.FIL
+	BatchPreCommitAboveBaseFee types.FIL
 
 	TerminateBatchMax  uint64
 	TerminateBatchMin  uint64
 	TerminateBatchWait Duration
 
+	// Whether to use available miner balance for sector collateral instead of sending it with each message
+	CollateralFromMinerBalance bool
+	// Minimum available balance to keep in the miner actor before sending it with messages
+	AvailableBalanceBuffer types.FIL
+	// Don't send collateral with messages even if there is no available balance in the miner actor
+	DisableCollateralFallback bool
 	// Keep this many sectors in sealing pipeline, start CC if needed
 	// todo TargetSealingSectors uint64
 

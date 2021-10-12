@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	miner5 "github.com/filecoin-project/specs-actors/v5/actors/builtin/miner"
 	"os"
 	"sort"
 	"strconv"
@@ -16,8 +17,6 @@ import (
 	"github.com/filecoin-project/go-bitfield"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
-
-	miner3 "github.com/filecoin-project/specs-actors/v3/actors/builtin/miner"
 
 	"github.com/filecoin-project/venus/pkg/types"
 	actors "github.com/filecoin-project/venus/pkg/types/specactors"
@@ -491,7 +490,7 @@ var sectorsExtendCmd = &cli.Command{
 			return err
 		}
 
-		var params []miner3.ExtendSectorExpirationParams
+		var params []miner5.ExtendSectorExpirationParams
 
 		if cctx.Bool("v1-sectors") {
 
@@ -527,6 +526,10 @@ var sectorsExtendCmd = &cli.Command{
 					continue
 				}
 
+				if si.Expiration < (head.Height() + abi.ChainEpoch(cctx.Int64("expiration-ignore"))) {
+					continue
+				}
+
 				if cctx.IsSet("expiration-cutoff") {
 					if si.Expiration > (head.Height() + abi.ChainEpoch(cctx.Int64("expiration-cutoff"))) {
 						continue
@@ -540,7 +543,11 @@ var sectorsExtendCmd = &cli.Command{
 				}
 
 				// Set the new expiration to 48 hours less than the theoretical maximum lifetime
-				newExp := ml - (miner3.WPoStProvingPeriod * 2) + si.Activation
+				newExp := ml - (miner5.WPoStProvingPeriod * 2) + si.Activation
+				if withinTolerance(si.Expiration, newExp) || si.Expiration >= newExp {
+					continue
+				}
+
 				p, err := fullApi.StateSectorPartition(ctx, maddr, si.SectorNumber, types.EmptyTSK)
 				if err != nil {
 					return xerrors.Errorf("getting sector location for sector %d: %w", si.SectorNumber, err)
@@ -558,7 +565,7 @@ var sectorsExtendCmd = &cli.Command{
 				} else {
 					added := false
 					for exp := range es {
-						if withinTolerance(exp, newExp) {
+						if withinTolerance(exp, newExp) && newExp >= exp && exp > si.Expiration {
 							es[exp] = append(es[exp], uint64(si.SectorNumber))
 							added = true
 							break
@@ -571,19 +578,27 @@ var sectorsExtendCmd = &cli.Command{
 				}
 			}
 
-			p := miner3.ExtendSectorExpirationParams{}
+			p := miner5.ExtendSectorExpirationParams{}
 			scount := 0
 
 			for l, exts := range extensions {
 				for newExp, numbers := range exts {
 					scount += len(numbers)
-					if scount > policy.GetAddressedSectorsMax(nv) || len(p.Extensions) == policy.GetDeclarationsMax(nv) {
+					addressedMax, err := policy.GetAddressedSectorsMax(nv)
+					if err != nil {
+						return xerrors.Errorf("failed to get addressed sectors max")
+					}
+					declMax, err := policy.GetDeclarationsMax(nv)
+					if err != nil {
+						return xerrors.Errorf("failed to get declarations max")
+					}
+					if scount > addressedMax || len(p.Extensions) == declMax {
 						params = append(params, p)
-						p = miner3.ExtendSectorExpirationParams{}
+						p = miner5.ExtendSectorExpirationParams{}
 						scount = len(numbers)
 					}
 
-					p.Extensions = append(p.Extensions, miner3.ExpirationExtension{
+					p.Extensions = append(p.Extensions, miner5.ExpirationExtension{
 						Deadline:      l.Deadline,
 						Partition:     l.Partition,
 						Sectors:       bitfield.NewFromSet(numbers),
@@ -621,11 +636,11 @@ var sectorsExtendCmd = &cli.Command{
 				sectors[*p] = append(sectors[*p], id)
 			}
 
-			p := miner3.ExtendSectorExpirationParams{}
+			p := miner5.ExtendSectorExpirationParams{}
 			for l, numbers := range sectors {
 
 				// TODO: Dedup with above loop
-				p.Extensions = append(p.Extensions, miner3.ExpirationExtension{
+				p.Extensions = append(p.Extensions, miner5.ExpirationExtension{
 					Deadline:      l.Deadline,
 					Partition:     l.Partition,
 					Sectors:       bitfield.NewFromSet(numbers),
@@ -652,7 +667,7 @@ var sectorsExtendCmd = &cli.Command{
 				return xerrors.Errorf("serializing params: %w", err)
 			}
 
-			smsg, err := fullApi.MpoolPushMessage(ctx, &types.Message{
+			cid, err := nodeApi.MessagerPushMessage(ctx, &types.Message{
 				From:   mi.Worker,
 				To:     maddr,
 				Method: miner.Methods.ExtendSectorExpiration,
@@ -664,7 +679,7 @@ var sectorsExtendCmd = &cli.Command{
 				return xerrors.Errorf("mpool push message: %w", err)
 			}
 
-			fmt.Println(smsg.Cid())
+			fmt.Println(cid)
 		}
 
 		return nil
