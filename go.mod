@@ -31,8 +31,8 @@ require (
 	github.com/filecoin-project/specs-actors/v3 v3.1.1
 	github.com/filecoin-project/specs-actors/v5 v5.0.4
 	github.com/filecoin-project/specs-storage v0.1.1-0.20201105051918-5188d9774506
-	github.com/filecoin-project/venus v1.0.5-0.20211011074414-aeacf1e4566f
-	github.com/filecoin-project/venus-market v0.0.0-20211011074838-a03ff639d09c
+	github.com/filecoin-project/venus v1.1.0-rc1
+	github.com/filecoin-project/venus-market v1.0.0
 	github.com/filecoin-project/venus-messager v1.1.1
 	github.com/gbrlsnchs/jwt/v3 v3.0.0
 	github.com/golang/mock v1.6.0
