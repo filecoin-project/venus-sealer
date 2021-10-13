@@ -37,7 +37,12 @@ type Config struct {
 	CommitBatchWait  time.Duration
 	CommitBatchSlack time.Duration
 
+	// network BaseFee below which to stop doing commit aggregation, instead
+	// submitting proofs to the chain individually
 	AggregateAboveBaseFee      abi.TokenAmount
+
+	// network BaseFee below which to stop doing precommit batching, instead
+	// sending precommit messages to the chain individually
 	BatchPreCommitAboveBaseFee abi.TokenAmount
 
 	TerminateBatchMax  uint64
