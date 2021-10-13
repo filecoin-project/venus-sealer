@@ -156,6 +156,10 @@ func (sm *StorageMinerAPI) DealSector(ctx context.Context) ([]types2.DealAssign,
 	return sm.Miner.DealSector(ctx)
 }
 
+func (sm *StorageMinerAPI) RedoSector(ctx context.Context, rsi storiface.SectorRedoParams) error  {
+	return sm.Miner.RedoSector(ctx, rsi)
+}
+
 func (sm *StorageMinerAPI) SectorsStatus(ctx context.Context, sid abi.SectorNumber, showOnChainInfo bool) (api.SectorInfo, error) {
 	info, err := sm.Miner.GetSectorInfo(sid)
 	if err != nil {
