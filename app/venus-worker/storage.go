@@ -26,7 +26,7 @@ var storageCmd = &cli.Command{
 
 var storageAttachCmd = &cli.Command{
 	Name:  "attach",
-	Usage: "attach local storage path",
+	Usage: "attach local storage path, only for seal",
 	Flags: []cli.Flag{
 		&cli.BoolFlag{
 			Name:  "init",
@@ -36,14 +36,6 @@ var storageAttachCmd = &cli.Command{
 			Name:  "weight",
 			Usage: "(for init) path weight",
 			Value: 10,
-		},
-		&cli.BoolFlag{
-			Name:  "seal",
-			Usage: "(for init) use path for sealing",
-		},
-		&cli.BoolFlag{
-			Name:  "store",
-			Usage: "(for init) use path for long-term storage",
 		},
 	},
 	Action: func(cctx *cli.Context) error {
@@ -81,12 +73,7 @@ var storageAttachCmd = &cli.Command{
 			cfg := &stores.LocalStorageMeta{
 				ID:       stores.ID(uuid.New().String()),
 				Weight:   cctx.Uint64("weight"),
-				CanSeal:  cctx.Bool("seal"),
-				CanStore: cctx.Bool("store"),
-			}
-
-			if !(cfg.CanStore || cfg.CanSeal) {
-				return xerrors.Errorf("must specify at least one of --store or --seal")
+				CanSeal:  true,
 			}
 
 			b, err := json.MarshalIndent(cfg, "", "  ")
