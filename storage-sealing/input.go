@@ -231,11 +231,8 @@ func (m *Sealing) handleAddPiece(ctx statemachine.Context, sector types.SectorIn
 	return ctx.Send(res)
 }
 
-// nolint
 func (m *Sealing) handleAddPieceFailed(ctx statemachine.Context, sector types.SectorInfo) error {
-	log.Errorf("No recovery plan for AddPiece failing")
-	// todo: cleanup sector / just go retry (requires adding offset param to AddPiece in sector-storage for this to be safe)
-	return nil
+	return ctx.Send(SectorRetryWaitDeals{})
 }
 
 func (m *Sealing) AddPieceToAnySector(ctx context.Context, size abi.UnpaddedPieceSize, data storage.Data, deal types.DealInfo) (abi.SectorNumber, abi.PaddedPieceSize, error) {

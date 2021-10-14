@@ -137,7 +137,11 @@ var fsmPlanners = map[types.SectorState]func(events []statemachine.Event, state 
 
 	// Sealing errors
 
-	types.AddPieceFailed: planOne(),
+	types.AddPieceFailed: planOne(
+		on(SectorRetryWaitDeals{}, types.WaitDeals),
+		apply(SectorStartPacking{}),
+		apply(SectorAddPiece{}),
+	),
 	types.SealPreCommit1Failed: planOne(
 		on(SectorRetrySealPreCommit1{}, types.PreCommit1),
 	),
@@ -410,6 +414,8 @@ func (m *Sealing) plan(events []statemachine.Event, state *types.SectorInfo) (fu
 		return m.handleFinalizeSector, processed, nil
 
 	// Handled failure modes
+	case types.AddPieceFailed:
+		return m.handleAddPieceFailed, processed, nil
 	case types.SealPreCommit1Failed:
 		return m.handleSealPrecommit1Failed, processed, nil
 	case types.SealPreCommit2Failed:

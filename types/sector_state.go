@@ -108,7 +108,7 @@ const (
 
 func toStatState(st SectorState) StatSectorState {
 	switch st {
-	case UndefinedSectorState, Empty, WaitDeals, AddPiece:
+	case UndefinedSectorState, Empty, WaitDeals, AddPiece, AddPieceFailed:
 		return SstStaging
 	case Packing, GetTicket, PreCommit1, PreCommit2, PreCommitting, PreCommitWait, SubmitPreCommitBatch, PreCommitBatchWait, WaitSeed, Committing, CommitFinalize, SubmitCommit, CommitWait, SubmitCommitAggregate, CommitAggregateWait, FinalizeSector:
 		return SstSealing
@@ -118,4 +118,3 @@ func toStatState(st SectorState) StatSectorState {
 
 	return SstFailed
 }
-

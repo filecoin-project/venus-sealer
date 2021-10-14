@@ -398,16 +398,12 @@ func (sw *schedWorker) startProcessingTask(taskDone chan struct{}, req *workerRe
 
 	go func() {
 		// first run the prepare step (e.g. fetching sector data from other worker)
-		log.Infof("Sector %d prepare for %s ...", req.sector.ID.Number, req.taskType)
 		err := req.prepare(req.ctx, sh.workTracker.worker(sw.wid, w.info, w.workerRpc))
-		log.Infof("Sector %d prepare for %s end ...", req.sector.ID.Number, req.taskType)
-		sh.workersLk.Lock()
+		w.lk.Lock()
 
 		if err != nil {
-			w.lk.Lock()
 			w.preparing.free(w.info.Resources, needRes)
 			w.lk.Unlock()
-			sh.workersLk.Unlock()
 
 			select {
 			case taskDone <- struct{}{}:
@@ -426,12 +422,10 @@ func (sw *schedWorker) startProcessingTask(taskDone chan struct{}, req *workerRe
 		}
 
 		// wait (if needed) for resources in the 'active' window
-		err = w.active.withResources(sw.wid, w.info, needRes, &sh.workersLk, func() error {
-			w.lk.Lock()
+		err = w.active.withResources(sw.wid, w.info, needRes, &w.lk, func() error {
 			w.preparing.free(w.info.Resources, needRes)
 			w.lk.Unlock()
-			sh.workersLk.Unlock()
-			defer sh.workersLk.Lock() // we MUST return locked from this function
+			defer w.lk.Lock() // we MUST return locked from this function
 
 			select {
 			case taskDone <- struct{}{}:
@@ -439,9 +433,7 @@ func (sw *schedWorker) startProcessingTask(taskDone chan struct{}, req *workerRe
 			}
 
 			// Do the work!
-			log.Infof("Sector %d work for %s ...", req.sector.ID.Number, req.taskType)
 			err = req.work(req.ctx, sh.workTracker.worker(sw.wid, w.info, w.workerRpc))
-			log.Infof("Sector %d work for %s end ...", req.sector.ID.Number, req.taskType)
 
 			select {
 			case req.ret <- workerResponse{err: err}:
@@ -454,7 +446,7 @@ func (sw *schedWorker) startProcessingTask(taskDone chan struct{}, req *workerRe
 			return nil
 		})
 
-		sh.workersLk.Unlock()
+		w.lk.Unlock()
 
 		// This error should always be nil, since nothing is setting it, but just to be safe:
 		if err != nil {

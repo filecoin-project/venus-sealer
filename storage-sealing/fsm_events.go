@@ -406,3 +406,7 @@ type SectorRemoveFailed struct{ error }
 
 func (evt SectorRemoveFailed) FormatError(xerrors.Printer) (next error) { return evt.error }
 func (evt SectorRemoveFailed) apply(*types.SectorInfo)                  {}
+
+type SectorRetryWaitDeals struct{}
+
+func (evt SectorRetryWaitDeals) apply(si *types.SectorInfo) {}

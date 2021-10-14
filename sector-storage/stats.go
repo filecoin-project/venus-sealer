@@ -18,6 +18,7 @@ func (m *Manager) WorkerStats() map[uuid.UUID]storiface.WorkerStats {
 	out := map[uuid.UUID]storiface.WorkerStats{}
 
 	for id, handle := range m.sched.workers {
+		handle.lk.Lock()
 		taskTypes, err := handle.workerRpc.TaskTypes(context.Background())
 		var tasks []types.TaskType
 		if err != nil {
@@ -41,6 +42,7 @@ func (m *Manager) WorkerStats() map[uuid.UUID]storiface.WorkerStats {
 			GpuUsed:    handle.active.gpuUsed,
 			CpuUse:     handle.active.cpuUse,
 		}
+		handle.lk.Unlock()
 	}
 
 	return out
