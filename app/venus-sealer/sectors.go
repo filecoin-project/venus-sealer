@@ -25,6 +25,7 @@ import (
 
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/lib/tablewriter"
+	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
 	types2 "github.com/filecoin-project/venus-sealer/types"
 )
 
@@ -46,6 +47,53 @@ var sectorsCmd = &cli.Command{
 		sectorsSealDelayCmd,
 		sectorsCapacityCollateralCmd,
 		sectorsBatching,
+		sectorsRedoCmd,
+	},
+}
+
+var sectorsRedoCmd = &cli.Command{
+	Name:  "redo",
+	Usage: "redo the specified sector and support sealer locally",
+	ArgsUsage: "<sectorNum>",
+	Flags: []cli.Flag{
+		&cli.StringFlag{
+			Name:  "sealPath",
+			Usage: "",
+		},
+		&cli.StringFlag{
+			Name:  "storePath",
+			Usage: "",
+		},
+	},
+	Action: func(cctx *cli.Context) error {
+		nodeApi, closer, err := api.GetStorageMinerAPI(cctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+		ctx := api.ReqContext(cctx)
+
+		if !cctx.Args().Present() {
+			return fmt.Errorf("must specify sector number to get status of")
+		}
+
+		id, err := strconv.ParseUint(cctx.Args().First(), 10, 64)
+		if err != nil {
+			return err
+		}
+
+		err = nodeApi.RedoSector(ctx, storiface.SectorRedoParams{
+			SectorNumber: abi.SectorNumber(id),
+			SealPath: cctx.String("sealPath"),
+			StorePath: cctx.String("storePath"),
+		})
+		if err != nil {
+			return err
+		}
+
+		fmt.Println("Redo CC sector: ", id)
+
+		return nil
 	},
 }
 

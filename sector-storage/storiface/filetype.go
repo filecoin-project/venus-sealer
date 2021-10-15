@@ -11,6 +11,21 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 )
 
+type SectorRedoParams struct {
+	SectorNumber abi.SectorNumber
+	SealPath     string
+	StorePath    string
+}
+
+func (s *SectorRedoParams) SectorSealPath(sid abi.SectorID, fileType SectorFileType) string {
+	return filepath.Join(s.SealPath, fileType.String(), SectorName(sid))
+}
+
+func (s *SectorRedoParams) SectorStorePath(sid abi.SectorID, fileType SectorFileType) string {
+	return filepath.Join(s.StorePath, fileType.String(), SectorName(sid))
+}
+
+
 const (
 	FTUnsealed SectorFileType = 1 << iota
 	FTSealed
