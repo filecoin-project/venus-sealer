@@ -1,7 +1,7 @@
 # Venus Sealer
 
-This project is a mining system supporting venus, is currently under active development,
-***please do not use in the production environment***, we do not guarantee compatibility.
+This project is an independent module(mining system) supporting venus, which is currently under development actively by venus team and community members,
+***please consider this carefully before deploy it  in the production environment***, we do not guarantee compatibility.
 
 ## How to Build
 
