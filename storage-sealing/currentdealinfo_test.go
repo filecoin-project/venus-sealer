@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+
 	"golang.org/x/net/context"
 	"golang.org/x/xerrors"
 
@@ -15,6 +16,9 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/crypto"
 	"github.com/filecoin-project/go-state-types/exitcode"
+	"github.com/filecoin-project/go-state-types/network"
+
+	market0 "github.com/filecoin-project/specs-actors/actors/builtin/market"
 	market2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
 	tutils "github.com/filecoin-project/specs-actors/v2/support/testing"
 
@@ -184,6 +188,12 @@ func TestGetCurrentDealInfo(t *testing.T) {
 			expectedDealID:   zeroDealID,
 			expectedError:    xerrors.Errorf("looking for publish deal message %s: search msg failed: something went wrong", dummyCid),
 		},
+		"search message not found": {
+			publishCid:     dummyCid,
+			targetProposal: &proposal,
+			expectedDealID: zeroDealID,
+			expectedError:  xerrors.Errorf("looking for publish deal message %s: not found", dummyCid),
+		},
 		"return code not ok": {
 			publishCid: dummyCid,
 			searchMessageLookup: &types2.MsgLookup{
@@ -303,9 +313,13 @@ func (mapi *CurrentDealInfoMockAPI) StateSearchMsg(ctx context.Context, c cid.Ci
 	return mapi.SearchMessageLookup, mapi.SearchMessageErr
 }
 
+func (mapi *CurrentDealInfoMockAPI) StateNetworkVersion(ctx context.Context, tok types2.TipSetToken) (network.Version, error) {
+	return network.Version0, nil
+}
+
 func makePublishDealsReturnBytes(t *testing.T, dealIDs []abi.DealID) []byte {
 	buf := new(bytes.Buffer)
-	dealsReturn := market.PublishStorageDealsReturn{
+	dealsReturn := market0.PublishStorageDealsReturn{
 		IDs: dealIDs,
 	}
 	err := dealsReturn.MarshalCBOR(buf)

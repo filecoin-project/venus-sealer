@@ -199,10 +199,6 @@ type CurrentDealInfoAPIAdapter struct {
 	CurrentDealInfoTskAPI
 }
 
-func (c *CurrentDealInfoAPIAdapter) StateNetworkVersion(ctx context.Context, tok types2.TipSetToken) (network.Version, error) {
-	return c.CurrentDealInfoTskAPI.StateNetworkVersion(ctx, tok)
-}
-
 func (c *CurrentDealInfoAPIAdapter) StateLookupID(ctx context.Context, a address.Address, tok types2.TipSetToken) (address.Address, error) {
 	tsk, err := types.TipSetKeyFromBytes(tok)
 	if err != nil {
@@ -240,6 +236,11 @@ func (c *CurrentDealInfoAPIAdapter) StateSearchMsg(ctx context.Context, k cid.Ci
 		TipSetTok: wmsg.TipSet.Bytes(),
 		Height:    wmsg.Height,
 	}, nil
+}
+
+func (c *CurrentDealInfoAPIAdapter) StateNetworkVersion(ctx context.Context, tok types2.TipSetToken) (network.Version, error) {
+
+	return c.CurrentDealInfoTskAPI.StateNetworkVersion(ctx, tok)
 }
 
 var _ CurrentDealInfoAPI = (*CurrentDealInfoAPIAdapter)(nil)

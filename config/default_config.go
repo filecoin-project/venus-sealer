@@ -4,8 +4,11 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
-	"github.com/filecoin-project/go-state-types/big"
 	"time"
+
+	"github.com/ipfs/go-cid"
+
+	"github.com/filecoin-project/go-state-types/big"
 
 	miner5 "github.com/filecoin-project/specs-actors/v5/actors/builtin/miner"
 
@@ -272,6 +275,36 @@ func DefaultCalibrationStorageMiner() *StorageMiner {
 			Secret: "",
 		},
 		RegisterMarket: defMarket,
+		Dealmaking: DealmakingConfig{
+			ConsiderOnlineStorageDeals:     true,
+			ConsiderOfflineStorageDeals:    true,
+			ConsiderOnlineRetrievalDeals:   true,
+			ConsiderOfflineRetrievalDeals:  true,
+			ConsiderVerifiedStorageDeals:   true,
+			ConsiderUnverifiedStorageDeals: true,
+			PieceCidBlocklist:              []cid.Cid{},
+			// TODO: It'd be nice to set this based on sector size
+			MaxDealStartDelay:               Duration(time.Hour * 24 * 14),
+			ExpectedSealDuration:            Duration(time.Hour * 24),
+			PublishMsgPeriod:                Duration(time.Hour),
+			MaxDealsPerPublishMsg:           8,
+			MaxProviderCollateralMultiplier: 2,
+
+			SimultaneousTransfersForStorage:   DefaultSimultaneousTransfers,
+			SimultaneousTransfersForRetrieval: DefaultSimultaneousTransfers,
+
+			StartEpochSealingBuffer: 480, // 480 epochs buffer == 4 hours from adding deal to sector to sector being sealed
+
+			RetrievalPricing: &RetrievalPricing{
+				Strategy: RetrievalPricingDefaultMode,
+				Default: &RetrievalPricingDefault{
+					VerifiedDealsFreeTransfer: true,
+				},
+				External: &RetrievalPricingExternal{
+					Path: "",
+				},
+			},
+		},
 	}
 	var secret [32]byte
 	_, _ = rand.Read(secret[:])
@@ -390,10 +423,10 @@ var defSealing = SealingConfig{
 	BatchPreCommitAboveBaseFee: types.FIL(types.BigMul(types.PicoFil, types.NewInt(320))), // 0.32 nFIL
 	AggregateAboveBaseFee:      types.FIL(types.BigMul(types.PicoFil, types.NewInt(320))), // 0.32 nFIL
 
-	TerminateBatchMin:                1,
-	TerminateBatchMax:                100,
-	TerminateBatchWait:               Duration(5 * time.Minute),
-	CommittedCapacityDefaultLifetime: Duration(time.Duration(policy.GetMaxSectorExpirationExtension()*30) * time.Second),
+	TerminateBatchMin:               1,
+	TerminateBatchMax:               100,
+	TerminateBatchWait:              Duration(5 * time.Minute),
+	CommittedCapacitySectorLifetime: Duration(time.Duration(policy.GetMaxSectorExpirationExtension()*30) * time.Second),
 
 	CollateralFromMinerBalance: false,
 	AvailableBalanceBuffer:     types.FIL(big.Zero()),

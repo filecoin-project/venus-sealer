@@ -87,6 +87,21 @@ func (mr *MockCommitBatcherApiMockRecorder) MessagerSendMsg(arg0, arg1, arg2, ar
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MessagerSendMsg", reflect.TypeOf((*MockCommitBatcherApi)(nil).MessagerSendMsg), arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 }
 
+// StateMinerAvailableBalance mocks base method.
+func (m *MockCommitBatcherApi) StateMinerAvailableBalance(arg0 context.Context, arg1 address.Address, arg2 types.TipSetToken) (big.Int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StateMinerAvailableBalance", arg0, arg1, arg2)
+	ret0, _ := ret[0].(big.Int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StateMinerAvailableBalance indicates an expected call of StateMinerAvailableBalance.
+func (mr *MockCommitBatcherApiMockRecorder) StateMinerAvailableBalance(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateMinerAvailableBalance", reflect.TypeOf((*MockCommitBatcherApi)(nil).StateMinerAvailableBalance), arg0, arg1, arg2)
+}
+
 // StateMinerInfo mocks base method.
 func (m *MockCommitBatcherApi) StateMinerInfo(arg0 context.Context, arg1 address.Address, arg2 types.TipSetToken) (miner0.MinerInfo, error) {
 	m.ctrl.T.Helper()
@@ -136,16 +151,7 @@ func (mr *MockCommitBatcherApiMockRecorder) StateNetworkVersion(arg0, arg1 inter
 func (m *MockCommitBatcherApi) StateSectorPreCommitInfo(arg0 context.Context, arg1 address.Address, arg2 abi.SectorNumber, arg3 types.TipSetToken) (*miner0.SectorPreCommitOnChainInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StateSectorPreCommitInfo", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(*miner0.SectorPreCommitOnChainInfo)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// StateMinerAvailableBalance mocks base method.
-func (m *MockCommitBatcherApi) StateMinerAvailableBalance(arg0 context.Context, arg1 address.Address, arg2 types.TipSetToken) (big.Int, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StateMinerAvailableBalance", arg0, arg1, arg2)
-	ret0, _ := ret[0].(big.Int)
+	ret0, _ := ret[0].(*miner.SectorPreCommitOnChainInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -154,10 +160,4 @@ func (m *MockCommitBatcherApi) StateMinerAvailableBalance(arg0 context.Context, 
 func (mr *MockCommitBatcherApiMockRecorder) StateSectorPreCommitInfo(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateSectorPreCommitInfo", reflect.TypeOf((*MockCommitBatcherApi)(nil).StateSectorPreCommitInfo), arg0, arg1, arg2, arg3)
-}
-
-// StateMinerAvailableBalance indicates an expected call of StateMinerAvailableBalance.
-func (mr *MockCommitBatcherApiMockRecorder) StateMinerAvailableBalance(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateMinerAvailableBalance", reflect.TypeOf((*MockCommitBatcherApi)(nil).StateMinerAvailableBalance), arg0, arg1, arg2)
 }

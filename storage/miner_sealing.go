@@ -8,6 +8,7 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/specs-storage/storage"
 
+	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
 	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 	"github.com/filecoin-project/venus-sealer/types"
@@ -19,8 +20,8 @@ func (m *Miner) Address() address.Address {
 	return m.sealing.Address()
 }
 
-func (m *Miner) AddPieceToAnySector(ctx context.Context, size abi.UnpaddedPieceSize, r io.Reader, d types.DealInfo) (abi.SectorNumber, abi.PaddedPieceSize, error) {
-	return m.sealing.AddPieceToAnySector(ctx, size, r, d)
+func (m *Miner) SectorAddPieceToAny(ctx context.Context, size abi.UnpaddedPieceSize, r io.Reader, d types.PieceDealInfo) (api.SectorOffset, error) {
+	return m.sealing.SectorAddPieceToAny(ctx, size, r, d)
 }
 
 func (m *Miner) StartPackingSector(sectorNum abi.SectorNumber) error {

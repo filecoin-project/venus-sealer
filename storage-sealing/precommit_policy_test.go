@@ -58,7 +58,7 @@ func TestBasicPolicyMostConstrictiveSchedule(t *testing.T) {
 				Size:     abi.PaddedPieceSize(1024),
 				PieceCID: fakePieceCid(t),
 			},
-			DealInfo: &types.DealInfo{
+			DealInfo: &types.PieceDealInfo{
 				DealID: abi.DealID(42),
 				DealSchedule: types.DealSchedule{
 					StartEpoch: abi.ChainEpoch(70),
@@ -71,7 +71,7 @@ func TestBasicPolicyMostConstrictiveSchedule(t *testing.T) {
 				Size:     abi.PaddedPieceSize(1024),
 				PieceCID: fakePieceCid(t),
 			},
-			DealInfo: &types.DealInfo{
+			DealInfo: & types.PieceDealInfo{
 				DealID: abi.DealID(43),
 				DealSchedule: types.DealSchedule{
 					StartEpoch: abi.ChainEpoch(80),
@@ -98,7 +98,7 @@ func TestBasicPolicyIgnoresExistingScheduleIfExpired(t *testing.T) {
 				Size:     abi.PaddedPieceSize(1024),
 				PieceCID: fakePieceCid(t),
 			},
-			DealInfo: &types.DealInfo{
+			DealInfo: &types.PieceDealInfo{
 				DealID: abi.DealID(44),
 				DealSchedule: types.DealSchedule{
 					StartEpoch: abi.ChainEpoch(1),
@@ -125,11 +125,11 @@ func TestMissingDealIsIgnored(t *testing.T) {
 				Size:     abi.PaddedPieceSize(1024),
 				PieceCID: fakePieceCid(t),
 			},
-			DealInfo: &types.DealInfo{
+			DealInfo: &types.PieceDealInfo{
 				DealID: abi.DealID(44),
 				DealSchedule: types.DealSchedule{
 					StartEpoch: abi.ChainEpoch(1),
-					EndEpoch:   abi.ChainEpoch(10),
+					EndEpoch:   abi.ChainEpoch(547300),
 				},
 			},
 		},
@@ -145,5 +145,5 @@ func TestMissingDealIsIgnored(t *testing.T) {
 	exp, err := policy.Expiration(context.Background(), pieces...)
 	require.NoError(t, err)
 
-	assert.Equal(t, 2890, int(exp))
+	assert.Equal(t, 547300, int(exp))
 }

@@ -100,6 +100,10 @@ type SectorAddPieceFailed struct{ error }
 func (evt SectorAddPieceFailed) FormatError(xerrors.Printer) (next error) { return evt.error }
 func (evt SectorAddPieceFailed) apply(si *types.SectorInfo)               {}
 
+type SectorRetryWaitDeals struct{}
+
+func (evt SectorRetryWaitDeals) apply(si *types.SectorInfo) {}
+
 type SectorStartPacking struct{}
 
 func (evt SectorStartPacking) apply(*types.SectorInfo) {}

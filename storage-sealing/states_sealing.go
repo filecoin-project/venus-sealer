@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
 	"io/ioutil"
@@ -70,13 +69,9 @@ func (m *Sealing) handlePacking(ctx statemachine.Context, sector types.SectorInf
 	if err != nil {
 		return err
 	}
-	totalSize := allocated
+
 	if len(fillerSizes) > 0 {
-		for _, xxx := range fillerSizes {
-			totalSize += xxx
-			fmt.Println("allocate size: ", xxx)
-		}
-		log.Warnf("Creating %d filler pieces for sector %d  pieces %d, sectorsize %d allocated %d total: %d", len(fillerSizes), sector.SectorNumber, len(sector.Pieces), ubytes, allocated, totalSize)
+		log.Warnf("Creating %d filler pieces for sector %d", len(fillerSizes), sector.SectorNumber)
 	}
 
 	fillerPieces, err := m.padSector(sector.SealingCtx(ctx.Context()), m.minerSector(sector.SectorType, sector.SectorNumber), sector.ExistingPieceSizes(), fillerSizes...)
@@ -207,7 +202,7 @@ func (m *Sealing) getTicket(ctx statemachine.Context, sector types.SectorInfo) (
 		return nil, 0, allocated, xerrors.Errorf("sector %s precommitted but expired", sector.SectorNumber)
 	}
 
-	rand, err := m.api.ChainGetRandomnessFromTickets(ctx.Context(), tok, crypto.DomainSeparationTag_SealRandomness, ticketEpoch, buf.Bytes())
+	rand, err := m.api.StateGetRandomnessFromTickets(ctx.Context(), crypto.DomainSeparationTag_SealRandomness, ticketEpoch, buf.Bytes(), tok)
 	if err != nil {
 		return nil, 0, allocated, err
 	}
@@ -384,7 +379,12 @@ func (m *Sealing) preCommitParams(ctx statemachine.Context, sector types.SectorI
 	if minExpiration := sector.TicketEpoch + policy.MaxPreCommitRandomnessLookback + msd + miner.MinSectorExpiration; expiration < minExpiration {
 		expiration = minExpiration
 	}
-	// TODO: enforce a reasonable _maximum_ sector lifetime?
+
+	// Assume: both precommit msg & commit msg land on chain as early as possible
+	maxExpiration := height + policy.GetPreCommitChallengeDelay() + policy.GetMaxSectorExpirationExtension()
+	if expiration > maxExpiration {
+		expiration = maxExpiration
+	}
 
 	params := &miner.SectorPreCommitInfo{
 		Expiration:   expiration,
@@ -425,8 +425,16 @@ func (m *Sealing) handlePreCommitting(ctx statemachine.Context, sector types.Sec
 		}
 	}
 
-	params, deposit, tok, err := m.preCommitParams(ctx, sector)
-	if params == nil || err != nil {
+	params, pcd, tok, err := m.preCommitParams(ctx, sector)
+	if err != nil {
+		return ctx.Send(SectorChainPreCommitFailed{xerrors.Errorf("preCommitParams: %w", err)})
+	}
+	if params == nil {
+		return nil // event was sent in preCommitParams
+	}
+
+	deposit, err := collateralSendAmount(ctx.Context(), m.api, m.maddr, cfg, pcd)
+	if err != nil {
 		return err
 	}
 
@@ -466,8 +474,11 @@ func (m *Sealing) handleSubmitPreCommitBatch(ctx statemachine.Context, sector ty
 	}
 
 	params, deposit, _, err := m.preCommitParams(ctx, sector)
-	if params == nil || err != nil {
+	if err != nil {
 		return ctx.Send(SectorChainPreCommitFailed{xerrors.Errorf("preCommitParams: %w", err)})
+	}
+	if params == nil {
+		return nil // event was sent in preCommitParams
 	}
 
 	res, err := m.precommiter.AddPreCommit(ctx.Context(), sector, deposit, params)
@@ -551,7 +562,8 @@ func (m *Sealing) handleWaitSeed(ctx statemachine.Context, sector types.SectorIn
 		if err := m.maddr.MarshalCBOR(buf); err != nil {
 			return err
 		}
-		rand, err := m.api.ChainGetRandomnessFromBeacon(ectx, tok, crypto.DomainSeparationTag_InteractiveSealChallengeSeed, randHeight, buf.Bytes())
+
+		rand, err := m.api.StateGetRandomnessFromBeacon(ectx, crypto.DomainSeparationTag_InteractiveSealChallengeSeed, randHeight, buf.Bytes(), tok)
 		if err != nil {
 			err = xerrors.Errorf("failed to get randomness for computing seal proof (ch %d; rh %d; tsk %x): %w", curH, randHeight, tok, err)
 
@@ -700,6 +712,11 @@ func (m *Sealing) handleSubmitCommit(ctx statemachine.Context, sector types.Sect
 		collateral = big.Zero()
 	}
 
+	collateral, err = collateralSendAmount(ctx.Context(), m.api, m.maddr, cfg, collateral)
+	if err != nil {
+		return err
+	}
+
 	goodFunds := big.Add(collateral, big.Int(m.feeCfg.MaxCommitGasFee))
 
 	from, _, err := m.addrSel(ctx.Context(), mi, api.CommitAddr, goodFunds, collateral)
@@ -734,11 +751,8 @@ func (m *Sealing) handleSubmitCommitAggregate(ctx statemachine.Context, sector t
 		Proof: sector.Proof, // todo: this correct??
 		Spt:   sector.SectorType,
 	})
-	if err != nil {
-		return ctx.Send(SectorRetrySubmitCommit{})
-	}
 
-	if res.Error != "" {
+	if err != nil || res.Error != "" {
 		tok, _, err := m.api.ChainHead(ctx.Context())
 		if err != nil {
 			log.Errorf("handleSubmitCommit: api error, not proceeding: %+v", err)
@@ -814,25 +828,6 @@ func (m *Sealing) handleFinalizeSector(ctx statemachine.Context, sector types.Se
 	}
 
 	return ctx.Send(SectorFinalized{})
-}
-
-func (m *Sealing) handleProvingSector(ctx statemachine.Context, sector types.SectorInfo) error {
-	// TODO: track sector health / expiration
-	log.Infof("Proving sector %d", sector.SectorNumber)
-
-	cfg, err := m.getConfig()
-	if err != nil {
-		return xerrors.Errorf("getting sealing config: %w", err)
-	}
-
-	if err := m.sealer.ReleaseUnsealed(ctx.Context(), m.minerSector(sector.SectorType, sector.SectorNumber), sector.KeepUnsealedRanges(true, cfg.AlwaysKeepUnsealedCopy)); err != nil {
-		log.Error(err)
-	}
-
-	// TODO: Watch termination
-	// TODO: Auto-extend if set
-
-	return nil
 }
 
 func isUnRecoverError(errString string) bool {
