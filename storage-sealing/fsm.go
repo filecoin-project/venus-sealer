@@ -137,7 +137,11 @@ var fsmPlanners = map[types.SectorState]func(events []statemachine.Event, state 
 
 	// Sealing errors
 
-	types.AddPieceFailed: planOne(),
+	types.AddPieceFailed: planOne(
+		on(SectorRetryWaitDeals{}, types.WaitDeals),
+		apply(SectorStartPacking{}),
+		apply(SectorAddPiece{}),
+	),
 	types.SealPreCommit1Failed: planOne(
 		on(SectorRetrySealPreCommit1{}, types.PreCommit1),
 	),
@@ -348,9 +352,9 @@ func (m *Sealing) plan(events []statemachine.Event, state *types.SectorInfo) (fu
 				*<- Committing    |
 				|   |        ^--> CommitFailed
 				|   v             ^
-		        |   SubmitCommit  |
-		        |   |             |
-		        |   v             |
+			        |   SubmitCommit  |
+		        	|   |             |
+		        	|   v             |
 				*<- CommitWait ---/
 				|   |
 				|   v
@@ -366,6 +370,13 @@ func (m *Sealing) plan(events []statemachine.Event, state *types.SectorInfo) (fu
 
 	if err := m.onUpdateSector(context.TODO(), state); err != nil {
 		log.Errorw("update sector stats", "error", err)
+	}
+
+	// todo: drop this, use Context iface everywhere
+	wrapCtx := func(f func(types.Context, types.SectorInfo) error) func(statemachine.Context, types.SectorInfo) error {
+		return func(ctx statemachine.Context, info types.SectorInfo) error {
+			return f(&ctx, info)
+		}
 	}
 
 	switch state.State {
@@ -410,6 +421,8 @@ func (m *Sealing) plan(events []statemachine.Event, state *types.SectorInfo) (fu
 		return m.handleFinalizeSector, processed, nil
 
 	// Handled failure modes
+	case types.AddPieceFailed:
+		return m.handleAddPieceFailed, processed, nil
 	case types.SealPreCommit1Failed:
 		return m.handleSealPrecommit1Failed, processed, nil
 	case types.SealPreCommit2Failed:
@@ -430,7 +443,7 @@ func (m *Sealing) plan(events []statemachine.Event, state *types.SectorInfo) (fu
 	case types.DealsExpired:
 		return m.handleDealsExpired, processed, nil
 	case types.RecoverDealIDs:
-		return m.handleRecoverDealIDs, processed, nil
+		return wrapCtx(m.HandleRecoverDealIDs), processed, nil
 
 	// Post-seal
 	case types.Proving:

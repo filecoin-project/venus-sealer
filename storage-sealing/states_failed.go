@@ -94,7 +94,6 @@ func (m *Sealing) handlePreCommitFailed(ctx statemachine.Context, sector types.S
 			return ctx.Send(SectorRetryPreCommitWait{})
 		}
 
-		//todo which situation err is nil ,and result is nil
 		if mw == nil {
 			// API error in precommit
 			return ctx.Send(SectorRetryPreCommitWait{})
@@ -326,7 +325,7 @@ func (m *Sealing) handleDealsExpired(ctx statemachine.Context, sector types.Sect
 	return ctx.Send(SectorRemove{})
 }
 
-func (m *Sealing) handleRecoverDealIDs(ctx statemachine.Context, sector types.SectorInfo) error {
+func (m *Sealing) HandleRecoverDealIDs(ctx types.Context, sector types.SectorInfo) error {
 	tok, height, err := m.api.ChainHead(ctx.Context())
 	if err != nil {
 		return xerrors.Errorf("getting chain head: %w", err)
@@ -396,9 +395,10 @@ func (m *Sealing) handleRecoverDealIDs(ctx statemachine.Context, sector types.Se
 			mdp := market.DealProposal(*p.DealInfo.DealProposal)
 			dp = &mdp
 		}
-		res, err := m.dealInfo.GetCurrentDealInfo(ctx.Context(), tok, dp, *p.DealInfo.PublishCid)
+		res, err := m.DealInfo.GetCurrentDealInfo(ctx.Context(), tok, dp, *p.DealInfo.PublishCid)
 		if err != nil {
 			failed[i] = xerrors.Errorf("getting current deal info for piece %d: %w", i, err)
+			continue
 		}
 
 		if res.MarketDeal == nil {

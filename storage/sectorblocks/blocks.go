@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
-	"github.com/filecoin-project/venus-sealer/service"
-	"github.com/filecoin-project/venus-sealer/types"
 	"io"
 	"sync"
 
@@ -14,7 +12,10 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/go-state-types/abi"
+
+	"github.com/filecoin-project/venus-sealer/service"
 	"github.com/filecoin-project/venus-sealer/storage"
+	"github.com/filecoin-project/venus-sealer/types"
 )
 
 type SealSerialization uint8
@@ -56,8 +57,8 @@ func NewSectorBlocks(miner *storage.Miner, ds *service.DealRefService) *SectorBl
 	return sbc
 }
 
-func (st *SectorBlocks) AddPiece(ctx context.Context, size abi.UnpaddedPieceSize, r io.Reader, d types.DealInfo) (abi.SectorNumber, abi.PaddedPieceSize, error) {
-	sn, offset, err := st.Miner.AddPieceToAnySector(ctx, size, r, d)
+func (st *SectorBlocks) AddPiece(ctx context.Context, size abi.UnpaddedPieceSize, r io.Reader, d types.PieceDealInfo) (abi.SectorNumber, abi.PaddedPieceSize, error) {
+	so, err := st.Miner.SectorAddPieceToAny(ctx, size, r, d)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -68,15 +69,15 @@ func (st *SectorBlocks) AddPiece(ctx context.Context, size abi.UnpaddedPieceSize
 
 	//todo save more db to database
 	err = st.keys.Save(uint64(d.DealID), types.SealedRef{
-		SectorID: sn,
-		Offset:   offset,
+		SectorID: so.Sector,
+		Offset:   so.Offset,
 		Size:     size,
 	}, d.DealProposal) // TODO: batch somehow
 	if err != nil {
 		return 0, 0, xerrors.Errorf("writeRef: %w", err)
 	}
 
-	return sn, offset, nil
+	return so.Sector, so.Offset, nil
 }
 
 func (st *SectorBlocks) List() (map[uint64][]types.SealedRef, error) {

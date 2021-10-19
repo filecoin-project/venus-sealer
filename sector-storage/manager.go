@@ -231,6 +231,7 @@ func (m *Manager) schedFetch(sector storage.SectorRef, ft storiface.SectorFileTy
 func (m *Manager) SectorsUnsealPiece(ctx context.Context, sector storage.SectorRef, offset storiface.UnpaddedByteIndex, size abi.UnpaddedPieceSize, ticket abi.SealRandomness, unsealed *cid.Cid) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
+
 	log.Debugf("acquire unseal sector lock for sector %d", sector.ID)
 	if err := m.index.StorageLock(ctx, sector.ID, storiface.FTSealed|storiface.FTCache, storiface.FTUnsealed); err != nil {
 		return xerrors.Errorf("acquiring unseal sector lock: %w", err)
@@ -589,7 +590,6 @@ func (m *Manager) FinalizeSector(ctx context.Context, sector storage.SectorRef, 
 }
 
 func (m *Manager) ReleaseUnsealed(ctx context.Context, sector storage.SectorRef, safeToFree []storage.Range) error {
-	log.Warnw("ReturnReleaseUnsealed todo")
 	return nil
 }
 

@@ -3,6 +3,7 @@ package storage
 import (
 	"bytes"
 	"context"
+	"time"
 	"testing"
 
 	"github.com/filecoin-project/venus-sealer/api"
@@ -41,6 +42,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus-sealer/journal"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
+	types3 "github.com/filecoin-project/venus-sealer/types"
 )
 
 type mockStorageMinerAPI struct {
@@ -66,11 +68,11 @@ func (m *mockStorageMinerAPI) StateNetworkVersion(ctx context.Context, key types
 	return constants.NewestNetworkVersion, nil
 }
 
-func (m *mockStorageMinerAPI) ChainGetRandomnessFromTickets(ctx context.Context, tsk types.TipSetKey, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte) (abi.Randomness, error) {
+func (m *mockStorageMinerAPI) StateGetRandomnessFromTickets(ctx context.Context, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte, tok types3.TipSetToken) (abi.Randomness, error) {
 	return abi.Randomness("ticket rand"), nil
 }
 
-func (m *mockStorageMinerAPI) ChainGetRandomnessFromBeacon(ctx context.Context, tsk types.TipSetKey, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte) (abi.Randomness, error) {
+func (m *mockStorageMinerAPI) StateGetRandomnessFromBeacon(ctx context.Context, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte, tok types3.TipSetToken) (abi.Randomness, error) {
 	return abi.Randomness("beacon rand"), nil
 }
 
@@ -290,7 +292,28 @@ func mockTipSet(t *testing.T) *types.TipSet {
 // All the mock methods below here are unused
 //
 
-func (m *mockStorageMinerAPI) StateCall(ctx context.Context, message *types.Message, key types.TipSetKey) (*apitypes.InvocResult, error) {
+type MsgGasCost struct {
+	Message            cid.Cid // Can be different than requested, in case it was replaced, but only gas values changed
+	GasUsed            abi.TokenAmount
+	BaseFeeBurn        abi.TokenAmount
+	OverEstimationBurn abi.TokenAmount
+	MinerPenalty       abi.TokenAmount
+	MinerTip           abi.TokenAmount
+	Refund             abi.TokenAmount
+	TotalCost          abi.TokenAmount
+}
+
+type InvocResult struct {
+	MsgCid         cid.Cid
+	Msg            *types.Message
+	MsgRct         *types.MessageReceipt
+	GasCost        MsgGasCost
+	ExecutionTrace types.ExecutionTrace
+	Error          string
+	Duration       time.Duration
+}
+
+func (m *mockStorageMinerAPI) StateCall(ctx context.Context, message *types.Message, key types.TipSetKey) (*InvocResult, error) {
 	panic("implement me")
 }
 

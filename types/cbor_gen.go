@@ -5,18 +5,21 @@ package types
 import (
 	"fmt"
 	"io"
+	"math"
 	"sort"
 
 	abi "github.com/filecoin-project/go-state-types/abi"
 	market "github.com/filecoin-project/specs-actors/actors/builtin/market"
 	miner "github.com/filecoin-project/specs-actors/actors/builtin/miner"
-	cid "github.com/ipfs/go-cid"
+
+	"github.com/ipfs/go-cid"
 	cbg "github.com/whyrusleeping/cbor-gen"
-	xerrors "golang.org/x/xerrors"
+	"golang.org/x/xerrors"
 )
 
 var _ = xerrors.Errorf
 var _ = cid.Undef
+var _ = math.E
 var _ = sort.Sort
 
 func (t *Call) MarshalCBOR(w io.Writer) error {
@@ -201,6 +204,7 @@ func (t *Call) UnmarshalCBOR(r io.Reader) error {
 
 	return nil
 }
+
 func (t *CallID) MarshalCBOR(w io.Writer) error {
 	if t == nil {
 		_, err := w.Write(cbg.CborNull)
@@ -330,6 +334,7 @@ func (t *CallID) UnmarshalCBOR(r io.Reader) error {
 
 	return nil
 }
+
 func (t *WorkState) MarshalCBOR(w io.Writer) error {
 	if t == nil {
 		_, err := w.Write(cbg.CborNull)
@@ -587,6 +592,7 @@ func (t *WorkState) UnmarshalCBOR(r io.Reader) error {
 
 	return nil
 }
+
 func (t *WorkID) MarshalCBOR(w io.Writer) error {
 	if t == nil {
 		_, err := w.Write(cbg.CborNull)
@@ -710,6 +716,7 @@ func (t *WorkID) UnmarshalCBOR(r io.Reader) error {
 
 	return nil
 }
+
 func (t *SectorInfo) MarshalCBOR(w io.Writer) error {
 	if t == nil {
 		_, err := w.Write(cbg.CborNull)
@@ -1773,6 +1780,7 @@ func (t *SectorInfo) UnmarshalCBOR(r io.Reader) error {
 
 	return nil
 }
+
 func (t *Piece) MarshalCBOR(w io.Writer) error {
 	if t == nil {
 		_, err := w.Write(cbg.CborNull)
@@ -1800,7 +1808,7 @@ func (t *Piece) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 
-	// t.DealInfo (types.DealInfo) (struct)
+	// t.DealInfo (api.PieceDealInfo) (struct)
 	if len("DealInfo") > cbg.MaxLength {
 		return xerrors.Errorf("Value in field \"DealInfo\" was too long")
 	}
@@ -1861,7 +1869,7 @@ func (t *Piece) UnmarshalCBOR(r io.Reader) error {
 				}
 
 			}
-			// t.DealInfo (types.DealInfo) (struct)
+			// t.DealInfo (api.PieceDealInfo) (struct)
 		case "DealInfo":
 
 			{
@@ -1874,7 +1882,7 @@ func (t *Piece) UnmarshalCBOR(r io.Reader) error {
 					if err := br.UnreadByte(); err != nil {
 						return err
 					}
-					t.DealInfo = new(DealInfo)
+					t.DealInfo = new(PieceDealInfo)
 					if err := t.DealInfo.UnmarshalCBOR(br); err != nil {
 						return xerrors.Errorf("unmarshaling t.DealInfo pointer: %w", err)
 					}
@@ -1890,7 +1898,8 @@ func (t *Piece) UnmarshalCBOR(r io.Reader) error {
 
 	return nil
 }
-func (t *DealInfo) MarshalCBOR(w io.Writer) error {
+
+func (t *PieceDealInfo) MarshalCBOR(w io.Writer) error {
 	if t == nil {
 		_, err := w.Write(cbg.CborNull)
 		return err
@@ -1955,7 +1964,7 @@ func (t *DealInfo) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 
-	// t.DealSchedule (types.DealSchedule) (struct)
+	// t.DealSchedule (api.DealSchedule) (struct)
 	if len("DealSchedule") > cbg.MaxLength {
 		return xerrors.Errorf("Value in field \"DealSchedule\" was too long")
 	}
@@ -1989,8 +1998,8 @@ func (t *DealInfo) MarshalCBOR(w io.Writer) error {
 	return nil
 }
 
-func (t *DealInfo) UnmarshalCBOR(r io.Reader) error {
-	*t = DealInfo{}
+func (t *PieceDealInfo) UnmarshalCBOR(r io.Reader) error {
+	*t = PieceDealInfo{}
 
 	br := cbg.GetPeeker(r)
 	scratch := make([]byte, 8)
@@ -2004,7 +2013,7 @@ func (t *DealInfo) UnmarshalCBOR(r io.Reader) error {
 	}
 
 	if extra > cbg.MaxLength {
-		return fmt.Errorf("DealInfo: map struct too large (%d)", extra)
+		return fmt.Errorf("PieceDealInfo: map struct too large (%d)", extra)
 	}
 
 	var name string
@@ -2080,7 +2089,7 @@ func (t *DealInfo) UnmarshalCBOR(r io.Reader) error {
 				}
 
 			}
-			// t.DealSchedule (types.DealSchedule) (struct)
+			// t.DealSchedule (api.DealSchedule) (struct)
 		case "DealSchedule":
 
 			{
@@ -2117,6 +2126,7 @@ func (t *DealInfo) UnmarshalCBOR(r io.Reader) error {
 
 	return nil
 }
+
 func (t *DealSchedule) MarshalCBOR(w io.Writer) error {
 	if t == nil {
 		_, err := w.Write(cbg.CborNull)
@@ -2268,6 +2278,7 @@ func (t *DealSchedule) UnmarshalCBOR(r io.Reader) error {
 
 	return nil
 }
+
 func (t *Log) MarshalCBOR(w io.Writer) error {
 	if t == nil {
 		_, err := w.Write(cbg.CborNull)

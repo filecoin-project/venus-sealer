@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/filecoin-project/venus-sealer/types"
 	"time"
 
 	"github.com/ipfs/go-cid"
 
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/specs-storage/storage"
+
+	"github.com/filecoin-project/venus-sealer/types"
 )
 
 type WorkerInfo struct {
@@ -36,7 +37,6 @@ type WorkerResources struct {
 
 type WorkerStats struct {
 	Info    WorkerInfo
-	Tasks   []types.TaskType
 	Enabled bool
 
 	MemUsedMin uint64

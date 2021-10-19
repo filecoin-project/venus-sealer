@@ -4,6 +4,12 @@ package api
 import (
 	"bytes"
 	"fmt"
+	"github.com/ipfs/go-cid"
+	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p-core/peer"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/polydawn/refmt/json"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-bitfield"
 	datatransfer "github.com/filecoin-project/go-data-transfer"
@@ -11,13 +17,11 @@ import (
 	"github.com/filecoin-project/go-fil-markets/storagemarket"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
+
 	"github.com/filecoin-project/venus-sealer/constants"
+	types2 "github.com/filecoin-project/venus-sealer/types"
+
 	"github.com/filecoin-project/venus/pkg/types"
-	"github.com/ipfs/go-cid"
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/peer"
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	"github.com/polydawn/refmt/json"
 )
 
 type ActorState struct {
@@ -155,12 +159,6 @@ type Fault struct {
 	Epoch abi.ChainEpoch
 }
 
-var EmptyVesting = MsigVesting{
-	InitialBalance: types.EmptyInt,
-	StartEpoch:     -1,
-	UnlockDuration: -1,
-}
-
 type MsigVesting struct {
 	InitialBalance abi.TokenAmount
 	StartEpoch     abi.ChainEpoch
@@ -242,6 +240,11 @@ type SectorLog struct {
 	Message string
 }
 
+type SectorPiece struct {
+	Piece    abi.PieceInfo
+	DealInfo *types2.PieceDealInfo // nil for pieces which do not appear in deals (e.g. filler pieces)
+}
+
 type SectorInfo struct {
 	SectorID     abi.SectorNumber
 	State        SectorState
@@ -249,6 +252,7 @@ type SectorInfo struct {
 	CommR        *cid.Cid
 	Proof        []byte
 	Deals        []abi.DealID
+	Pieces       []SectorPiece
 	Ticket       SealTicket
 	Seed         SealSeed
 	PreCommitMsg string
@@ -305,10 +309,16 @@ const (
 )
 
 type AddressConfig struct {
-	PreCommitControl []address.Address
-	CommitControl    []address.Address
-	TerminateControl []address.Address
+	PreCommitControl   []address.Address
+	CommitControl      []address.Address
+	TerminateControl   []address.Address
+	DealPublishControl []address.Address
 
 	DisableOwnerFallback  bool
 	DisableWorkerFallback bool
+}
+
+type SectorOffset struct {
+	Sector abi.SectorNumber
+	Offset abi.PaddedPieceSize
 }

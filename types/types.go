@@ -11,10 +11,10 @@ import (
 	"github.com/filecoin-project/go-state-types/exitcode"
 	"github.com/filecoin-project/specs-storage/storage"
 
-	"github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
-
 	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
 	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
+
+	"github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
 
 	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 )
@@ -22,20 +22,14 @@ import (
 var DealSectorPriority = 1024
 var MaxTicketAge = policy.MaxPreCommitRandomnessLookback
 
-// Piece is a tuple of piece and deal info
-type PieceWithDealInfo struct {
-	Piece    abi.PieceInfo
-	DealInfo DealInfo
-}
-
-// Piece is a tuple of piece info and optional deal
-type Piece struct {
-	Piece    abi.PieceInfo
-	DealInfo *DealInfo // nil for pieces which do not appear in deals (e.g. filler pieces)
+// Context is a go-statemachine context
+type Context interface {
+	Context() context.Context
+	Send(evt interface{}) error
 }
 
 // DealInfo is a tuple of deal identity and its schedule
-type DealInfo struct {
+type PieceDealInfo struct {
 	PublishCid   *cid.Cid
 	DealID       abi.DealID
 	DealProposal *market.DealProposal
@@ -49,6 +43,18 @@ type DealInfo struct {
 type DealSchedule struct {
 	StartEpoch abi.ChainEpoch
 	EndEpoch   abi.ChainEpoch
+}
+
+// Piece is a tuple of piece and deal info
+type PieceWithDealInfo struct {
+	Piece    abi.PieceInfo
+	DealInfo PieceDealInfo
+}
+
+// Piece is a tuple of piece info and optional deal
+type Piece struct {
+	Piece    abi.PieceInfo
+	DealInfo *PieceDealInfo // nil for pieces which do not appear in deals (e.g. filler pieces)
 }
 
 type Log struct {
