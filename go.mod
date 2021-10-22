@@ -16,9 +16,9 @@ require (
 	github.com/filecoin-project/go-bitfield v0.2.4
 	github.com/filecoin-project/go-cbor-util v0.0.0-20201016124514-d0bbec7bfcc4
 	github.com/filecoin-project/go-commp-utils v0.1.1-0.20210427191551-70bf140d31c7
-	github.com/filecoin-project/go-data-transfer v1.11.1
+	github.com/filecoin-project/go-data-transfer v1.10.1
 	github.com/filecoin-project/go-fil-commcid v0.1.0
-	github.com/filecoin-project/go-fil-markets v1.13.1
+	github.com/filecoin-project/go-fil-markets v1.12.0
 	github.com/filecoin-project/go-jsonrpc v0.1.4-0.20210217175800-45ea43ac2bec
 	github.com/filecoin-project/go-padreader v0.0.0-20210723183308-812a16dc01b1
 	github.com/filecoin-project/go-paramfetch v0.0.2
@@ -32,7 +32,7 @@ require (
 	github.com/filecoin-project/specs-actors/v5 v5.0.4
 	github.com/filecoin-project/specs-storage v0.1.1-0.20201105051918-5188d9774506
 	github.com/filecoin-project/venus v1.1.1-rc1
-	github.com/filecoin-project/venus-market v1.0.1
+	github.com/filecoin-project/venus-market v1.0.0
 	github.com/filecoin-project/venus-messager v1.2.0
 	github.com/gbrlsnchs/jwt/v3 v3.0.0
 	github.com/golang/mock v1.6.0
@@ -52,6 +52,8 @@ require (
 	github.com/ipfs/go-ipld-cbor v0.0.5
 	github.com/ipfs/go-log/v2 v2.3.0
 	github.com/ipfs/go-metrics-interface v0.0.1
+	github.com/ipld/go-car v0.3.2-0.20211001225732-32d0d9933823 // indirect
+	github.com/ipld/go-ipld-prime v0.12.3 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/libp2p/go-buffer-pool v0.0.2
 	github.com/libp2p/go-libp2p-core v0.8.6
