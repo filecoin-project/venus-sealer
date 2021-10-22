@@ -440,6 +440,11 @@ func NewGetSealConfigFunc(r *config.StorageMiner) (types2.GetSealingConfigFunc, 
 				TerminateBatchMax:  cfg.Sealing.TerminateBatchMax,
 				TerminateBatchMin:  cfg.Sealing.TerminateBatchMin,
 				TerminateBatchWait: time.Duration(cfg.Sealing.TerminateBatchWait),
+
+				BatchPreCommitAboveBaseFee: types.BigInt(cfg.Sealing.BatchPreCommitAboveBaseFee),
+				CollateralFromMinerBalance: cfg.Sealing.CollateralFromMinerBalance,
+				AvailableBalanceBuffer:     types.BigInt(cfg.Sealing.AvailableBalanceBuffer),
+				DisableCollateralFallback:  cfg.Sealing.DisableCollateralFallback,
 			}
 		})
 		return
