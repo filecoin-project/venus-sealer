@@ -167,7 +167,7 @@ func (s *WindowPoStScheduler) runSubmitPoST(
 		commEpoch = deadline.Challenge
 	}
 
-	commRand, err := s.api.ChainGetRandomnessFromTickets(ctx, ts.Key(), crypto.DomainSeparationTag_PoStChainCommit, commEpoch, nil)
+	commRand, err := s.api.StateGetRandomnessFromTickets(ctx, crypto.DomainSeparationTag_PoStChainCommit, commEpoch, nil, ts.Key())
 	if err != nil {
 		err = xerrors.Errorf("failed to get chain randomness from tickets for windowPost (ts=%d; deadline=%d): %w", ts.Height(), commEpoch, err)
 		log.Errorf("submitPoStMessage failed: %+v", err)
@@ -532,7 +532,7 @@ func (s *WindowPoStScheduler) runPoStCycle(ctx context.Context, di dline.Info, t
 		return nil, xerrors.Errorf("getting current head: %w", err)
 	}
 
-	rand, err := s.api.ChainGetRandomnessFromBeacon(ctx, headTs.Key(), crypto.DomainSeparationTag_WindowedPoStChallengeSeed, di.Challenge, buf.Bytes())
+	rand, err := s.api.StateGetRandomnessFromBeacon(ctx, crypto.DomainSeparationTag_WindowedPoStChallengeSeed, di.Challenge, buf.Bytes(), headTs.Key())
 	if err != nil {
 		return nil, xerrors.Errorf("failed to get chain randomness from beacon for window post (ts=%d; deadline=%d): %w", ts.Height(), di, err)
 	}
@@ -569,12 +569,12 @@ func (s *WindowPoStScheduler) runPoStCycle(ctx context.Context, di dline.Info, t
 			Proofs:     nil,
 		}
 
-		skipCount := uint64(0)
 		postSkipped := bitfield.New()
 		somethingToProve := false
 
 		// Retry until we run out of sectors to prove.
 		for retries := 0; ; retries++ {
+			skipCount := uint64(0)
 			var partitions []miner.PoStPartition
 			var sinfos []proof2.SectorInfo
 			for partIdx, partition := range batch {
@@ -661,13 +661,14 @@ func (s *WindowPoStScheduler) runPoStCycle(ctx context.Context, di dline.Info, t
 					return nil, xerrors.Errorf("getting current head: %w", err)
 				}
 
-				checkRand, err := s.api.ChainGetRandomnessFromBeacon(ctx, headTs.Key(), crypto.DomainSeparationTag_WindowedPoStChallengeSeed, di.Challenge, buf.Bytes())
+				checkRand, err := s.api.StateGetRandomnessFromBeacon(ctx, crypto.DomainSeparationTag_WindowedPoStChallengeSeed, di.Challenge, buf.Bytes(), headTs.Key())
 				if err != nil {
 					return nil, xerrors.Errorf("failed to get chain randomness from beacon for window post (ts=%d; deadline=%d): %w", ts.Height(), di, err)
 				}
 
 				if !bytes.Equal(checkRand, rand) {
 					log.Warnw("windowpost randomness changed", "old", rand, "new", checkRand, "ts-height", ts.Height(), "challenge-height", di.Challenge, "tsk", ts.Key())
+					rand = checkRand
 					continue
 				}
 
@@ -713,7 +714,6 @@ func (s *WindowPoStScheduler) runPoStCycle(ctx context.Context, di dline.Info, t
 				return nil, ctx.Err()
 			}
 
-			skipCount += uint64(len(ps))
 			for _, sector := range ps {
 				postSkipped.Set(uint64(sector.Number))
 			}

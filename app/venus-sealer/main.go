@@ -14,6 +14,8 @@ import (
 	sealer "github.com/filecoin-project/venus-sealer"
 	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus-sealer/lib/tracing"
+
+	"github.com/filecoin-project/venus-sealer/app/panic-reporter"
 )
 
 var log = logging.Logger("main")
@@ -54,7 +56,7 @@ func main() {
 			&cli.StringFlag{
 				Name:    "actor",
 				Value:   "",
-				Usage:   "specify other actor to check state for (read only)",
+				Usage:   "specify other actor to query / manipulate",
 				Aliases: []string{"a"},
 			},
 			&cli.StringFlag{
@@ -62,7 +64,16 @@ func main() {
 				Usage: "network type: one of mainnet,calibration,2k, force, Default: mainnet",
 			},
 			&cli.BoolFlag{
-				Name: "color",
+				// examined in the Before above
+				Name:        "color",
+				Usage:       "use color in display output",
+				DefaultText: "depends on output being a TTY",
+			},
+			&cli.StringFlag{
+				Name:    "panic-reports",
+				EnvVars: []string{"VENUS_PANIC_REPORT_PATH"},
+				Hidden:  true,
+				Value:   "~/.venussealer", // should follow --repo default
 			},
 			&cli.StringFlag{
 				Name:    "repo",
@@ -88,6 +99,14 @@ func main() {
 				}
 			}
 
+			return nil
+		},
+		After: func(c *cli.Context) error {
+			if r := recover(); r != nil {
+				// Generate report in LOTUS_PATH and re-raise panic
+				panicreporter.GeneratePanicReport(c.String("panic-reports"), "repo", c.App.Name)
+				panic(r)
+			}
 			return nil
 		},
 	}

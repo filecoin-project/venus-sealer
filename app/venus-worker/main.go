@@ -38,6 +38,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/service"
 	"github.com/filecoin-project/venus-sealer/types"
 	"github.com/filecoin-project/venus/fixtures/asset"
+	panicreporter "github.com/filecoin-project/venus-sealer/app/panic-reporter"
 )
 
 var log = logging.Logger("main")
@@ -66,6 +67,12 @@ func main() {
 				Hidden:  false,
 				Value:   "~/.venusworker", // TODO: Consider XDG_DATA_HOME
 			},
+			&cli.StringFlag{
+				Name:    "panic-reports",
+				EnvVars: []string{"VENUS_PANIC_REPORT_PATH"},
+				Hidden:  true,
+				Value:   "~/.lotusworker", // should follow --repo default
+			},
 			&cli.BoolFlag{
 				Name:  "enable-gpu-proving",
 				Usage: "enable use of GPU for mining operations",
@@ -73,6 +80,14 @@ func main() {
 			},
 		},
 
+		After: func(c *cli.Context) error {
+			if r := recover(); r != nil {
+				// Generate report in LOTUS_PATH and re-raise panic
+				panicreporter.GeneratePanicReport(c.String("panic-reports"), "repo", c.App.Name)
+				panic(r)
+			}
+			return nil
+		},
 		Commands: local,
 	}
 	app.Setup()

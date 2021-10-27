@@ -125,6 +125,21 @@ func (mr *MockSectorIndexMockRecorder) StorageInfo(arg0, arg1 interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StorageInfo", reflect.TypeOf((*MockSectorIndex)(nil).StorageInfo), arg0, arg1)
 }
 
+// StorageList mocks base method.
+func (m *MockSectorIndex) StorageList(ctx context.Context) (map[stores.ID][]stores.Decl, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StorageList", ctx)
+	ret0, _ := ret[0].(map[stores.ID][]stores.Decl)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StorageList indicates an expected call of StorageList.
+func (mr *MockSectorIndexMockRecorder) StorageList(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StorageList", reflect.TypeOf((*MockSectorIndex)(nil).StorageList), ctx)
+}
+
 // StorageLock mocks base method.
 func (m *MockSectorIndex) StorageLock(ctx context.Context, sector abi.SectorID, read, write storiface.SectorFileType) error {
 	m.ctrl.T.Helper()

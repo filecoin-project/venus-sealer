@@ -34,44 +34,79 @@ var infoAllCmd = &cli.Command{
 
 		fmt.Println("#: Version")
 		if err := versionCmd.Action(cctx); err != nil {
-			return err
+			fmt.Println("ERROR: ", err)
 		}
 
 		fmt.Println("\n#: Sealer Info")
 		if err := infoCmdAct(cctx); err != nil {
-			return err
+			fmt.Println("ERROR: ", err)
 		}
 
 		// Verbose info
 
 		fmt.Println("\n#: Storage List")
 		if err := storageListCmd.Action(cctx); err != nil {
-			return err
+			fmt.Println("ERROR: ", err)
 		}
 
 		fmt.Println("\n#: Worker List")
 		if err := sealingWorkersCmd.Action(cctx); err != nil {
-			return err
+			fmt.Println("ERROR: ", err)
+		}
+
+		fmt.Println("\n#: Proving Info")
+		if err := provingInfoCmd.Action(cctx); err != nil {
+			fmt.Println("ERROR: ", err)
+		}
+
+		fmt.Println("\n#: Proving Deadlines")
+		if err := provingDeadlinesCmd.Action(cctx); err != nil {
+			fmt.Println("ERROR: ", err)
+		}
+
+		fmt.Println("\n#: Proving Faults")
+		if err := provingFaultsCmd.Action(cctx); err != nil {
+			fmt.Println("ERROR: ", err)
 		}
 
 		fmt.Println("\n#: Sealing Jobs")
 		if err := sealingJobsCmd.Action(cctx); err != nil {
-			return err
+			fmt.Println("ERROR: ", err)
 		}
 
 		fmt.Println("\n#: Sched Diag")
 		if err := sealingSchedDiagCmd.Action(cctx); err != nil {
-			return err
+			fmt.Println("ERROR: ", err)
+		}
+
+		fmt.Println("\n#: Pending Batch Terminations")
+		if err := sectorsTerminatePendingCmd.Action(cctx); err != nil {
+			fmt.Println("ERROR: ", err)
+		}
+
+		fmt.Println("\n#: Pending Batch PreCommit")
+		if err := sectorsBatchingPendingPreCommit.Action(cctx); err != nil {
+			fmt.Println("ERROR: ", err)
+		}
+
+		fmt.Println("\n#: Pending Batch Commit")
+		if err := sectorsBatchingPendingCommit.Action(cctx); err != nil {
+			fmt.Println("ERROR: ", err)
 		}
 
 		fmt.Println("\n#: Sector List")
 		if err := sectorsListCmd.Action(cctx); err != nil {
-			return err
+			fmt.Println("ERROR: ", err)
+		}
+
+		fmt.Println("\n#: Expired Sectors")
+		if err := sectorsExpiredCmd.Action(cctx); err != nil {
+			fmt.Println("ERROR: ", err)
 		}
 
 		fmt.Println("\n#: Sector Refs")
 		if err := sectorsRefsCmd.Action(cctx); err != nil {
-			return err
+			fmt.Println("ERROR: ", err)
 		}
 
 		// Very Very Verbose info
@@ -79,7 +114,7 @@ var infoAllCmd = &cli.Command{
 
 		list, err := storageAPI.SectorsList(ctx)
 		if err != nil {
-			return err
+			fmt.Println("ERROR: ", err)
 		}
 
 		sort.Slice(list, func(i, j int) bool {
@@ -92,11 +127,11 @@ var infoAllCmd = &cli.Command{
 			fs := &flag.FlagSet{}
 			for _, f := range sectorsStatusCmd.Flags {
 				if err := f.Apply(fs); err != nil {
-					return err
+					fmt.Println("ERROR: ", err)
 				}
 			}
 			if err := fs.Parse([]string{"--log", "--on-chain-info", fmt.Sprint(s)}); err != nil {
-				return err
+				fmt.Println("ERROR: ", err)
 			}
 
 			if err := sectorsStatusCmd.Action(cli.NewContext(cctx.App, fs, cctx)); err != nil {
@@ -107,18 +142,11 @@ var infoAllCmd = &cli.Command{
 
 			fs = &flag.FlagSet{}
 			if err := fs.Parse([]string{fmt.Sprint(s)}); err != nil {
-				return err
+				fmt.Println("ERROR: ", err)
 			}
 
 			if err := storageFindCmd.Action(cli.NewContext(cctx.App, fs, cctx)); err != nil {
 				fmt.Println("ERROR: ", err)
-			}
-		}
-
-		if !_test {
-			fmt.Println("\n#: Goroutines")
-			if err := PprofGoroutines.Action(cctx); err != nil {
-				return err
 			}
 		}
 

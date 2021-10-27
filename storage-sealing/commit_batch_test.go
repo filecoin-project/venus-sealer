@@ -64,7 +64,7 @@ func TestCommitBatcher(t *testing.T) {
 			CommitBatchWait:  24 * time.Hour,
 			CommitBatchSlack: 1 * time.Hour,
 
-			AggregateAboveBaseFee: types.BigMul(types.PicoFil, types.NewInt(150)), // 0.15 nFIL
+			AggregateAboveBaseFee:      types.BigMul(types.PicoFil, types.NewInt(150)), // 0.15 nFIL
 			BatchPreCommitAboveBaseFee: types.BigMul(types.PicoFil, types.NewInt(150)), // 0.15 nFIL
 
 			TerminateBatchMin:  1,

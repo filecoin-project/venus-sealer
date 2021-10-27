@@ -20,11 +20,17 @@ type Config struct {
 
 	WaitDealsDelay time.Duration
 
-	CommittedCapacityDefaultLifetime time.Duration
+	CommittedCapacitySectorLifetime time.Duration
+
+	StartEpochSealingBuffer abi.ChainEpoch
 
 	AlwaysKeepUnsealedCopy bool
 
 	FinalizeEarly bool
+
+	CollateralFromMinerBalance bool
+	AvailableBalanceBuffer     abi.TokenAmount
+	DisableCollateralFallback  bool
 
 	BatchPreCommits     bool
 	MaxPreCommitBatch   int
@@ -48,8 +54,4 @@ type Config struct {
 	TerminateBatchMax  uint64
 	TerminateBatchMin  uint64
 	TerminateBatchWait time.Duration
-
-	CollateralFromMinerBalance bool
-	AvailableBalanceBuffer     abi.TokenAmount
-	DisableCollateralFallback  bool
 }

@@ -94,6 +94,8 @@ func NewCommitBatcher(mctx context.Context, networkParams *config.NetParamsConfi
 		force:   make(chan chan []sealiface.CommitBatchRes),
 		stop:    make(chan struct{}),
 		stopped: make(chan struct{}),
+
+		networkParams: networkParams,
 	}
 
 	go b.run()

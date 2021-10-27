@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ipfs/go-cid"
+
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/multiformats/go-multiaddr"
@@ -14,6 +16,15 @@ import (
 
 	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
 )
+
+const (
+	// RetrievalPricingDefault configures the node to use the default retrieval pricing policy.
+	RetrievalPricingDefaultMode = "default"
+	// RetrievalPricingExternal configures the node to use the external retrieval pricing script
+	// configured by the user.
+	RetrievalPricingExternalMode = "external"
+)
+
 
 type HomeDir string
 
@@ -32,6 +43,7 @@ func (cfg StorageWorker) LocalStorage() *LocalStorage {
 type StorageMiner struct {
 	DataDir        string
 	API            API
+	Dealmaking     DealmakingConfig
 	Sealing        SealingConfig
 	Storage        sectorstorage.SealerConfig
 	Fees           MinerFeeConfig
@@ -136,6 +148,78 @@ type MySqlConfig struct {
 	MaxIdleConn     int           `toml:"maxIdleConn"`
 	ConnMaxLifeTime time.Duration `toml:"connMaxLifeTime"`
 }
+
+type DealmakingConfig struct {
+	// When enabled, the miner can accept online deals
+	ConsiderOnlineStorageDeals bool
+	// When enabled, the miner can accept offline deals
+	ConsiderOfflineStorageDeals bool
+	// When enabled, the miner can accept retrieval deals
+	ConsiderOnlineRetrievalDeals bool
+	// When enabled, the miner can accept offline retrieval deals
+	ConsiderOfflineRetrievalDeals bool
+	// When enabled, the miner can accept verified deals
+	ConsiderVerifiedStorageDeals bool
+	// When enabled, the miner can accept unverified deals
+	ConsiderUnverifiedStorageDeals bool
+	// A list of Data CIDs to reject when making deals
+	PieceCidBlocklist []cid.Cid
+	// Maximum expected amount of time getting the deal into a sealed sector will take
+	// This includes the time the deal will need to get transferred and published
+	// before being assigned to a sector
+	ExpectedSealDuration Duration
+	// Maximum amount of time proposed deal StartEpoch can be in future
+	MaxDealStartDelay Duration
+	// When a deal is ready to publish, the amount of time to wait for more
+	// deals to be ready to publish before publishing them all as a batch
+	PublishMsgPeriod Duration
+	// The maximum number of deals to include in a single PublishStorageDeals
+	// message
+	MaxDealsPerPublishMsg uint64
+	// The maximum collateral that the provider will put up against a deal,
+	// as a multiplier of the minimum collateral bound
+	MaxProviderCollateralMultiplier uint64
+	// The maximum allowed disk usage size in bytes of staging deals not yet
+	// passed to the sealing node by the markets service. 0 is unlimited.
+	MaxStagingDealsBytes int64
+	// The maximum number of parallel online data transfers for storage deals
+	SimultaneousTransfersForStorage uint64
+	// The maximum number of parallel online data transfers for retrieval deals
+	SimultaneousTransfersForRetrieval uint64
+	// Minimum start epoch buffer to give time for sealing of sector with deal.
+	StartEpochSealingBuffer uint64
+
+	// A command used for fine-grained evaluation of storage deals
+	// see https://docs.filecoin.io/mine/lotus/miner-configuration/#using-filters-for-fine-grained-storage-and-retrieval-deal-acceptance for more details
+	Filter string
+	// A command used for fine-grained evaluation of retrieval deals
+	// see https://docs.filecoin.io/mine/lotus/miner-configuration/#using-filters-for-fine-grained-storage-and-retrieval-deal-acceptance for more details
+	RetrievalFilter string
+
+	RetrievalPricing *RetrievalPricing
+}
+
+type RetrievalPricing struct {
+	Strategy string // possible values: "default", "external"
+
+	Default  *RetrievalPricingDefault
+	External *RetrievalPricingExternal
+}
+
+type RetrievalPricingExternal struct {
+	// Path of the external script that will be run to price a retrieval deal.
+	// This parameter is ONLY applicable if the retrieval pricing policy strategy has been configured to "external".
+	Path string
+}
+
+type RetrievalPricingDefault struct {
+	// VerifiedDealsFreeTransfer configures zero fees for data transfer for a retrieval deal
+	// of a payloadCid that belongs to a verified storage deal.
+	// This parameter is ONLY applicable if the retrieval pricing policy strategy has been configured to "default".
+	// default value is true
+	VerifiedDealsFreeTransfer bool
+}
+
 type SealingConfig struct {
 	// 0 = no limit
 	MaxWaitDealsSectors uint64
@@ -148,11 +232,11 @@ type SealingConfig struct {
 
 	WaitDealsDelay Duration
 
-	// CommittedCapacityDefaultLifetime is the default duration a Committed Capacity (CC)
+	// CommittedCapacitySectorLifetime is the default duration a Committed Capacity (CC)
 	// sector will live before it must be extended or converted into sector containing deals
 	// before it is terminated.
 	// Value must be between 180-540 days inclusive.
-	CommittedCapacityDefaultLifetime Duration
+	CommittedCapacitySectorLifetime Duration
 
 	AlwaysKeepUnsealedCopy bool
 

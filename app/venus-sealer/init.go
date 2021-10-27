@@ -616,7 +616,7 @@ func migratePreSealMeta(ctx context.Context, api api.FullNode, metadata string, 
 						Size:     abi.PaddedPieceSize(meta.SectorSize),
 						PieceCID: commD,
 					},
-					DealInfo: &types2.DealInfo{
+					DealInfo: &types2.PieceDealInfo{
 						DealID: dealID,
 						DealSchedule: types2.DealSchedule{
 							StartEpoch: sector.Deal.StartEpoch,

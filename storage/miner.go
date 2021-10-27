@@ -122,8 +122,8 @@ type fullNodeFilteredAPI interface {
 
 	ChainHead(context.Context) (*types.TipSet, error)
 	ChainNotify(context.Context) <-chan []*chain.HeadChange
-	ChainGetRandomnessFromTickets(ctx context.Context, tsk types.TipSetKey, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte) (abi.Randomness, error)
-	ChainGetRandomnessFromBeacon(ctx context.Context, tsk types.TipSetKey, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte) (abi.Randomness, error)
+	StateGetRandomnessFromTickets(ctx context.Context, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte, tsk types.TipSetKey) (abi.Randomness, error)
+	StateGetRandomnessFromBeacon(ctx context.Context, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte, tsk types.TipSetKey) (abi.Randomness, error)
 	ChainGetTipSetByHeight(context.Context, abi.ChainEpoch, types.TipSetKey) (*types.TipSet, error)
 	ChainGetTipSetAfterHeight(context.Context, abi.ChainEpoch, types.TipSetKey) (*types.TipSet, error)
 	ChainGetBlockMessages(context.Context, cid.Cid) (*apitypes.BlockMessages, error)
@@ -206,20 +206,20 @@ func (m *Miner) Run(ctx context.Context) error {
 		adaptedAPI = NewSealingAPIAdapter(m.api, m.messager, m.marketClient)
 
 		// Instantiate a precommit policy.
-		defaultDuration = getDefaultSectorExpirationExtension(m.getSealConfig) - (md.WPoStProvingPeriod * 2)
-		provingBoundary = md.PeriodStart % md.WPoStProvingPeriod
-
-		// TODO: Maybe we update this policy after actor upgrades?
-		pcp = sealing.NewBasicPreCommitPolicy(adaptedAPI, defaultDuration, provingBoundary)
-
-		// address selector.
-		as = func(ctx context.Context, mi miner.MinerInfo, use api.AddrUse, goodFunds, minFunds abi.TokenAmount) (address.Address, abi.TokenAmount, error) {
-			return m.addrSel.AddressFor(ctx, m.api, m.messager, mi, use, goodFunds, minFunds)
-		}
-
-		// sealing configuration.
-		cfg = types2.GetSealingConfigFunc(m.getSealConfig)
+		defaultDuration = getDefaultSectorExpirationExtension(m.getSealConfig)
+		provingBuffer   = md.WPoStProvingPeriod * 2
 	)
+
+	// TODO: Maybe we update this policy after actor upgrades?
+	pcp := sealing.NewBasicPreCommitPolicy(adaptedAPI, defaultDuration, provingBuffer)
+
+	// address selector.
+	as := func(ctx context.Context, mi miner.MinerInfo, use api.AddrUse, goodFunds, minFunds abi.TokenAmount) (address.Address, abi.TokenAmount, error) {
+		return m.addrSel.AddressFor(ctx, m.api, m.messager, mi, use, goodFunds, minFunds)
+	}
+
+	// sealing configuration.
+	cfg := types2.GetSealingConfigFunc(m.getSealConfig)
 
 	// Instantiate the sealing FSM.
 	m.sealing = sealing.New(ctx, adaptedAPI, m.feeCfg, evtsAdapter, m.maddr, m.metadataService, m.sectorInfoService, m.logService, m.sealer, m.sc, m.verif, m.prover,
@@ -281,7 +281,7 @@ func getDefaultSectorExpirationExtension(cfg types2.GetSealingConfigFunc) abi.Ch
 		log.Errorf("sealing config load error: %s", err.Error())
 		return policy.GetMaxSectorExpirationExtension()
 	}
-	return abi.ChainEpoch(c.CommittedCapacityDefaultLifetime.Seconds() / builtin.EpochDurationSeconds)
+	return abi.ChainEpoch(c.CommittedCapacitySectorLifetime.Seconds() / builtin.EpochDurationSeconds)
 }
 
 type StorageWpp struct {

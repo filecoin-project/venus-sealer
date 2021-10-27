@@ -3,7 +3,6 @@ package sealing
 import (
 	"context"
 	"errors"
-	"github.com/filecoin-project/venus-market/piece"
 	"sync"
 	"time"
 
@@ -32,11 +31,9 @@ import (
 	"github.com/filecoin-project/venus-sealer/service"
 	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 	types2 "github.com/filecoin-project/venus-sealer/types"
+
+	"github.com/filecoin-project/venus-market/piece"
 )
-
-const SectorStorePrefix = "/sectors"
-
-var ErrTooManySectorsSealing = xerrors.New("too many sectors sealing")
 
 var log = logging.Logger("sectors")
 
@@ -62,6 +59,7 @@ type SealingAPI interface {
 	StateMinerPreCommitDepositForPower(context.Context, address.Address, miner.SectorPreCommitInfo, types2.TipSetToken) (big.Int, error)
 	StateMinerInitialPledgeCollateral(context.Context, address.Address, miner.SectorPreCommitInfo, types2.TipSetToken) (big.Int, error)
 	StateMinerInfo(context.Context, address.Address, types2.TipSetToken) (miner.MinerInfo, error)
+	StateMinerAvailableBalance(context.Context, address.Address, types2.TipSetToken) (big.Int, error)
 	StateMinerSectorAllocated(context.Context, address.Address, abi.SectorNumber, types2.TipSetToken) (bool, error)
 	StateMarketStorageDeal(context.Context, abi.DealID, types2.TipSetToken) (*apitypes.MarketDeal, error)
 	StateMarketStorageDealProposal(context.Context, abi.DealID, types2.TipSetToken) (market.DealProposal, error)
@@ -72,11 +70,10 @@ type SealingAPI interface {
 	ChainHead(ctx context.Context) (types2.TipSetToken, abi.ChainEpoch, error)
 	ChainBaseFee(context.Context, types2.TipSetToken) (abi.TokenAmount, error)
 	ChainGetMessage(ctx context.Context, mc cid.Cid) (*types.Message, error)
-	ChainGetRandomnessFromBeacon(ctx context.Context, tok types2.TipSetToken, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte) (abi.Randomness, error)
-	ChainGetRandomnessFromTickets(ctx context.Context, tok types2.TipSetToken, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte) (abi.Randomness, error)
+	StateGetRandomnessFromBeacon(ctx context.Context, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte, tok types2.TipSetToken) (abi.Randomness, error)
+	StateGetRandomnessFromTickets(ctx context.Context,personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte, tok types2.TipSetToken) (abi.Randomness, error)
 	ChainReadObj(context.Context, cid.Cid) ([]byte, error)
-	StateMinerAvailableBalance(context.Context, address.Address, types2.TipSetToken) (big.Int, error)
-
+	
 	//for messager
 	MessagerWaitMsg(context.Context, string) (types2.MsgLookup, error)
 	MessagerSearchMsg(context.Context, string) (*types2.MsgLookup, error)
@@ -94,6 +91,8 @@ type AddrSel func(ctx context.Context, mi miner.MinerInfo, use api.AddrUse, good
 
 type Sealing struct {
 	api    SealingAPI
+	DealInfo *CurrentDealInfoManager
+
 	feeCfg config.MinerFeeConfig
 	events Events
 
@@ -128,7 +127,6 @@ type Sealing struct {
 	commiter    *CommitBatcher
 
 	getConfig types2.GetSealingConfigFunc
-	dealInfo  *CurrentDealInfoManager
 
 	//service
 	logService *service.LogService
@@ -142,7 +140,7 @@ type openSector struct {
 
 type pendingPiece struct {
 	size abi.UnpaddedPieceSize
-	deal types2.DealInfo
+	deal types2.PieceDealInfo
 
 	data storage.Data
 
@@ -153,6 +151,7 @@ type pendingPiece struct {
 func New(mctx context.Context, api SealingAPI, fc config.MinerFeeConfig, events Events, maddr address.Address, metaDataService *service.MetadataService, sectorInfoService *service.SectorInfoService, logService *service.LogService, sealer sectorstorage.SectorManager, sc types2.SectorIDCounter, verif ffiwrapper.Verifier, prov ffiwrapper.Prover, pcp PreCommitPolicy, gc types2.GetSealingConfigFunc, notifee SectorStateNotifee, as AddrSel, networkParams *config.NetParamsConfig) *Sealing {
 	s := &Sealing{
 		api:    api,
+		DealInfo: &CurrentDealInfoManager{api},
 		feeCfg: fc,
 		events: events,
 
@@ -178,7 +177,6 @@ func New(mctx context.Context, api SealingAPI, fc config.MinerFeeConfig, events 
 		commiter:    NewCommitBatcher(mctx, networkParams, maddr, api, as, fc, gc, prov),
 
 		getConfig: gc,
-		dealInfo:  &CurrentDealInfoManager{api},
 
 		stats: types2.SectorStats{
 			BySector: map[abi.SectorID]types2.StatSectorState{},

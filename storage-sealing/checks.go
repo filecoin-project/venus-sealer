@@ -64,7 +64,7 @@ func checkPieces(ctx context.Context, maddr address.Address, si types.SectorInfo
 		}
 
 		if proposal.PieceCID != p.Piece.PieceCID {
-			return &ErrInvalidDeals{xerrors.Errorf("piece %d (of %d) of sector %d refers deal %d with wrong PieceCID: %x != %x", i, len(si.Pieces), si.SectorNumber, p.DealInfo.DealID, p.Piece.PieceCID, proposal.PieceCID)}
+			return &ErrInvalidDeals{xerrors.Errorf("piece %d (of %d) of sector %d refers deal %d with wrong PieceCID: %s != %s", i, len(si.Pieces), si.SectorNumber, p.DealInfo.DealID, p.Piece.PieceCID, proposal.PieceCID)}
 		}
 
 		if p.Piece.Size != proposal.PieceSize {
@@ -79,8 +79,6 @@ func checkPieces(ctx context.Context, maddr address.Address, si types.SectorInfo
 	return nil
 }
 
-// checkPrecommit checks that data commitment generated in the sealing process
-//  matches pieces, and that the seal ticket isn't expired
 // checkPrecommit checks that data commitment generated in the sealing process
 //  matches pieces, and that the seal ticket isn't expired
 func checkPrecommit(ctx context.Context, maddr address.Address, si types.SectorInfo, tok types.TipSetToken, height abi.ChainEpoch, api SealingAPI) (err error) {
@@ -156,7 +154,7 @@ func (m *Sealing) checkCommit(ctx context.Context, si types.SectorInfo, proof []
 		return err
 	}
 
-	seed, err := m.api.ChainGetRandomnessFromBeacon(ctx, tok, crypto.DomainSeparationTag_InteractiveSealChallengeSeed, si.SeedEpoch, buf.Bytes())
+	seed, err := m.api.StateGetRandomnessFromBeacon(ctx, crypto.DomainSeparationTag_InteractiveSealChallengeSeed, si.SeedEpoch, buf.Bytes(), tok)
 	if err != nil {
 		return &ErrApi{xerrors.Errorf("failed to get randomness for computing seal proof: %w", err)}
 	}
