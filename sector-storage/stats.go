@@ -26,6 +26,7 @@ func (m *Manager) WorkerStats() map[uuid.UUID]storiface.WorkerStats {
 			GpuUsed:    handle.active.gpuUsed,
 			CpuUse:     handle.active.cpuUse,
 		}
+		handle.lk.Unlock()
 	}
 
 	return out
