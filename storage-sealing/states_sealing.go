@@ -126,16 +126,18 @@ func (m *Sealing) padSector(ctx context.Context, sectorID storage.SectorRef, exi
 		out[i] = ppi
 	}
 
-	if len(existingPieceSizes) == 0 {
+	psFile := storiface.DefaultUnsealedFile(ssize)
+	if bExist, _ := storiface.FileExists(psFile); bExist {
 		//hack for cc sector
-		// save piece info to /var/tmp/s-piece-infos
+		// save piece info to /var/tmp/s-piece-infos-<SectorSize>
 		buf, err := json.Marshal(out)
 		if err != nil {
 			return nil, err
 		}
 
+		log.Infof("default pieceInfo file: %s, buf: %s", pisFile, buf)
 		if err := ioutil.WriteFile(pisFile, buf, 0644); err != nil {
-			return nil, xerrors.Errorf("persisting  (%s): %w", pisFile, err)
+			return nil, xerrors.Errorf("persisting (%s): %w", pisFile, err)
 		}
 	}
 
