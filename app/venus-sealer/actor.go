@@ -1064,7 +1064,7 @@ var actorCompactAllocatedCmd = &cli.Command{
 		}
 		defer closer()
 
-		nodeApi, acloser, err := api.GetFullNodeAPI(cctx)
+		nodeApi, acloser, err := api.GetFullNodeAPIV2(cctx)
 		if err != nil {
 			return err
 		}
