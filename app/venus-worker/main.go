@@ -28,6 +28,7 @@ import (
 
 	sealer "github.com/filecoin-project/venus-sealer"
 	"github.com/filecoin-project/venus-sealer/api"
+	panicreporter "github.com/filecoin-project/venus-sealer/app/panic-reporter"
 	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus-sealer/lib/rpcenc"
@@ -38,7 +39,6 @@ import (
 	"github.com/filecoin-project/venus-sealer/service"
 	"github.com/filecoin-project/venus-sealer/types"
 	"github.com/filecoin-project/venus/fixtures/asset"
-	panicreporter "github.com/filecoin-project/venus-sealer/app/panic-reporter"
 )
 
 var log = logging.Logger("main")
@@ -567,6 +567,7 @@ var runCmd = &cli.Command{
 	},
 }
 
+// nolint
 func cleaningUpRepo(path string) {
 	log.Infof("Cleaning up %s after attempt...", path)
 	if err := os.RemoveAll(path); err != nil {

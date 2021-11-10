@@ -2,8 +2,9 @@ package api
 
 import (
 	"context"
-	"github.com/filecoin-project/venus-market/piece"
 	"time"
+
+	"github.com/filecoin-project/venus-market/piece"
 
 	"github.com/google/uuid"
 	"github.com/ipfs/go-cid"
@@ -100,7 +101,6 @@ type StorageMiner interface {
 	// SectorCommitPending returns a list of pending Commit sectors to be sent in the next aggregate message
 	SectorCommitPending(ctx context.Context) ([]abi.SectorID, error) //perm:admin
 
-	StorageList(ctx context.Context) (map[stores.ID][]stores.Decl, error)
 	StorageLocal(ctx context.Context) (map[stores.ID]string, error)
 	StorageStat(ctx context.Context, id stores.ID) (fsutil.FsStat, error)
 
@@ -307,7 +307,7 @@ func (c *StorageMinerStruct) PledgeSector(ctx context.Context) (abi.SectorID, er
 }
 
 // Redo
-func (c *StorageMinerStruct)  RedoSector(ctx context.Context, rsi storiface.SectorRedoParams) error {
+func (c *StorageMinerStruct) RedoSector(ctx context.Context, rsi storiface.SectorRedoParams) error {
 	return c.Internal.RedoSector(ctx, rsi)
 }
 

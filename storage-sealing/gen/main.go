@@ -12,7 +12,6 @@ import (
 func main() {
 	err := gen.WriteMapEncodersToFile("./cbor_gen.go", "sealing",
 		types.Piece{},
-		types.DealInfo{},
 		types.DealSchedule{},
 		types.SectorInfo{},
 		types.Log{},

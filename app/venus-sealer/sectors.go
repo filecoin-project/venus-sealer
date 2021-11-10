@@ -63,8 +63,8 @@ var sectorsCmd = &cli.Command{
 }
 
 var sectorsRedoCmd = &cli.Command{
-	Name:  "redo",
-	Usage: "redo the specified sector and support sealer locally",
+	Name:      "redo",
+	Usage:     "redo the specified sector and support sealer locally",
 	ArgsUsage: "<sectorNum>",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
@@ -95,8 +95,8 @@ var sectorsRedoCmd = &cli.Command{
 
 		err = nodeApi.RedoSector(ctx, storiface.SectorRedoParams{
 			SectorNumber: abi.SectorNumber(id),
-			SealPath: cctx.String("sealPath"),
-			StorePath: cctx.String("storePath"),
+			SealPath:     cctx.String("sealPath"),
+			StorePath:    cctx.String("storePath"),
 		})
 		if err != nil {
 			return err
@@ -147,7 +147,8 @@ var sectorsDealCmd = &cli.Command{
 		}
 
 		for _, assignedDeal := range assignedDeals {
-			fmt.Println("Assign Deals %d sector %d piece %s offset %d length ", assignedDeal.DealId, assignedDeal.SectorId, assignedDeal.PieceCid, assignedDeal.Offset, assignedDeal.Size)
+			fmt.Printf("Assign Deals %d sector %d piece %s offset %d length %d \n", assignedDeal.DealId,
+				assignedDeal.SectorId, assignedDeal.PieceCid, assignedDeal.Offset, assignedDeal.Size)
 		}
 		return nil
 	},
@@ -496,7 +497,7 @@ var sectorsListCmd = &cli.Command{
 				_, inSSet := commitedIDs[st.SectorID]
 				_, inASet := activeIDs[st.SectorID]
 
-				const verifiedPowerGainMul= 9
+				const verifiedPowerGainMul = 9
 
 				dw, vp := .0, .0
 				estimate := st.Expiration-st.Activation <= 0
