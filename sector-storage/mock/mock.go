@@ -499,10 +499,6 @@ func (mgr *SectorMgr) ReturnFetch(ctx context.Context, callID types.CallID, err 
 	panic("not supported")
 }
 
-func (mgr *SectorMgr) SectorsUnsealPiece(ctx context.Context, sector storage.SectorRef, offset storiface.UnpaddedByteIndex, size abi.UnpaddedPieceSize, randomness abi.SealRandomness, commd *cid.Cid) error {
-	return nil
-}
-
 func (m mockVerifProver) VerifySeal(svi proof5.SealVerifyInfo) (bool, error) {
 	plen, err := svi.SealProof.ProofSize()
 	if err != nil {

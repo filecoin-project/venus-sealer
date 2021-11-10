@@ -3,13 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/filecoin-project/venus-sealer/api"
 	"sort"
+
+	"github.com/filecoin-project/venus-sealer/api"
 
 	"github.com/urfave/cli/v2"
 )
-
-var _test = false
 
 var infoAllCmd = &cli.Command{
 	Name:  "all",

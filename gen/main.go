@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/filecoin-project/venus-sealer/types"
 	"os"
+
+	"github.com/filecoin-project/venus-sealer/types"
 
 	gen "github.com/whyrusleeping/cbor-gen"
 )
@@ -16,7 +17,6 @@ func main() {
 		types.WorkID{},
 		types.SectorInfo{},
 		types.Piece{},
-		types.DealInfo{},
 		types.DealSchedule{},
 		types.Log{},
 	)

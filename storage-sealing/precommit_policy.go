@@ -91,7 +91,12 @@ func (p *BasicPreCommitPolicy) Expiration(ctx context.Context, ps ...types.Piece
 		end = &tmp
 	}
 
-	*end += miner.WPoStProvingPeriod - (*end % miner.WPoStProvingPeriod) + p.provingBuffer - 1
+	// Ensure there is at least one day for the PC message to land without falling below min sector lifetime
+	// TODO: The "one day" should probably be a config, though it doesn't matter too much
+	minExp := epoch + policy.GetMinSectorExpiration() + miner.WPoStProvingPeriod
+	if *end < minExp {
+		end = &minExp
+	}
 
 	return *end, nil
 }

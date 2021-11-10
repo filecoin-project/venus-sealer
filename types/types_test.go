@@ -22,7 +22,7 @@ func TestSectorInfoSerialization(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dealInfo := DealInfo{
+	dealInfo := PieceDealInfo{
 		DealID: d,
 		DealSchedule: DealSchedule{
 			StartEpoch: 0,

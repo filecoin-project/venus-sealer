@@ -5,12 +5,13 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
-	"github.com/filecoin-project/go-bitfield"
-	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
-	api2 "github.com/filecoin-project/venus-market/api"
 	"math"
 	"net/http"
 	"time"
+
+	"github.com/filecoin-project/go-bitfield"
+	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
+	api2 "github.com/filecoin-project/venus-market/api"
 
 	"github.com/gbrlsnchs/jwt/v3"
 	"github.com/ipfs/go-datastore"
@@ -371,7 +372,7 @@ out:
 		return nil
 	}
 
-	log.Infow("winning PoSt warmup successful", "took", time.Now().Sub(start))
+	log.Infow("winning PoSt warmup successful", "took", time.Since(start))
 	return nil
 }
 
