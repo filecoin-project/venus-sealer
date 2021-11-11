@@ -2,25 +2,28 @@ package market_client
 
 import (
 	"context"
-	"github.com/filecoin-project/venus-market/piece"
-	"github.com/filecoin-project/venus-sealer/sector-storage/fr32"
-	"github.com/modern-go/reflect2"
-
 	"encoding/json"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/modern-go/reflect2"
+	"golang.org/x/xerrors"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
 	types2 "github.com/filecoin-project/venus-sealer/types"
-	"github.com/google/uuid"
+
 	"github.com/ipfs-force-community/venus-gateway/marketevent"
 	"github.com/ipfs-force-community/venus-gateway/types"
 	logging "github.com/ipfs/go-log/v2"
 
+	"github.com/filecoin-project/venus-market/piecestorage"
+
 	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
+	"github.com/filecoin-project/venus-sealer/sector-storage/fr32"
 	"github.com/filecoin-project/venus-sealer/storage/sectorblocks"
-	"golang.org/x/xerrors"
-	"time"
 )
 
 var log = logging.Logger("market_event")
@@ -149,7 +152,7 @@ func (e *MarketEvent) processSectorUnsealed(ctx context.Context, reqId uuid.UUID
 		return
 	}
 
-	_, err = piece.ReWrite(req.Dest, upr)
+	_, err = piecestorage.ReWrite(req.Dest, upr)
 	if err != nil {
 		e.error(ctx, reqId, err)
 		return

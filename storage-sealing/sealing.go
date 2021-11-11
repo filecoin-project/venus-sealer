@@ -32,7 +32,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 	types2 "github.com/filecoin-project/venus-sealer/types"
 
-	"github.com/filecoin-project/venus-market/piece"
+	types3 "github.com/filecoin-project/venus-market/types"
 )
 
 var log = logging.Logger("sectors")
@@ -71,18 +71,18 @@ type SealingAPI interface {
 	ChainBaseFee(context.Context, types2.TipSetToken) (abi.TokenAmount, error)
 	ChainGetMessage(ctx context.Context, mc cid.Cid) (*types.Message, error)
 	StateGetRandomnessFromBeacon(ctx context.Context, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte, tok types2.TipSetToken) (abi.Randomness, error)
-	StateGetRandomnessFromTickets(ctx context.Context,personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte, tok types2.TipSetToken) (abi.Randomness, error)
+	StateGetRandomnessFromTickets(ctx context.Context, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte, tok types2.TipSetToken) (abi.Randomness, error)
 	ChainReadObj(context.Context, cid.Cid) ([]byte, error)
-	
+
 	//for messager
 	MessagerWaitMsg(context.Context, string) (types2.MsgLookup, error)
 	MessagerSearchMsg(context.Context, string) (*types2.MsgLookup, error)
 	MessagerSendMsg(ctx context.Context, from, to address.Address, method abi.MethodNum, value, maxFee abi.TokenAmount, params []byte) (string, error)
 
 	//for market
-	GetUnPackedDeals(ctx context.Context, miner address.Address, spec *piece.GetDealSpec) ([]*piece.DealInfoIncludePath, error)                                       //perm:read
-	MarkDealsAsPacking(ctx context.Context, miner address.Address, deals []abi.DealID) error                                                                          //perm:write
-	UpdateDealOnPacking(ctx context.Context, miner address.Address, pieceCID cid.Cid, dealId abi.DealID, sectorid abi.SectorNumber, offset abi.PaddedPieceSize) error //perm:write
+	GetUnPackedDeals(ctx context.Context, miner address.Address, spec *types3.GetDealSpec) ([]*types3.DealInfoIncludePath, error)                   //perm:read
+	MarkDealsAsPacking(ctx context.Context, miner address.Address, deals []abi.DealID) error                                                        //perm:write
+	UpdateDealOnPacking(ctx context.Context, miner address.Address, dealId abi.DealID, sectorid abi.SectorNumber, offset abi.PaddedPieceSize) error //perm:write
 }
 
 type SectorStateNotifee func(before, after types2.SectorInfo)
@@ -90,7 +90,7 @@ type SectorStateNotifee func(before, after types2.SectorInfo)
 type AddrSel func(ctx context.Context, mi miner.MinerInfo, use api.AddrUse, goodFunds, minFunds abi.TokenAmount) (address.Address, abi.TokenAmount, error)
 
 type Sealing struct {
-	api    SealingAPI
+	api      SealingAPI
 	DealInfo *CurrentDealInfoManager
 
 	feeCfg config.MinerFeeConfig
@@ -150,10 +150,10 @@ type pendingPiece struct {
 
 func New(mctx context.Context, api SealingAPI, fc config.MinerFeeConfig, events Events, maddr address.Address, metaDataService *service.MetadataService, sectorInfoService *service.SectorInfoService, logService *service.LogService, sealer sectorstorage.SectorManager, sc types2.SectorIDCounter, verif ffiwrapper.Verifier, prov ffiwrapper.Prover, pcp PreCommitPolicy, gc types2.GetSealingConfigFunc, notifee SectorStateNotifee, as AddrSel, networkParams *config.NetParamsConfig) *Sealing {
 	s := &Sealing{
-		api:    api,
+		api:      api,
 		DealInfo: &CurrentDealInfoManager{api},
-		feeCfg: fc,
-		events: events,
+		feeCfg:   fc,
+		events:   events,
 
 		networkParams: networkParams,
 		maddr:         maddr,
