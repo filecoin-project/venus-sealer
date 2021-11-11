@@ -3,8 +3,6 @@ package storage
 import (
 	"bytes"
 	"context"
-	api2 "github.com/filecoin-project/venus-market/api"
-	"github.com/filecoin-project/venus-market/piece"
 
 	"github.com/ipfs/go-cid"
 	cbg "github.com/whyrusleeping/cbor-gen"
@@ -28,6 +26,9 @@ import (
 	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/market"
 	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
 
+	api4 "github.com/filecoin-project/venus-market/api"
+	types4 "github.com/filecoin-project/venus-market/types"
+
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/constants"
 	sealing "github.com/filecoin-project/venus-sealer/storage-sealing"
@@ -41,10 +42,10 @@ var _ sealing.SealingAPI = new(SealingAPIAdapter)
 type SealingAPIAdapter struct {
 	delegate  fullNodeFilteredAPI
 	messager  api.IMessager
-	marketAPI api2.MarketFullNode
+	marketAPI api4.MarketFullNode
 }
 
-func NewSealingAPIAdapter(api fullNodeFilteredAPI, messager api.IMessager, marketAPI api2.MarketFullNode) SealingAPIAdapter {
+func NewSealingAPIAdapter(api fullNodeFilteredAPI, messager api.IMessager, marketAPI api4.MarketFullNode) SealingAPIAdapter {
 	return SealingAPIAdapter{delegate: api, messager: messager, marketAPI: marketAPI}
 }
 
@@ -472,7 +473,7 @@ func (s SealingAPIAdapter) MessagerSendMsg(ctx context.Context, from, to address
 	})
 }
 
-func (s SealingAPIAdapter) GetUnPackedDeals(ctx context.Context, miner address.Address, spec *piece.GetDealSpec) ([]*piece.DealInfoIncludePath, error) {
+func (s SealingAPIAdapter) GetUnPackedDeals(ctx context.Context, miner address.Address, spec *types4.GetDealSpec) ([]*types4.DealInfoIncludePath, error) {
 	return s.marketAPI.GetUnPackedDeals(ctx, miner, spec)
 }
 
@@ -480,6 +481,6 @@ func (s SealingAPIAdapter) MarkDealsAsPacking(ctx context.Context, miner address
 	return s.marketAPI.MarkDealsAsPacking(ctx, miner, deals)
 }
 
-func (s SealingAPIAdapter) UpdateDealOnPacking(ctx context.Context, miner address.Address, pieceCID cid.Cid, dealId abi.DealID, sectorid abi.SectorNumber, offset abi.PaddedPieceSize) error {
-	return s.marketAPI.UpdateDealOnPacking(ctx, miner, pieceCID, dealId, sectorid, offset)
+func (s SealingAPIAdapter) UpdateDealOnPacking(ctx context.Context, miner address.Address, dealId abi.DealID, sectorid abi.SectorNumber, offset abi.PaddedPieceSize) error {
+	return s.marketAPI.UpdateDealOnPacking(ctx, miner, dealId, sectorid, offset)
 }
