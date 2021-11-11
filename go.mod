@@ -15,7 +15,7 @@ require (
 	github.com/filecoin-project/go-address v0.0.5
 	github.com/filecoin-project/go-bitfield v0.2.4
 	github.com/filecoin-project/go-cbor-util v0.0.0-20201016124514-d0bbec7bfcc4
-	github.com/filecoin-project/go-commp-utils v0.1.1-0.20210427191551-70bf140d31c7
+	github.com/filecoin-project/go-commp-utils v0.1.3
 	github.com/filecoin-project/go-data-transfer v1.10.1
 	github.com/filecoin-project/go-fil-commcid v0.1.0
 	github.com/filecoin-project/go-fil-markets v1.12.0
@@ -30,10 +30,10 @@ require (
 	github.com/filecoin-project/specs-actors/v2 v2.3.5
 	github.com/filecoin-project/specs-actors/v3 v3.1.1
 	github.com/filecoin-project/specs-actors/v5 v5.0.4
-	github.com/filecoin-project/specs-actors/v6 v6.0.0
+	github.com/filecoin-project/specs-actors/v6 v6.0.1
 	github.com/filecoin-project/specs-storage v0.1.1-0.20201105051918-5188d9774506
-	github.com/filecoin-project/venus v1.1.1-rc1
-	github.com/filecoin-project/venus-market v1.0.1
+	github.com/filecoin-project/venus v1.1.3-rc1
+	github.com/filecoin-project/venus-market v1.0.2-0.20211116071853-d29d45417e0c
 	github.com/filecoin-project/venus-messager v1.2.0
 	github.com/gbrlsnchs/jwt/v3 v3.0.0
 	github.com/golang/mock v1.6.0
@@ -55,7 +55,6 @@ require (
 	github.com/ipfs/go-log/v2 v2.3.0
 	github.com/ipfs/go-metrics-interface v0.0.1
 	github.com/ipld/go-car v0.3.2-0.20211001225732-32d0d9933823 // indirect
-	github.com/ipld/go-ipld-prime v0.12.3 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/libp2p/go-buffer-pool v0.0.2
 	github.com/libp2p/go-libp2p-core v0.8.6
@@ -92,6 +91,4 @@ replace github.com/filecoin-project/go-jsonrpc => github.com/ipfs-force-communit
 
 replace github.com/filecoin-project/go-statemachine => github.com/hunjixin/go-statemachine v0.0.0-20210309063909-a65119041e93
 
-replace github.com/filecoin-project/go-statestore => github.com/hunjixin/go-statestore v0.1.1-0.20210309025204-01c69afffbd7
-
-replace github.com/ipfs-force-community/venus-gateway => github.com/ipfs-force-community/venus-gateway v1.1.2-0.20220106064158-4c3c21fa1811
+replace github.com/filecoin-project/go-statestore => github.com/hunjixin/go-statestore v0.1.1-0.20211111090520-981ada391e33
