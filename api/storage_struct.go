@@ -4,8 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/filecoin-project/venus-market/piece"
-
 	"github.com/google/uuid"
 	"github.com/ipfs/go-cid"
 
@@ -16,6 +14,9 @@ import (
 	"github.com/filecoin-project/specs-storage/storage"
 
 	types3 "github.com/filecoin-project/venus-messager/types"
+
+	types4 "github.com/filecoin-project/venus-market/types"
+
 	"github.com/filecoin-project/venus/app/submodule/apitypes"
 	"github.com/filecoin-project/venus/pkg/chain"
 	types2 "github.com/filecoin-project/venus/pkg/types"
@@ -159,7 +160,7 @@ type StorageMiner interface {
 	MessagerGetMessage(ctx context.Context, uuid string) (*types3.Message, error)
 
 	//for market
-	GetDeals(ctx context.Context, pageIndex, pageSize int) ([]*piece.DealInfo, error)
+	GetDeals(ctx context.Context, pageIndex, pageSize int) ([]*types4.DealInfo, error)
 	MarkDealsAsPacking(ctx context.Context, deals []abi.DealID) error
 	UpdateDealStatus(ctx context.Context, dealId abi.DealID, status string) error
 
@@ -281,9 +282,9 @@ type StorageMinerStruct struct {
 
 		DealSector func(ctx context.Context) ([]types.DealAssign, error) `perm:"admin"`
 
-		GetDeals           func(ctx context.Context, pageIndex, pageSize int) ([]*piece.DealInfo, error) `perm:"admin"`
-		MarkDealsAsPacking func(ctx context.Context, deals []abi.DealID) error                           `perm:"admin"`
-		UpdateDealStatus   func(ctx context.Context, dealId abi.DealID, status string) error             `perm:"admin"`
+		GetDeals           func(ctx context.Context, pageIndex, pageSize int) ([]*types4.DealInfo, error) `perm:"admin"`
+		MarkDealsAsPacking func(ctx context.Context, deals []abi.DealID) error                            `perm:"admin"`
+		UpdateDealStatus   func(ctx context.Context, dealId abi.DealID, status string) error              `perm:"admin"`
 	}
 }
 
@@ -639,7 +640,7 @@ func (c *StorageMinerStruct) DealSector(ctx context.Context) ([]types.DealAssign
 	return c.Internal.DealSector(ctx)
 }
 
-func (c *StorageMinerStruct) GetDeals(ctx context.Context, pageIndex, pageSize int) ([]*piece.DealInfo, error) {
+func (c *StorageMinerStruct) GetDeals(ctx context.Context, pageIndex, pageSize int) ([]*types4.DealInfo, error) {
 	return c.Internal.GetDeals(ctx, pageIndex, pageSize)
 }
 

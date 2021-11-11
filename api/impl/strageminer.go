@@ -22,6 +22,9 @@ import (
 	sto "github.com/filecoin-project/specs-storage/storage"
 	multi "github.com/hashicorp/go-multierror"
 
+	api4 "github.com/filecoin-project/venus-market/api"
+	types4 "github.com/filecoin-project/venus-market/types"
+
 	"github.com/filecoin-project/venus/app/submodule/apitypes"
 	"github.com/filecoin-project/venus/pkg/chain"
 	"github.com/filecoin-project/venus/pkg/types"
@@ -62,14 +65,14 @@ type StorageMinerAPI struct {
 
 	Stor *stores.Remote
 
-	MarketClient         api2.MarketFullNode
+	MarketClient         api4.MarketFullNode
 	LogService           *service.LogService
 	NetParams            *config.NetParamsConfig
 	SetSealingConfigFunc types2.SetSealingConfigFunc
 	GetSealingConfigFunc types2.GetSealingConfigFunc
 }
 
-func (sm *StorageMinerAPI) GetDeals(ctx context.Context, pageIndex, pageSize int) ([]*piece.DealInfo, error) {
+func (sm *StorageMinerAPI) GetDeals(ctx context.Context, pageIndex, pageSize int) ([]*types4.DealInfo, error) {
 	addr := sm.Miner.Address()
 	deals, err := sm.MarketClient.GetDeals(ctx, addr, pageIndex, pageSize)
 	return deals, err
@@ -161,7 +164,7 @@ func (sm *StorageMinerAPI) DealSector(ctx context.Context) ([]types2.DealAssign,
 	return sm.Miner.DealSector(ctx)
 }
 
-func (sm *StorageMinerAPI) RedoSector(ctx context.Context, rsi storiface.SectorRedoParams) error  {
+func (sm *StorageMinerAPI) RedoSector(ctx context.Context, rsi storiface.SectorRedoParams) error {
 	return sm.Miner.RedoSector(ctx, rsi)
 }
 
