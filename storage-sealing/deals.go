@@ -2,14 +2,17 @@ package sealing
 
 import (
 	"context"
-	"github.com/filecoin-project/venus-market/piece"
+
+	"github.com/filecoin-project/venus-market/piecestorage"
+	types2 "github.com/filecoin-project/venus-market/types"
+
 	"github.com/filecoin-project/venus-sealer/types"
 )
 
 func (m *Sealing) DealSector(ctx context.Context) ([]types.DealAssign, error) {
 	m.startupWait.Wait()
 
-	deals, err := m.api.GetUnPackedDeals(ctx, m.maddr, &piece.GetDealSpec{MaxPiece: 50})
+	deals, err := m.api.GetUnPackedDeals(ctx, m.maddr, &types2.GetDealSpec{MaxPiece: 50})
 	if err != nil {
 		return nil, err
 	}
@@ -17,7 +20,7 @@ func (m *Sealing) DealSector(ctx context.Context) ([]types.DealAssign, error) {
 	//read from file
 	var assigned []types.DealAssign
 	for _, deal := range deals {
-		r, err := piece.Read(deal.PieceStorage)
+		r, err := piecestorage.Read(deal.PieceStorage)
 		if err != nil {
 			log.Errorf("read piece from piece storage %v", err)
 			continue
@@ -36,7 +39,7 @@ func (m *Sealing) DealSector(ctx context.Context) ([]types.DealAssign, error) {
 			continue
 		}
 
-		err = m.api.UpdateDealOnPacking(ctx, m.maddr, deal.DealProposal.PieceCID, deal.DealID, so.Sector, so.Offset)
+		err = m.api.UpdateDealOnPacking(ctx, m.maddr, deal.DealID, so.Sector, so.Offset)
 		if err != nil {
 			log.Errorf("update deal status on chain ", err)
 			//if error how to fix this problems
