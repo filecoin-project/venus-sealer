@@ -6,18 +6,20 @@ import (
 	"strconv"
 	"text/tabwriter"
 
-	"github.com/filecoin-project/venus-sealer/api"
-	"github.com/filecoin-project/venus/pkg/chain"
-
 	"github.com/fatih/color"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/specs-actors/actors/builtin"
 	"github.com/filecoin-project/specs-storage/storage"
+
+	"github.com/filecoin-project/venus/pkg/chain"
 	"github.com/filecoin-project/venus/pkg/types"
 	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
+
+	"github.com/filecoin-project/venus-sealer/api"
 )
 
 var provingCmd = &cli.Command{
@@ -74,10 +76,16 @@ var provingFaultsCmd = &cli.Command{
 			return err
 		}
 
-		fmt.Printf("Sealer: %s\n", color.BlueString("%s", maddr))
+		fmt.Printf("Miner: %s\n", color.BlueString("%s", maddr))
+
+		ts, err := nodeAPI.ChainHead(ctx)
+		if err != nil {
+			return err
+		}
+		curHeight := ts.Height()
 
 		tw := tabwriter.NewWriter(os.Stdout, 2, 4, 2, ' ', 0)
-		_, _ = fmt.Fprintln(tw, "deadline\tpartition\tsectors")
+		_, _ = fmt.Fprintln(tw, "deadline\tpartition\tsectors\texpiration(days)")
 		err = mas.ForEachDeadline(func(dlIdx uint64, dl miner.Deadline) error {
 			return dl.ForEachPartition(func(partIdx uint64, part miner.Partition) error {
 				faults, err := part.FaultySectors()
@@ -85,7 +93,11 @@ var provingFaultsCmd = &cli.Command{
 					return err
 				}
 				return faults.ForEach(func(num uint64) error {
-					_, _ = fmt.Fprintf(tw, "%d\t%d\t%d\n", dlIdx, partIdx, num)
+					se, err := nodeAPI.StateSectorExpiration(ctx, maddr, abi.SectorNumber(num), types.EmptyTSK)
+					if err != nil {
+						return err
+					}
+					_, _ = fmt.Fprintf(tw, "\t%d\t%d\t%d\t%v\n", dlIdx, partIdx, num, float64((se.Early-curHeight)*builtin.EpochDurationSeconds)/60/60/24)
 					return nil
 				})
 			})
