@@ -97,22 +97,22 @@ func (sectorInfo *sectorInfo) TableName() string {
 
 func fromSectorInfo(sector *types.SectorInfo) (*sectorInfo, error) {
 	sectorInfo := &sectorInfo{
-		Id:           uuid.New().String(),
-		SectorNumber: uint64(sector.SectorNumber),
-		State:        string(sector.State),
-		SectorType:   int64(sector.SectorType),
-		CreationTime: sector.CreationTime,
+		Id:            uuid.New().String(),
+		SectorNumber:  uint64(sector.SectorNumber),
+		State:         string(sector.State),
+		SectorType:    int64(sector.SectorType),
+		CreationTime:  sector.CreationTime,
 		TicketValue:   sector.TicketValue,
 		TicketEpoch:   int64(sector.TicketEpoch),
 		PreCommit1Out: sector.PreCommit1Out,
-		Proof: sector.Proof,
+		Proof:         sector.Proof,
 		//PreCommitDeposit: sector.PreCommitDeposit,
 		PreCommitMessage: "",
 		PreCommitTipSet:  sector.PreCommitTipSet,
 		PreCommit2Fails:  sector.PreCommit2Fails,
 		SeedValue:        sector.SeedValue,
 		SeedEpoch:        int64(sector.SeedEpoch),
-		CommitMessage:   "",
+		CommitMessage:    "",
 		InvalidProofs:    sector.InvalidProofs,
 		FaultReportMsg:   "",
 		Return:           string(sector.Return),
@@ -165,7 +165,6 @@ func fromSectorInfo(sector *types.SectorInfo) (*sectorInfo, error) {
 	return sectorInfo, nil
 }
 
-
 const (
 	fsDatastore       = "datastore"
 	SectorStorePrefix = "/sectors"
@@ -180,50 +179,16 @@ func levelDs(path string, readonly bool) (datastore.Batching, error) {
 	})
 }
 
-func ImportFromLotus(lmRepo, vsRepo string, sid abi.SectorNumber) error {
-	//  read from lotus repo
+func ImportFromLotus(lmRepo, vsRepo string, sid abi.SectorNumber, taskType int) error {
+	//  db for lotus
 	lds, err := levelDs(filepath.Join(lmRepo, fsDatastore, "metadata"), true)
 	if err != nil {
 		return err
 	}
-
-	var sectors []types.SectorInfo
 	ds := namespace.Wrap(lds, datastore.NewKey(SectorStorePrefix))
-	res, err := ds.Query(query.Query{})
-	if err != nil {
-		return err
-	}
-	defer res.Close()
+	defer ds.Close()
 
-	outT := reflect.TypeOf(&sectors).Elem().Elem()
-	rout := reflect.ValueOf(&sectors)
-
-	var errs error
-
-	for {
-		res, ok := res.NextSync()
-		if !ok {
-			break
-		}
-		if res.Error != nil {
-			return res.Error
-		}
-
-		elem := reflect.New(outT)
-		err := cborutil.ReadCborRPC(bytes.NewReader(res.Value), elem.Interface())
-		if err != nil {
-			errs = multierr.Append(errs, xerrors.Errorf("decoding state for key '%s': %w", res.Key, err))
-			continue
-		}
-
-		rout.Elem().Set(reflect.Append(rout.Elem(), elem.Elem()))
-	}
-
-	if errs != nil {
-		return errs
-	}
-
-	// save to venus-sealer
+	// db for venus
 	path, err := homedir.Expand(filepath.Join(vsRepo, "sealer.db"))
 	if err != nil {
 		return xerrors.Errorf("expand path error %v", err)
@@ -244,24 +209,64 @@ func ImportFromLotus(lmRepo, vsRepo string, sid abi.SectorNumber) error {
 
 	sqlDB.SetMaxOpenConns(1)
 	sqlDB.SetMaxIdleConns(1)
-
 	defer sqlDB.Close()
 
 	var maxSectorID abi.SectorNumber = 0
-	for _, sector := range sectors {
-		sSector, err := fromSectorInfo(&sector)
+	if taskType > 0 {
+		var sectors []types.SectorInfo
+		res, err := ds.Query(query.Query{})
 		if err != nil {
 			return err
 		}
-		sSector.Id = uuid.New().String()
-		err = db.Create(&sSector).Error
-		if err != nil {
-			fmt.Printf("put [%d] err: %s \n", sSector.SectorNumber, err.Error())
+		defer res.Close()
+
+		outT := reflect.TypeOf(&sectors).Elem().Elem()
+		rout := reflect.ValueOf(&sectors)
+
+		var errs error
+
+		for {
+			res, ok := res.NextSync()
+			if !ok {
+				break
+			}
+			if res.Error != nil {
+				return res.Error
+			}
+
+			elem := reflect.New(outT)
+			err := cborutil.ReadCborRPC(bytes.NewReader(res.Value), elem.Interface())
+			if err != nil {
+				errs = multierr.Append(errs, xerrors.Errorf("decoding state for key '%s': %w", res.Key, err))
+				continue
+			}
+
+			rout.Elem().Set(reflect.Append(rout.Elem(), elem.Elem()))
 		}
 
-		if maxSectorID < sector.SectorNumber {
-			maxSectorID = sector.SectorNumber
+		if errs != nil {
+			return errs
 		}
+
+		for _, sector := range sectors {
+			sSector, err := fromSectorInfo(&sector)
+			if err != nil {
+				return err
+			}
+			sSector.Id = uuid.New().String()
+			err = db.Create(&sSector).Error
+			if err != nil {
+				fmt.Printf("put [%d] err: %s \n", sSector.SectorNumber, err.Error())
+			}
+
+			if maxSectorID < sector.SectorNumber {
+				maxSectorID = sector.SectorNumber
+			}
+		}
+	}
+
+	if taskType == 1 {
+		return nil
 	}
 
 	// update sector_count
@@ -280,16 +285,16 @@ func ImportFromLotus(lmRepo, vsRepo string, sid abi.SectorNumber) error {
 func main() {
 	var (
 		lmRepo, vsRepo string
-		sid uint64
+		sid            uint64
+		taskType           int
 	)
 
 	flag.StringVar(&lmRepo, "lotus-miner-repo", "", "repo path for lotus-miner")
 	flag.StringVar(&vsRepo, "venus-sealer-repo", "", "repo path for venus-sealer")
-	flag.Uint64Var(&sid, "sid", 0, "last sector id, default: max sector id")
+	flag.Uint64Var(&sid, "sid", 0, "last sector id, default max sector id")
+	flag.IntVar(&taskType, "taskType", 0, "0-only set sid,1-only import sectors,2-all")
 
-	flag.Parse()
-
-	if err := ImportFromLotus(lmRepo, vsRepo, abi.SectorNumber(sid)); err != nil {
+	if err := ImportFromLotus(lmRepo, vsRepo, abi.SectorNumber(sid), taskType); err != nil {
 		fmt.Printf("import err: %s\n", err.Error())
 		return
 	}
