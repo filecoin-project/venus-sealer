@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/filecoin-project/venus-sealer/tool/convert-with-lotus/types"
 	"path/filepath"
 
 	cborutil "github.com/filecoin-project/go-cbor-util"
@@ -15,18 +14,18 @@ import (
 	"github.com/filecoin-project/specs-actors/actors/builtin/miner"
 
 	"github.com/ipfs/go-cid"
+	"github.com/ipfs/go-datastore"
+	levelds "github.com/ipfs/go-ds-leveldb"
 	u "github.com/ipfs/go-ipfs-util"
 	"github.com/mitchellh/go-homedir"
+	ldbopts "github.com/syndtr/goleveldb/leveldb/opt"
 	"golang.org/x/xerrors"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
-	"github.com/ipfs/go-datastore"
-	levelds "github.com/ipfs/go-ds-leveldb"
-	ldbopts "github.com/syndtr/goleveldb/leveldb/opt"
-
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/config"
+	"github.com/filecoin-project/venus-sealer/tool/convert-with-lotus/types"
 )
 
 type SectorPreCommitInfo struct {
@@ -214,7 +213,8 @@ func levelDs(path string, readonly bool) (datastore.Batching, error) {
 	})
 }
 
-func ImportToLotusMiner(lmRepo, vsRepo string, sid abi.SectorNumber) error {
+func ImportToLotusMiner(lmRepo, vsRepo string, sid abi.SectorNumber, taskType int) error {
+	// db for venus
 	path, err := homedir.Expand(filepath.Join(vsRepo, "sealer.db"))
 	if err != nil {
 		return xerrors.Errorf("expand path error %v", err)
@@ -235,54 +235,60 @@ func ImportToLotusMiner(lmRepo, vsRepo string, sid abi.SectorNumber) error {
 
 	sqlDB.SetMaxOpenConns(1)
 	sqlDB.SetMaxIdleConns(1)
-
 	defer sqlDB.Close()
 
-	var sectorInfos []*sectorInfo
-	err = db.Table("sectors_infos").Find(&sectorInfos).Error
-	if err != nil {
-		return err
-	}
-
-	// read message config
-	cfgPath := config.FsConfig(vsRepo)
-	cfg, err := config.MinerFromFile(cfgPath)
-	if err != nil {
-		return err
-	}
-
-	mc, closer, err := api.NewMessageRPC(&cfg.Messager)
-	if err != nil {
-		return err
-	}
-	defer closer()
-
-	result := make([]types.SectorInfo, len(sectorInfos))
-	for index, st := range sectorInfos {
-		newSt, err := st.SectorInfo(mc)
-		if err != nil {
-			return err
-		}
-		result[index] = *newSt
-	}
-
-	// import to lotus-miner repo
+	// db for lotus
 	ds, err := levelDs(filepath.Join(lmRepo, fsDatastore, "metadata"), false)
 	if err != nil {
 		return err
 	}
+	defer ds.Close()
 
-	for _, sector := range result {
-		b, err := cborutil.Dump(&sector)
+	if taskType > 0 {
+		var sectorInfos []*sectorInfo
+		err = db.Table("sectors_infos").Find(&sectorInfos).Error
 		if err != nil {
-			return xerrors.Errorf("serializing refs: %w", err)
+			return err
 		}
 
-		sectorKey := datastore.NewKey(SectorStorePrefix).ChildString(fmt.Sprint(sector.SectorNumber))
-		err = ds.Put(sectorKey, b)
+		// read message config
+		cfgPath := config.FsConfig(vsRepo)
+		cfg, err := config.MinerFromFile(cfgPath)
 		if err != nil {
-			fmt.Printf("put [%s] err: %s \n", sectorKey, err.Error())
+			return err
 		}
+
+		mc, closer, err := api.NewMessageRPC(&cfg.Messager)
+		if err != nil {
+			return err
+		}
+		defer closer()
+
+		result := make([]types.SectorInfo, len(sectorInfos))
+		for index, st := range sectorInfos {
+			newSt, err := st.SectorInfo(mc)
+			if err != nil {
+				return err
+			}
+			result[index] = *newSt
+		}
+
+		for _, sector := range result {
+			b, err := cborutil.Dump(&sector)
+			if err != nil {
+				return xerrors.Errorf("serializing refs: %w", err)
+			}
+
+			sectorKey := datastore.NewKey(SectorStorePrefix).ChildString(fmt.Sprint(sector.SectorNumber))
+			err = ds.Put(sectorKey, b)
+			if err != nil {
+				fmt.Printf("put [%s] err: %s \n", sectorKey, err.Error())
+			}
+		}
+	}
+
+	if taskType == 1 {
+		return nil
 	}
 
 	// update sector_count
@@ -311,15 +317,17 @@ func main() {
 	var (
 		lmRepo, vsRepo string
 		sid            uint64
+		taskType           int
 	)
 
 	flag.StringVar(&lmRepo, "lotus-miner-repo", "", "repo path for lotus-miner")
 	flag.StringVar(&vsRepo, "venus-sealer-repo", "", "repo path for venus-sealer")
 	flag.Uint64Var(&sid, "sid", 0, "last sector id, default max sector id")
+	flag.IntVar(&taskType, "taskType", 0, "0-only set sid,1-only import sectors,2-all")
 
 	flag.Parse()
 
-	if err := ImportToLotusMiner(lmRepo, vsRepo, abi.SectorNumber(sid)); err != nil {
+	if err := ImportToLotusMiner(lmRepo, vsRepo, abi.SectorNumber(sid), taskType); err != nil {
 		fmt.Printf("import sectors err: %s\n", err.Error())
 		return
 	}
