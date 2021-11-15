@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/filecoin-project/venus-sealer/tool/convert-with-lotus/types"
 	"path/filepath"
 
 	cborutil "github.com/filecoin-project/go-cbor-util"
@@ -26,7 +27,6 @@ import (
 
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/config"
-	sealing "github.com/filecoin-project/venus-sealer/tool/to-lotus/types"
 )
 
 type SectorPreCommitInfo struct {
@@ -92,31 +92,31 @@ type sectorInfo struct {
 	LastErr string `gorm:"column:last_err;type:text;" json:"last_err"`
 }
 
-func (sectorInfo *sectorInfo) SectorInfo(api api.IMessager) (*sealing.SectorInfo, error) {
+func (sectorInfo *sectorInfo) SectorInfo(api api.IMessager) (*types.SectorInfo, error) {
 	tc := cid.NewCidV0(u.Hash([]byte("undef")))
 
 	pcCid := &tc
 	cCid := &tc
 	frCid := &tc
 	tCid := &tc
-	if msg, err := api.GetMessageByUid(context.TODO(), sectorInfo.PreCommitMessage); err ==nil && msg.SignedCid != nil {
+	if msg, err := api.GetMessageByUid(context.TODO(), sectorInfo.PreCommitMessage); err == nil && msg.SignedCid != nil {
 		pcCid = msg.SignedCid
 	}
 
-	if msg, err := api.GetMessageByUid(context.TODO(), sectorInfo.CommitMessage); err ==nil && msg.SignedCid != nil {
+	if msg, err := api.GetMessageByUid(context.TODO(), sectorInfo.CommitMessage); err == nil && msg.SignedCid != nil {
 		pcCid = msg.SignedCid
 	}
 
-	if msg, err := api.GetMessageByUid(context.TODO(), sectorInfo.FaultReportMsg); err ==nil && msg.SignedCid != nil {
+	if msg, err := api.GetMessageByUid(context.TODO(), sectorInfo.FaultReportMsg); err == nil && msg.SignedCid != nil {
 		frCid = msg.SignedCid
 	}
 
-	if msg, err := api.GetMessageByUid(context.TODO(), sectorInfo.TerminateMessage); err ==nil && msg.SignedCid != nil {
+	if msg, err := api.GetMessageByUid(context.TODO(), sectorInfo.TerminateMessage); err == nil && msg.SignedCid != nil {
 		tCid = msg.SignedCid
 	}
 
-	sinfo := &sealing.SectorInfo{
-		State:        sealing.SectorState(sectorInfo.State),
+	sinfo := &types.SectorInfo{
+		State:        types.SectorState(sectorInfo.State),
 		SectorNumber: abi.SectorNumber(sectorInfo.SectorNumber),
 		SectorType:   abi.RegisteredSealProof(sectorInfo.SectorType),
 		//	Pieces:           pieces,
@@ -136,7 +136,7 @@ func (sectorInfo *sectorInfo) SectorInfo(api api.IMessager) (*sealing.SectorInfo
 		CommitMessage:    cCid,
 		InvalidProofs:    sectorInfo.InvalidProofs,
 		FaultReportMsg:   frCid,
-		Return:           sealing.ReturnState(sectorInfo.Return),
+		Return:           types.ReturnState(sectorInfo.Return),
 		TerminateMessage: tCid,
 		TerminatedAt:     abi.ChainEpoch(sectorInfo.TerminatedAt),
 		LastErr:          sectorInfo.LastErr,
@@ -214,26 +214,14 @@ func levelDs(path string, readonly bool) (datastore.Batching, error) {
 	})
 }
 
-func UpdateNextID(repo string, sid uint64) error {
-	ds, err := levelDs(filepath.Join(repo, fsDatastore, "metadata"), false)
-	if err != nil {
-		return err
-	}
-
-	buf := make([]byte, binary.MaxVarintLen64)
-	size := binary.PutUvarint(buf, uint64(sid))
-
-	return ds.Put(datastore.NewKey("/storage/nextid"), buf[:size])
-}
-
-func ImportSectorsFromVenusSealer(lmRepo, vsRepo string) error {
+func ImportToLotusMiner(lmRepo, vsRepo string, sid abi.SectorNumber) error {
 	path, err := homedir.Expand(filepath.Join(vsRepo, "sealer.db"))
 	if err != nil {
 		return xerrors.Errorf("expand path error %v", err)
 	}
 
 	db, err := gorm.Open(sqlite.Open(path+"?cache=shared&_cache_size=204800&_journal_mode=wal&sync=normal"), &gorm.Config{
-		// Logger: logger.Default.LogMode(logger.Info), // 日志配置
+		// Logger: logger.Default.LogMode(logger.Info),
 	})
 	if err != nil {
 		return xerrors.Errorf("fail to connect sqlite: %v", err)
@@ -247,6 +235,8 @@ func ImportSectorsFromVenusSealer(lmRepo, vsRepo string) error {
 
 	sqlDB.SetMaxOpenConns(1)
 	sqlDB.SetMaxIdleConns(1)
+
+	defer sqlDB.Close()
 
 	var sectorInfos []*sectorInfo
 	err = db.Table("sectors_infos").Find(&sectorInfos).Error
@@ -267,7 +257,7 @@ func ImportSectorsFromVenusSealer(lmRepo, vsRepo string) error {
 	}
 	defer closer()
 
-	result := make([]sealing.SectorInfo, len(sectorInfos))
+	result := make([]types.SectorInfo, len(sectorInfos))
 	for index, st := range sectorInfos {
 		newSt, err := st.SectorInfo(mc)
 		if err != nil {
@@ -295,38 +285,44 @@ func ImportSectorsFromVenusSealer(lmRepo, vsRepo string) error {
 		}
 	}
 
+	// update sector_count
+	var maxSectorID abi.SectorNumber = 0
+	if sid > 0 {
+		maxSectorID = sid
+	} else {
+		err = db.Raw("select `sector_count` from `metadata` LIMIT 1").Scan(&maxSectorID).Error
+		if err != nil {
+			return xerrors.Errorf("fail to query latest sector id: %v", err)
+		}
+	}
+
+	buf := make([]byte, binary.MaxVarintLen64)
+	size := binary.PutUvarint(buf, uint64(sid))
+	err = ds.Put(datastore.NewKey("/storage/nextid"), buf[:size])
+	if err != nil {
+		return xerrors.Errorf("fail to update latest sector id: %v", err)
+	}
+	fmt.Printf("latest sector id: %d\n", maxSectorID)
+
 	return nil
 }
 
 func main() {
 	var (
-		task           string
 		lmRepo, vsRepo string
 		sid            uint64
 	)
 
-	flag.StringVar(&task, "task", "correct-nextid", "what are you going to do? correct-nextid or import-sectors?")
 	flag.StringVar(&lmRepo, "lotus-miner-repo", "", "repo path for lotus-miner")
 	flag.StringVar(&vsRepo, "venus-sealer-repo", "", "repo path for venus-sealer")
-	flag.Uint64Var(&sid, "sid", 0, "last sector id = max sector id")
+	flag.Uint64Var(&sid, "sid", 0, "last sector id, default max sector id")
 
 	flag.Parse()
 
-	if task == "correct-nextid" {
-		fmt.Printf("lotus-miner repo: %s, nextid: %d\n", lmRepo, sid)
-
-		if err := UpdateNextID(lmRepo, sid); err != nil {
-			fmt.Printf("update nextid err: %s\n", err.Error())
-			return
-		}
-
-		fmt.Printf("update nextid: %d\n", sid)
-	} else {
-		if err := ImportSectorsFromVenusSealer(lmRepo, vsRepo); err != nil {
-			fmt.Printf("import sectors err: %s\n", err.Error())
-			return
-		}
-
-		fmt.Println("import sectors success.")
+	if err := ImportToLotusMiner(lmRepo, vsRepo, abi.SectorNumber(sid)); err != nil {
+		fmt.Printf("import sectors err: %s\n", err.Error())
+		return
 	}
+
+	fmt.Println("import success.")
 }
