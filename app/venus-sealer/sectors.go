@@ -235,7 +235,7 @@ var sectorsStatusCmd = &cli.Command{
 		}
 
 		if cctx.Bool("partition-info") {
-			fullApi, nCloser, err := api.GetFullNodeAPI(cctx)
+			fullApi, nCloser, err := api.GetFullNodeAPIV2(cctx)
 			if err != nil {
 				return err
 			}
@@ -665,7 +665,7 @@ var sectorsCheckExpireCmd = &cli.Command{
 	},
 	Action: func(cctx *cli.Context) error {
 
-		fullApi, nCloser, err := api.GetFullNodeAPI(cctx)
+		fullApi, nCloser, err := api.GetFullNodeAPIV2(cctx)
 		if err != nil {
 			return err
 		}
@@ -891,7 +891,7 @@ var sectorsRenewCmd = &cli.Command{
 
 		spec := &types.MessageSendSpec{MaxFee: abi.TokenAmount(mf)}
 
-		fullApi, nCloser, err := api.GetFullNodeAPI(cctx)
+		fullApi, nCloser, err := api.GetFullNodeAPIV2(cctx)
 		if err != nil {
 			return err
 		}
@@ -1657,7 +1657,7 @@ var sectorsCapacityCollateralCmd = &cli.Command{
 	},
 	Action: func(cctx *cli.Context) error {
 
-		nApi, nCloser, err := api.GetFullNodeAPI(cctx)
+		nApi, nCloser, err := api.GetFullNodeAPIV2(cctx)
 		if err != nil {
 			return err
 		}
@@ -1791,7 +1791,7 @@ var sectorsExpiredCmd = &cli.Command{
 		}
 		defer closer()
 
-		fullApi, nCloser, err := api.GetFullNodeAPI(cctx)
+		fullApi, nCloser, err := api.GetFullNodeAPIV2(cctx)
 		if err != nil {
 			return xerrors.Errorf("getting fullnode api: %w", err)
 		}
