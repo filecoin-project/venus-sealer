@@ -30,10 +30,17 @@ deps:
 
 lotus-fix:
 	rm -f lotus-fix
-	go build -o lotus-fix ./tool/to-lotus
+	go build -o lotus-fix ./tool/convert-with-lotus/to-lotus
 
 .PHONY: lotus-fix
 BINS+=lotus-fix
+
+lotus-convert:
+	rm -f lotus-convert
+	go build -o lotus-convert ./tool/convert-with-lotus/from-lotus
+
+.PHONY: lotus-convert
+BINS+=lotus-convert
 
 lint:
 	go run github.com/golangci/golangci-lint/cmd/golangci-lint run

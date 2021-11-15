@@ -97,7 +97,7 @@ var provingFaultsCmd = &cli.Command{
 					if err != nil {
 						return err
 					}
-					_, _ = fmt.Fprintf(tw, "\t%d\t%d\t%d\t%v\n", dlIdx, partIdx, num, float64((se.Early-curHeight)*builtin.EpochDurationSeconds)/60/60/24)
+					_, _ = fmt.Fprintf(tw, "  %d\t%d\t%d\t%v\n", dlIdx, partIdx, num, float64((se.Early-curHeight)*builtin.EpochDurationSeconds)/60/60/24)
 					return nil
 				})
 			})
