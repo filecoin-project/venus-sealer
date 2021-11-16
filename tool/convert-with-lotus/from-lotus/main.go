@@ -212,43 +212,43 @@ func ImportFromLotus(lmRepo, vsRepo string, sid abi.SectorNumber, taskType int) 
 	defer sqlDB.Close()
 
 	var maxSectorID abi.SectorNumber = 0
-	if taskType > 0 {
-		var sectors []types.SectorInfo
-		res, err := ds.Query(query.Query{})
+	var sectors []types.SectorInfo
+	res, err := ds.Query(query.Query{})
+	if err != nil {
+		return err
+	}
+	defer res.Close()
+
+	outT := reflect.TypeOf(&sectors).Elem().Elem()
+	rout := reflect.ValueOf(&sectors)
+
+	var errs error
+
+	for {
+		res, ok := res.NextSync()
+		if !ok {
+			break
+		}
+		if res.Error != nil {
+			return res.Error
+		}
+
+		elem := reflect.New(outT)
+		err := cborutil.ReadCborRPC(bytes.NewReader(res.Value), elem.Interface())
 		if err != nil {
-			return err
-		}
-		defer res.Close()
-
-		outT := reflect.TypeOf(&sectors).Elem().Elem()
-		rout := reflect.ValueOf(&sectors)
-
-		var errs error
-
-		for {
-			res, ok := res.NextSync()
-			if !ok {
-				break
-			}
-			if res.Error != nil {
-				return res.Error
-			}
-
-			elem := reflect.New(outT)
-			err := cborutil.ReadCborRPC(bytes.NewReader(res.Value), elem.Interface())
-			if err != nil {
-				errs = multierr.Append(errs, xerrors.Errorf("decoding state for key '%s': %w", res.Key, err))
-				continue
-			}
-
-			rout.Elem().Set(reflect.Append(rout.Elem(), elem.Elem()))
+			errs = multierr.Append(errs, xerrors.Errorf("decoding state for key '%s': %w", res.Key, err))
+			continue
 		}
 
-		if errs != nil {
-			return errs
-		}
+		rout.Elem().Set(reflect.Append(rout.Elem(), elem.Elem()))
+	}
 
-		for _, sector := range sectors {
+	if errs != nil {
+		return errs
+	}
+
+	for _, sector := range sectors {
+		if taskType > 0 {
 			sSector, err := fromSectorInfo(&sector)
 			if err != nil {
 				return err
@@ -258,10 +258,9 @@ func ImportFromLotus(lmRepo, vsRepo string, sid abi.SectorNumber, taskType int) 
 			if err != nil {
 				fmt.Printf("put [%d] err: %s \n", sSector.SectorNumber, err.Error())
 			}
-
-			if maxSectorID < sector.SectorNumber {
-				maxSectorID = sector.SectorNumber
-			}
+		}
+		if maxSectorID < sector.SectorNumber {
+			maxSectorID = sector.SectorNumber
 		}
 	}
 
@@ -269,7 +268,7 @@ func ImportFromLotus(lmRepo, vsRepo string, sid abi.SectorNumber, taskType int) 
 		return nil
 	}
 
-	// update sector_count
+	// update latest sector id
 	if sid > 0 {
 		maxSectorID = sid
 	}
@@ -286,13 +285,15 @@ func main() {
 	var (
 		lmRepo, vsRepo string
 		sid            uint64
-		taskType           int
+		taskType       int
 	)
 
 	flag.StringVar(&lmRepo, "lotus-miner-repo", "", "repo path for lotus-miner")
 	flag.StringVar(&vsRepo, "venus-sealer-repo", "", "repo path for venus-sealer")
 	flag.Uint64Var(&sid, "sid", 0, "last sector id, default max sector id")
 	flag.IntVar(&taskType, "taskType", 0, "0-only set sid,1-only import sectors,2-all")
+
+	flag.Parse()
 
 	if err := ImportFromLotus(lmRepo, vsRepo, abi.SectorNumber(sid), taskType); err != nil {
 		fmt.Printf("import err: %s\n", err.Error())
