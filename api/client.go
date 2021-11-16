@@ -91,10 +91,7 @@ func ReqContext(cctx *cli.Context) context.Context {
 	go func() {
 		sig := <-sigChan
 		log.Warnf("receive sig: %v", sig)
-		switch sig {
-		case syscall.SIGTERM:
-			done()
-		}
+		done()
 	}()
 	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
 
