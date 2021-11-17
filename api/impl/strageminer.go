@@ -152,6 +152,10 @@ func (sm *StorageMinerAPI) PledgeSector(ctx context.Context) (abi.SectorID, erro
 	}
 }
 
+func (sm *StorageMinerAPI) CurrentSectorID(ctx context.Context) (abi.SectorNumber, error) {
+	return sm.Miner.CurrentSectorID(ctx)
+}
+
 func (sm *StorageMinerAPI) DealSector(ctx context.Context) ([]types2.DealAssign, error) {
 	return sm.Miner.DealSector(ctx)
 }
