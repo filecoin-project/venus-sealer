@@ -45,3 +45,5 @@ func init() {
 		SetAddressNetwork(address.Mainnet)
 	}
 }
+
+const BlockDelaySecs = uint64(builtin2.EpochDurationSeconds)

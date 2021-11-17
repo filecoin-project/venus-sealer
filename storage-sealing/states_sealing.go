@@ -8,6 +8,7 @@ import (
 	"golang.org/x/xerrors"
 	"io/ioutil"
 	"strings"
+	"time"
 
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
@@ -17,6 +18,7 @@ import (
 	"github.com/filecoin-project/go-statemachine"
 	"github.com/filecoin-project/specs-storage/storage"
 
+	builtin2 "github.com/filecoin-project/specs-actors/v2/actors/builtin"
 	actors "github.com/filecoin-project/venus/pkg/types/specactors"
 	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
 	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
@@ -24,6 +26,7 @@ import (
 	"github.com/filecoin-project/specs-actors/v5/actors/runtime/proof"
 
 	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
 	"github.com/filecoin-project/venus-sealer/types"
 )
@@ -535,7 +538,7 @@ func (m *Sealing) handlePreCommitWait(ctx statemachine.Context, sector types.Sec
 }
 
 func (m *Sealing) handleWaitSeed(ctx statemachine.Context, sector types.SectorInfo) error {
-	tok, _, err := m.api.ChainHead(ctx.Context())
+	tok, height, err := m.api.ChainHead(ctx.Context())
 	if err != nil {
 		log.Errorf("handleWaitSeed: api error, not proceeding: %+v", err)
 		return nil
@@ -550,42 +553,80 @@ func (m *Sealing) handleWaitSeed(ctx statemachine.Context, sector types.SectorIn
 	}
 
 	randHeight := pci.PreCommitEpoch + policy.GetPreCommitChallengeDelay()
+	triggerAt := randHeight + abi.ChainEpoch(InteractivePoRepConfidence)
 
-	err = m.events.ChainAt(ctx.Context(), func(ectx context.Context, _ types.TipSetToken, curH abi.ChainEpoch) error {
-		// in case of null blocks the randomness can land after the tipset we
-		// get from the events API
-		tok, _, err := m.api.ChainHead(ctx.Context())
+	log.Infof("WaitSeed for %d, triggerAt: %d, curHeight: %d", sector.SectorNumber, triggerAt, height)
+	if height < triggerAt {
+		select {
+		case <-constants.Clock.After(time.Minute * time.Duration((triggerAt-height)/2+1)):
+
+		}
+	}
+	log.Infof("WaitSeed for %d, sleep end", sector.SectorNumber)
+
+	for {
+		tok, height, err := m.api.ChainHead(ctx.Context())
 		if err != nil {
 			log.Errorf("handleCommitting: api error, not proceeding: %+v", err)
 			return nil
 		}
 
-		buf := new(bytes.Buffer)
-		if err := m.maddr.MarshalCBOR(buf); err != nil {
-			return err
+		if height >= triggerAt {
+			buf := new(bytes.Buffer)
+			if err := m.maddr.MarshalCBOR(buf); err != nil {
+				return err
+			}
+
+			rand, err := m.api.StateGetRandomnessFromBeacon(ctx.Context(), crypto.DomainSeparationTag_InteractiveSealChallengeSeed, randHeight, buf.Bytes(), tok)
+			if err != nil {
+				err = xerrors.Errorf("failed to get randomness for computing seal proof (ch %d; rh %d; tsk %x): %w", height, randHeight, tok, err)
+
+				_ = ctx.Send(SectorChainPreCommitFailed{error: err})
+				return err
+			}
+
+			_ = ctx.Send(SectorSeedReady{SeedValue: abi.InteractiveSealRandomness(rand), SeedEpoch: randHeight})
+
+			return nil
+		} else {
+			constants.Clock.Sleep(time.Second * time.Duration(builtin2.EpochDurationSeconds))
 		}
-
-		rand, err := m.api.StateGetRandomnessFromBeacon(ectx, crypto.DomainSeparationTag_InteractiveSealChallengeSeed, randHeight, buf.Bytes(), tok)
-		if err != nil {
-			err = xerrors.Errorf("failed to get randomness for computing seal proof (ch %d; rh %d; tsk %x): %w", curH, randHeight, tok, err)
-
-			_ = ctx.Send(SectorChainPreCommitFailed{error: err})
-			return err
-		}
-
-		_ = ctx.Send(SectorSeedReady{SeedValue: abi.InteractiveSealRandomness(rand), SeedEpoch: randHeight})
-
-		return nil
-	}, func(ctx context.Context, ts types.TipSetToken) error {
-		log.Warn("revert in interactive commit sector step")
-		// TODO: need to cancel running process and restart...
-		return nil
-	}, InteractivePoRepConfidence, randHeight)
-	if err != nil {
-		log.Warn("waitForPreCommitMessage ChainAt errored: ", err)
 	}
+	//err = m.events.ChainAt(ctx.Context(), func(ectx context.Context, _ types.TipSetToken, curH abi.ChainEpoch) error {
+	//	// in case of null blocks the randomness can land after the tipset we
+	//	// get from the events API
+	//	tok, _, err := m.api.ChainHead(ctx.Context())
+	//	if err != nil {
+	//		log.Errorf("handleCommitting: api error, not proceeding: %+v", err)
+	//		return nil
+	//	}
+	//
+	//	buf := new(bytes.Buffer)
+	//	if err := m.maddr.MarshalCBOR(buf); err != nil {
+	//		return err
+	//	}
+	//
+	//	rand, err := m.api.StateGetRandomnessFromBeacon(ectx, crypto.DomainSeparationTag_InteractiveSealChallengeSeed, randHeight, buf.Bytes(), tok)
+	//	if err != nil {
+	//		err = xerrors.Errorf("failed to get randomness for computing seal proof (ch %d; rh %d; tsk %x): %w", curH, randHeight, tok, err)
+	//
+	//		_ = ctx.Send(SectorChainPreCommitFailed{error: err})
+	//		return err
+	//	}
+	//
+	//	_ = ctx.Send(SectorSeedReady{SeedValue: abi.InteractiveSealRandomness(rand), SeedEpoch: randHeight})
+	//
+	//	return nil
+	//}, func(ctx context.Context, ts types.TipSetToken) error {
+	//	log.Warn("revert in interactive commit sector step")
+	//	// TODO: need to cancel running process and restart...
+	//	return nil
+	//}, InteractivePoRepConfidence, randHeight)
+	//if err != nil {
+	//	log.Warn("waitForPreCommitMessage ChainAt errored: ", err)
+	//}
 
-	return nil
+	// return nil
 }
 
 func (m *Sealing) handleCommitting(ctx statemachine.Context, sector types.SectorInfo) error {
