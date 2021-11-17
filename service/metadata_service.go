@@ -32,3 +32,7 @@ func (metadataService *MetadataService) SaveMinerAddress(mAddr address.Address) 
 func (metadataService *MetadataService) Next() (abi.SectorNumber, error) {
 	return metadataService.MetaDataRepo.IncreaseStorageCounter()
 }
+
+func (metadataService *MetadataService) GetStorageCounter() (abi.SectorNumber, error) {
+	return metadataService.MetaDataRepo.GetStorageCounter()
+}

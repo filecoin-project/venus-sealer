@@ -40,7 +40,7 @@ func (ve Version) EqMajorMinor(v2 Version) bool {
 }
 
 // BuildVersion is the local build version, set by build system
-const BuildVersion = "1.3.2"
+const BuildVersion = "1.3.3"
 
 func UserVersion() string {
 	if os.Getenv("VENUS_SEALER_VERSION_IGNORE_COMMIT") == "1" {

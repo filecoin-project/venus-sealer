@@ -40,6 +40,10 @@ func (m *Miner) PledgeSector(ctx context.Context) (storage.SectorRef, error) {
 	return m.sealing.PledgeSector(ctx)
 }
 
+func (m *Miner) CurrentSectorID(ctx context.Context) (abi.SectorNumber, error) {
+	return m.sealing.CurrentSectorID(ctx)
+}
+
 func (m *Miner) DealSector(ctx context.Context) ([]types.DealAssign, error) {
 	return m.sealing.DealSector(ctx)
 }

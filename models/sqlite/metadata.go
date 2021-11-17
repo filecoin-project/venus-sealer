@@ -88,3 +88,13 @@ func (m *metadataRepo) SetStorageCounter(counter uint64) error {
 	meta.SectorCount = counter
 	return m.DB.Save(&meta).Error
 }
+
+func (m *metadataRepo) GetStorageCounter() (abi.SectorNumber, error) {
+	m.lk.Lock()
+	defer m.lk.Unlock()
+	var meta metadata
+	if err := m.DB.First(&meta).Error; err != nil {
+		return 0, err
+	}
+	return abi.SectorNumber(meta.SectorCount), nil
+}

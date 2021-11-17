@@ -46,6 +46,7 @@ var sectorsCmd = &cli.Command{
 		sectorsRefsCmd,
 		sectorsUpdateCmd,
 		sectorsPledgeCmd,
+		sectorsCurrentIDCmd,
 		sectorsCheckExpireCmd,
 		sectorsExpiredCmd,
 		sectorsRenewCmd,
@@ -125,6 +126,28 @@ var sectorsPledgeCmd = &cli.Command{
 		}
 
 		fmt.Println("Created CC sector: ", id.Number)
+
+		return nil
+	},
+}
+
+var sectorsCurrentIDCmd = &cli.Command{
+	Name:  "id",
+	Usage: "display the recently allocated sector id",
+	Action: func(cctx *cli.Context) error {
+		nodeApi, closer, err := api.GetStorageMinerAPI(cctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+		ctx := api.ReqContext(cctx)
+
+		id, err := nodeApi.CurrentSectorID(ctx)
+		if err != nil {
+			return err
+		}
+
+		fmt.Println("Current Sector ID: ", id)
 
 		return nil
 	},

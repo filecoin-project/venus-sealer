@@ -20,6 +20,10 @@ import (
 	"github.com/filecoin-project/venus-sealer/types"
 )
 
+func (m *Sealing) CurrentSectorID(ctx context.Context) (abi.SectorNumber, error) {
+	return m.sc.GetStorageCounter()
+}
+
 func (m *Sealing) PledgeSector(ctx context.Context) (storage.SectorRef, error) {
 	m.startupWait.Wait()
 

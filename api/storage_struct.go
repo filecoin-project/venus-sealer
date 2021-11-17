@@ -44,6 +44,8 @@ type StorageMiner interface {
 	// Temp api for testing
 	PledgeSector(context.Context) (abi.SectorID, error)
 
+	CurrentSectorID(ctx context.Context) (abi.SectorNumber, error)
+
 	// Redo
 	RedoSector(ctx context.Context, rsi storiface.SectorRedoParams) error
 
@@ -178,6 +180,8 @@ type StorageMinerStruct struct {
 
 		PledgeSector func(context.Context) (abi.SectorID, error) `perm:"write"`
 
+		CurrentSectorID func(ctx context.Context) (abi.SectorNumber, error) `perm:"read"`
+
 		RedoSector func(ctx context.Context, rsi storiface.SectorRedoParams) error `perm:"write"`
 
 		SectorsList                   func(context.Context) ([]abi.SectorNumber, error)                                                `perm:"read"`
@@ -304,6 +308,10 @@ func (c *StorageMinerStruct) ActorAddressConfig(ctx context.Context) (AddressCon
 
 func (c *StorageMinerStruct) PledgeSector(ctx context.Context) (abi.SectorID, error) {
 	return c.Internal.PledgeSector(ctx)
+}
+
+func (c *StorageMinerStruct) CurrentSectorID(ctx context.Context) (abi.SectorNumber, error) {
+	return c.Internal.CurrentSectorID(ctx)
 }
 
 // Redo
