@@ -164,7 +164,7 @@ strip_version() {
 }
 
 recursive_release_log() {
-    local start="${1:-$(git tag -l | sort -V | grep -v -- '-rc' | grep 'v'| tail -n2 | head -1)}"
+    local start="${1:-$(git tag -l | sort -V | grep -v -- '-rc' | grep 'v'| tail -n1)}"
     local end="${2:-$(git rev-parse HEAD)}"
     local repo_root="$(git rev-parse --show-toplevel)"
     local module="$(go list -m)"
