@@ -88,6 +88,7 @@ var stateList = []stateMeta{
 
 	{col: color.FgBlue, state: types.Empty},
 	{col: color.FgBlue, state: types.WaitDeals},
+	{col: color.FgBlue, state: types.AddPiece},
 
 	{col: color.FgRed, state: types.UndefinedSectorState},
 	{col: color.FgYellow, state: types.Packing},
@@ -96,10 +97,15 @@ var stateList = []stateMeta{
 	{col: color.FgYellow, state: types.PreCommit2},
 	{col: color.FgYellow, state: types.PreCommitting},
 	{col: color.FgYellow, state: types.PreCommitWait},
+	{col: color.FgYellow, state: types.SubmitPreCommitBatch},
+	{col: color.FgYellow, state: types.PreCommitBatchWait},
 	{col: color.FgYellow, state: types.WaitSeed},
 	{col: color.FgYellow, state: types.Committing},
+	{col: color.FgYellow, state: types.CommitFinalize},
 	{col: color.FgYellow, state: types.SubmitCommit},
 	{col: color.FgYellow, state: types.CommitWait},
+	{col: color.FgYellow, state: types.SubmitCommitAggregate},
+	{col: color.FgYellow, state: types.CommitAggregateWait},
 	{col: color.FgYellow, state: types.FinalizeSector},
 
 	{col: color.FgCyan, state: types.Terminating},
@@ -110,11 +116,13 @@ var stateList = []stateMeta{
 	{col: color.FgCyan, state: types.Removed},
 
 	{col: color.FgRed, state: types.FailedUnrecoverable},
+	{col: color.FgRed, state: types.AddPieceFailed},
 	{col: color.FgRed, state: types.SealPreCommit1Failed},
 	{col: color.FgRed, state: types.SealPreCommit2Failed},
 	{col: color.FgRed, state: types.PreCommitFailed},
 	{col: color.FgRed, state: types.ComputeProofFailed},
 	{col: color.FgRed, state: types.CommitFailed},
+	{col: color.FgRed, state: types.CommitFinalizeFailed},
 	{col: color.FgRed, state: types.PackingFailed},
 	{col: color.FgRed, state: types.FinalizeFailed},
 	{col: color.FgRed, state: types.Faulty},
