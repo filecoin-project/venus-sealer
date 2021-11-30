@@ -3,12 +3,16 @@ package storage
 import (
 	"context"
 	"io"
+	"time"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/specs-storage/storage"
 
+	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
+
 	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
 	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 	"github.com/filecoin-project/venus-sealer/types"
@@ -48,8 +52,8 @@ func (m *Miner) DealSector(ctx context.Context) ([]types.DealAssign, error) {
 	return m.sealing.DealSector(ctx)
 }
 
-func (m *Miner) RedoSector(ctx context.Context, rsi storiface.SectorRedoParams) error  {
-	return  m.sealing.RedoSector(ctx, rsi)
+func (m *Miner) RedoSector(ctx context.Context, rsi storiface.SectorRedoParams) error {
+	return m.sealing.RedoSector(ctx, rsi)
 }
 
 func (m *Miner) ForceSectorState(ctx context.Context, id abi.SectorNumber, state types.SectorState) error {
@@ -94,4 +98,28 @@ func (m *Miner) MarkForUpgrade(id abi.SectorNumber) error {
 
 func (m *Miner) IsMarkedForUpgrade(id abi.SectorNumber) bool {
 	return m.sealing.IsMarkedForUpgrade(id)
+}
+
+func (s *Miner) MockWindowPoSt(ctx context.Context, sis []proof2.SectorInfo, rand abi.PoStRandomness) error {
+	mid, err := address.IDFromAddress(s.maddr)
+	if err != nil {
+		return err
+	}
+
+	tCtx := context.TODO()
+	for {
+		tsStart := constants.Clock.Now()
+
+		_, _, err = s.sealer.GenerateWindowPoSt(tCtx, abi.ActorID(mid), sis, append(abi.PoStRandomness{}, rand...))
+		if err != nil {
+			log.Warnf("generate window post failed: %v", err.Error())
+			continue
+		}
+
+		elapsed := time.Since(tsStart)
+		log.Infow("mock generate window post", "elapsed", elapsed)
+		break
+	}
+
+	return nil
 }
