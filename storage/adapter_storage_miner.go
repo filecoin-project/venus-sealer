@@ -3,9 +3,6 @@ package storage
 import (
 	"bytes"
 	"context"
-	api2 "github.com/filecoin-project/venus-market/api"
-	types4 "github.com/filecoin-project/venus-market/types"
-
 	"github.com/ipfs/go-cid"
 	cbg "github.com/whyrusleeping/cbor-gen"
 	"golang.org/x/xerrors"
