@@ -3,6 +3,7 @@ package sealing
 import (
 	"context"
 	"errors"
+	types3 "github.com/filecoin-project/venus-market/types"
 	"sync"
 	"time"
 
@@ -33,6 +34,7 @@ import (
 	types2 "github.com/filecoin-project/venus-sealer/types"
 
 	types3 "github.com/filecoin-project/venus-market/types"
+	"github.com/filecoin-project/venus-market/piecestorage"
 )
 
 var log = logging.Logger("sectors")
@@ -126,8 +128,8 @@ type Sealing struct {
 	precommiter *PreCommitBatcher
 	commiter    *CommitBatcher
 
-	getConfig types2.GetSealingConfigFunc
-
+	getConfig    types2.GetSealingConfigFunc
+	pieceStorage piecestorage.IPieceStorage
 	//service
 	logService *service.LogService
 }
@@ -148,13 +150,14 @@ type pendingPiece struct {
 	accepted func(abi.SectorNumber, abi.UnpaddedPieceSize, error)
 }
 
-func New(mctx context.Context, api SealingAPI, fc config.MinerFeeConfig, events Events, maddr address.Address, metaDataService *service.MetadataService, sectorInfoService *service.SectorInfoService, logService *service.LogService, sealer sectorstorage.SectorManager, sc types2.SectorIDCounter, verif ffiwrapper.Verifier, prov ffiwrapper.Prover, pcp PreCommitPolicy, gc types2.GetSealingConfigFunc, notifee SectorStateNotifee, as AddrSel, networkParams *config.NetParamsConfig) *Sealing {
+func New(mctx context.Context, api SealingAPI, fc config.MinerFeeConfig, events Events, maddr address.Address, metaDataService *service.MetadataService, sectorInfoService *service.SectorInfoService, logService *service.LogService, sealer sectorstorage.SectorManager, sc types2.SectorIDCounter, verif ffiwrapper.Verifier, prov ffiwrapper.Prover, pcp PreCommitPolicy, gc types2.GetSealingConfigFunc, notifee SectorStateNotifee, as AddrSel, networkParams *config.NetParamsConfig, pieceStorage piecestorage.IPieceStorage) *Sealing {
 	s := &Sealing{
 		api:      api,
 		DealInfo: &CurrentDealInfoManager{api},
 		feeCfg:   fc,
 		events:   events,
 
+		pieceStorage:  pieceStorage,
 		networkParams: networkParams,
 		maddr:         maddr,
 		sealer:        sealer,
