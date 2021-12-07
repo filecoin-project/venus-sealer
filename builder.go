@@ -5,6 +5,8 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	storage2 "github.com/filecoin-project/specs-storage/storage"
 	api2 "github.com/filecoin-project/venus-market/api"
+	config2 "github.com/filecoin-project/venus-market/config"
+	"github.com/filecoin-project/venus-market/piecestorage"
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/api/impl"
 	"github.com/filecoin-project/venus-sealer/config"
@@ -167,6 +169,7 @@ func Repo(cfg *config.StorageMiner) Option {
 			Override(new(sectorstorage.SealerConfig), cfg.Storage),
 			Override(new(*storage.AddressSelector), AddressSelector(&cfg.Addresses)),
 			Override(new(*config.DbConfig), &cfg.DB),
+			Override(new(*config2.PieceStorage), &cfg.PieceStorage),
 			Override(new(*config.StorageMiner), cfg),
 			Override(new(*config.MessagerConfig), &cfg.Messager),
 			Override(new(*config.MarketConfig), &cfg.Market),
@@ -176,6 +179,7 @@ func Repo(cfg *config.StorageMiner) Option {
 
 			Override(new(api.IMessager), api.NewMessageRPC),
 			Override(new(api2.MarketFullNode), api.NewMarketRPC),
+			Override(new(piecestorage.IPieceStorage), NewPieceStorage),
 			Override(new(*market_client.MarketEventClient), market_client.NewMarketEventClient),
 			Override(new(*proof_client.ProofEventClient), proof_client.NewProofEventClient),
 			Override(new(repo.Repo), models.SetDataBase),

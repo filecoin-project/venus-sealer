@@ -18,6 +18,7 @@ func (m *Sealing) DealSector(ctx context.Context) ([]types.DealAssign, error) {
 	}
 	log.Infof("got %d deals from venus-market", len(deals))
 	//read from file
+
 	var assigned []types.DealAssign
 	for _, deal := range deals {
 		r, err := piecestorage.Read(deal.PieceStorage)
