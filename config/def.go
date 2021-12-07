@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding"
+	"github.com/filecoin-project/venus-market/config"
 	"net/http"
 	"strings"
 	"time"
@@ -25,7 +26,6 @@ const (
 	RetrievalPricingExternalMode = "external"
 )
 
-
 type HomeDir string
 
 type StorageWorker struct {
@@ -41,19 +41,21 @@ func (cfg StorageWorker) LocalStorage() *LocalStorage {
 
 // StorageMiner is a miner config
 type StorageMiner struct {
-	DataDir        string
-	API            API
-	Dealmaking     DealmakingConfig
-	Sealing        SealingConfig
-	Storage        sectorstorage.SealerConfig
-	Fees           MinerFeeConfig
-	Addresses      MinerAddressConfig
-	NetParams      NetParamsConfig
-	DB             DbConfig
-	Node           NodeConfig
-	JWT            JWTConfig
-	Messager       MessagerConfig
+	DataDir    string
+	API        API
+	Dealmaking DealmakingConfig
+	Sealing    SealingConfig
+	Storage    sectorstorage.SealerConfig
+	Fees       MinerFeeConfig
+	Addresses  MinerAddressConfig
+	NetParams  NetParamsConfig
+	DB         DbConfig
+	Node       NodeConfig
+	JWT        JWTConfig
+	Messager   MessagerConfig
+
 	Market         MarketConfig
+	PieceStorage   config.PieceStorage
 	RegisterProof  RegisterProofConfig
 	RegisterMarket RegisterMarketConfig
 

@@ -5,6 +5,8 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	config2 "github.com/filecoin-project/venus-market/config"
+	"github.com/filecoin-project/venus-market/piecestorage"
 	"math"
 	"net/http"
 	"time"
@@ -240,6 +242,10 @@ func AddressSelector(addrConf *config.MinerAddressConfig) func() (*storage.Addre
 	}
 }
 
+func NewPieceStorage(cfg *config2.PieceStorage) (piecestorage.IPieceStorage, error) {
+	return piecestorage.NewPieceStorage(cfg)
+}
+
 type StorageMinerParams struct {
 	fx.In
 
@@ -259,6 +265,7 @@ type StorageMinerParams struct {
 	Journal            journal.Journal
 	AddrSel            *storage.AddressSelector
 	NetworkParams      *config.NetParamsConfig
+	PieceStorage       piecestorage.IPieceStorage
 }
 
 func StorageMiner(fc config.MinerFeeConfig) func(params StorageMinerParams) (*storage.Miner, error) {
@@ -280,6 +287,7 @@ func StorageMiner(fc config.MinerFeeConfig) func(params StorageMinerParams) (*st
 			j                 = params.Journal
 			as                = params.AddrSel
 			np                = params.NetworkParams
+			ps                = params.PieceStorage
 		)
 
 		maddr, err := metadataService.GetMinerAddress()
@@ -294,7 +302,7 @@ func StorageMiner(fc config.MinerFeeConfig) func(params StorageMinerParams) (*st
 			return nil, err
 		}
 
-		sm, err := storage.NewMiner(api, messager, marketClient, maddr, metadataService, sectorinfoService, logService, sealer, sc, verif, prover, gsd, fc, j, as, np)
+		sm, err := storage.NewMiner(api, ps, messager, marketClient, maddr, metadataService, sectorinfoService, logService, sealer, sc, verif, prover, gsd, fc, j, as, np)
 		if err != nil {
 			return nil, err
 		}

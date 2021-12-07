@@ -2,6 +2,8 @@ package market_client
 
 import (
 	"context"
+	"github.com/filecoin-project/venus-market/piecestorage"
+	"github.com/filecoin-project/venus-sealer/sector-storage/fr32"
 	"encoding/json"
 	"time"
 
@@ -35,6 +37,7 @@ type MarketEvent struct {
 	sectorBlocks *sectorblocks.SectorBlocks
 	storageMgr   *sectorstorage.Manager
 	index        stores.SectorIndex
+	pieceStorage piecestorage.IPieceStorage
 }
 
 func (e *MarketEvent) listenMarketRequest(ctx context.Context) {
@@ -152,7 +155,7 @@ func (e *MarketEvent) processSectorUnsealed(ctx context.Context, reqId uuid.UUID
 		return
 	}
 
-	_, err = piecestorage.ReWrite(req.Dest, upr)
+	_, err = e.pieceStorage.SaveTo(ctx, req.Dest, upr)
 	if err != nil {
 		e.error(ctx, reqId, err)
 		return
