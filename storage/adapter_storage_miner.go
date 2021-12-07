@@ -26,9 +26,6 @@ import (
 	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/market"
 	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
 
-	api4 "github.com/filecoin-project/venus-market/api"
-	types4 "github.com/filecoin-project/venus-market/types"
-
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/constants"
 	sealing "github.com/filecoin-project/venus-sealer/storage-sealing"
@@ -42,10 +39,10 @@ var _ sealing.SealingAPI = new(SealingAPIAdapter)
 type SealingAPIAdapter struct {
 	delegate  fullNodeFilteredAPI
 	messager  api.IMessager
-	marketAPI api4.MarketFullNode
+	marketAPI api2.MarketFullNode
 }
 
-func NewSealingAPIAdapter(api fullNodeFilteredAPI, messager api.IMessager, marketAPI api4.MarketFullNode) SealingAPIAdapter {
+func NewSealingAPIAdapter(api fullNodeFilteredAPI, messager api.IMessager, marketAPI api2.MarketFullNode) SealingAPIAdapter {
 	return SealingAPIAdapter{delegate: api, messager: messager, marketAPI: marketAPI}
 }
 
