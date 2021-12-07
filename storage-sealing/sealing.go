@@ -3,6 +3,7 @@ package sealing
 import (
 	"context"
 	"errors"
+	types3 "github.com/filecoin-project/venus-market/types"
 	"sync"
 	"time"
 
@@ -34,6 +35,7 @@ import (
 
 	"github.com/filecoin-project/venus-market/piecestorage"
 	types3 "github.com/filecoin-project/venus-market/types"
+	"github.com/filecoin-project/venus-market/piecestorage"
 )
 
 var log = logging.Logger("sectors")
