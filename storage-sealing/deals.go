@@ -3,7 +3,6 @@ package sealing
 import (
 	"context"
 
-	"github.com/filecoin-project/venus-market/piecestorage"
 	types2 "github.com/filecoin-project/venus-market/types"
 
 	"github.com/filecoin-project/venus-sealer/types"
@@ -21,7 +20,7 @@ func (m *Sealing) DealSector(ctx context.Context) ([]types.DealAssign, error) {
 
 	var assigned []types.DealAssign
 	for _, deal := range deals {
-		r, err := piecestorage.Read(deal.PieceStorage)
+		r, err := m.pieceStorage.Read(ctx, deal.PieceStorage)
 		if err != nil {
 			log.Errorf("read piece from piece storage %v", err)
 			continue
