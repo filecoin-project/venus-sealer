@@ -5,6 +5,7 @@ import (
 	"errors"
 	fbig "github.com/filecoin-project/go-state-types/big"
 	api2 "github.com/filecoin-project/venus-market/api"
+	"github.com/filecoin-project/venus-market/piecestorage"
 	"time"
 
 	"github.com/ipfs/go-cid"
@@ -51,6 +52,7 @@ var log = logging.Logger("storageminer")
 //
 // Miner#Run starts the sealing FSM.
 type Miner struct {
+	pieceStorage      piecestorage.IPieceStorage
 	messager          api.IMessager
 	marketClient      api2.MarketFullNode
 	metadataService   *service.MetadataService
@@ -140,6 +142,7 @@ type fullNodeFilteredAPI interface {
 }
 
 func NewMiner(api fullNodeFilteredAPI,
+	pieceStorage piecestorage.IPieceStorage,
 	messager api.IMessager,
 	marketClient api2.MarketFullNode,
 	maddr address.Address,
@@ -172,6 +175,7 @@ func NewMiner(api fullNodeFilteredAPI,
 		getSealConfig:     gsd,
 		journal:           journal,
 		logService:        logService,
+		pieceStorage:      pieceStorage,
 		sealingEvtType:    journal.RegisterEventType("storage", "sealing_states"),
 	}
 
@@ -223,7 +227,7 @@ func (m *Miner) Run(ctx context.Context) error {
 
 	// Instantiate the sealing FSM.
 	m.sealing = sealing.New(ctx, adaptedAPI, m.feeCfg, evtsAdapter, m.maddr, m.metadataService, m.sectorInfoService, m.logService, m.sealer, m.sc, m.verif, m.prover,
-		&pcp, cfg, m.handleSealingNotifications, as, m.networkParams)
+		&pcp, cfg, m.handleSealingNotifications, as, m.networkParams, m.pieceStorage)
 
 	// Run the sealing FSM.
 	go m.sealing.Run(ctx) //nolint:errcheck // logged intside the function
