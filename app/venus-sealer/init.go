@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"github.com/filecoin-project/venus-market/piecestorage"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -134,6 +135,11 @@ var initCmd = &cli.Command{
 			Name:  "auth-token",
 			Usage: "auth token",
 		},
+
+		&cli.StringFlag{
+			Name:  "piecestorage",
+			Usage: "config storage for piece  (eg  fs:/mnt/piece   s3:{access key}:{secret key}:{option token}@{region}host/{bucket}",
+		},
 	},
 	Action: func(cctx *cli.Context) error {
 		log.Info("Initializing venus sealer")
@@ -161,7 +167,10 @@ var initCmd = &cli.Command{
 		}
 
 		setAuthToken(cctx)
-		parseFlag(defaultCfg, cctx)
+		err = parseFlag(defaultCfg, cctx)
+		if err != nil {
+			return err
+		}
 		if err := checkURL(defaultCfg); err != nil {
 			return err
 		}
@@ -311,7 +320,7 @@ func setAuthToken(cctx *cli.Context) {
 	}
 }
 
-func parseFlag(cfg *config.StorageMiner, cctx *cli.Context) {
+func parseFlag(cfg *config.StorageMiner, cctx *cli.Context) error {
 	cfg.DataDir = cctx.String("repo")
 
 	if cctx.IsSet("messager-url") {
@@ -337,6 +346,16 @@ func parseFlag(cfg *config.StorageMiner, cctx *cli.Context) {
 	if cctx.IsSet("gateway-token") {
 		cfg.RegisterProof.Token = cctx.String("gateway-token")
 	}
+
+	if cctx.IsSet("piecestorage") {
+		pieceStorage, err := piecestorage.ParserProtocol(cctx.String("piecestorage"))
+		if err != nil {
+			return err
+		}
+
+		cfg.PieceStorage = pieceStorage
+	}
+	return nil
 }
 
 func parseMultiAddr(url string) error {
