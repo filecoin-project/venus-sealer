@@ -4,7 +4,6 @@ import (
 	"context"
 
 	types2 "github.com/filecoin-project/venus-market/types"
-
 	"github.com/filecoin-project/venus-sealer/types"
 )
 
