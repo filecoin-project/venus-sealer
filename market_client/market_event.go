@@ -2,6 +2,8 @@ package market_client
 
 import (
 	"context"
+	"github.com/filecoin-project/venus-market/piecestorage"
+	"github.com/filecoin-project/venus-sealer/sector-storage/fr32"
 	"encoding/json"
 	"time"
 
