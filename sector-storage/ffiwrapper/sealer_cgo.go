@@ -513,6 +513,7 @@ func (sb *Sealer) SealPreCommit1(ctx context.Context, sector storage.SectorRef, 
 	log.Infof("pre commit1 paths: %v", paths)
 	if bExist, _ := storiface.FileExists(tUnsealedFile); bExist {
 		if bExist, _ := storiface.FileExists(paths.Unsealed); !bExist {
+			log.Infof("copy default unsealed file for sector %v", sector.ID.Number)
 			err = storiface.CopyFile(tUnsealedFile, paths.Unsealed)
 			if err != nil {
 				return nil, err

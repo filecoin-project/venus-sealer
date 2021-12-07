@@ -44,6 +44,15 @@ func GetFullNodeAPIV2(cctx *cli.Context) (FullNode, jsonrpc.ClientCloser, error)
 	return NewFullNodeRPC(cctx.Context, addr, apiInfo.AuthHeader())
 }
 
+func GetFullNodeFromNodeConfig(ctx context.Context, cfg *config.NodeConfig) (FullNode, jsonrpc.ClientCloser, error) {
+	apiInfo := apiinfo.NewAPIInfo(cfg.Url, cfg.Token)
+	addr, err := apiInfo.DialArgs("v1")
+	if err != nil {
+		return nil, nil, xerrors.Errorf("could not get DialArgs: %w", err)
+	}
+	return NewFullNodeRPC(ctx, addr, apiInfo.AuthHeader())
+}
+
 func GetFullNodeAPIFromConfig(cctx *cli.Context) (apiinfo.APIInfo, error) {
 	repoPath := cctx.String("repo")
 	cfgPath := config.FsConfig(repoPath)

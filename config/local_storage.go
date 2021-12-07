@@ -99,7 +99,7 @@ func (fsr *LocalStorage) SetConfig(c func(interface{})) error {
 	fsr.configLk.Lock()
 	defer fsr.configLk.Unlock()
 
-	cfg, err := MinerFromFile(fsr.configPath)
+	cfg, err := MinerFromFile(FsConfig(fsr.configPath))
 	if err != nil {
 		return err
 	}
@@ -117,7 +117,7 @@ func (fsr *LocalStorage) SetConfig(c func(interface{})) error {
 	}
 
 	// write buffer of TOML bytes to config file
-	err = ioutil.WriteFile(fsr.configPath, buf.Bytes(), 0644)
+	err = ioutil.WriteFile(FsConfig(fsr.configPath), buf.Bytes(), 0644)
 	if err != nil {
 		return err
 	}

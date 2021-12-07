@@ -77,7 +77,19 @@ func (m *Sealing) handlePacking(ctx statemachine.Context, sector types.SectorInf
 		log.Warnf("Creating %d filler pieces for sector %d", len(fillerSizes), sector.SectorNumber)
 	}
 
-	fillerPieces, err := m.padSector(sector.SealingCtx(ctx.Context()), m.minerSector(sector.SectorType, sector.SectorNumber), sector.ExistingPieceSizes(), fillerSizes...)
+	// Check if the sector is deal
+	var deals int = 0
+	for _, piece := range sector.Pieces {
+		if piece.DealInfo == nil {
+			continue
+		}
+
+		if piece.DealInfo.DealID > 0 {
+			deals++
+		}
+	}
+
+	fillerPieces, err := m.padSector(sector.SealingCtx(ctx.Context()), m.minerSector(sector.SectorType, sector.SectorNumber), deals>0, sector.ExistingPieceSizes(), fillerSizes...)
 	if err != nil {
 		return xerrors.Errorf("filling up the sector (%v): %w", fillerSizes, err)
 	}
@@ -85,7 +97,7 @@ func (m *Sealing) handlePacking(ctx statemachine.Context, sector types.SectorInf
 	return ctx.Send(SectorPacked{FillerPieces: fillerPieces})
 }
 
-func (m *Sealing) padSector(ctx context.Context, sectorID storage.SectorRef, existingPieceSizes []abi.UnpaddedPieceSize, sizes ...abi.UnpaddedPieceSize) ([]abi.PieceInfo, error) {
+func (m *Sealing) padSector(ctx context.Context, sectorID storage.SectorRef, bDeal bool, existingPieceSizes []abi.UnpaddedPieceSize, sizes ...abi.UnpaddedPieceSize) ([]abi.PieceInfo, error) {
 	if len(sizes) == 0 {
 		return nil, nil
 	}
@@ -98,9 +110,9 @@ func (m *Sealing) padSector(ctx context.Context, sectorID storage.SectorRef, exi
 	}
 
 	pisFile := storiface.DefaultPieceInfosFile(ssize)
-	if len(existingPieceSizes) == 0 {
+	if len(existingPieceSizes) == 0 && !bDeal {
 		//hack for cc sector
-		log.Infof("pisFile: %s", pisFile)
+		log.Infof("use default pisFile for sector %v: %s", sectorID.ID.Number, pisFile)
 		if bExist, _ := storiface.FileExists(pisFile); bExist {
 			bufs, err := ioutil.ReadFile(pisFile)
 			if err != nil {
@@ -129,18 +141,20 @@ func (m *Sealing) padSector(ctx context.Context, sectorID storage.SectorRef, exi
 		out[i] = ppi
 	}
 
-	psFile := storiface.DefaultUnsealedFile(ssize)
-	if bExist, _ := storiface.FileExists(psFile); bExist {
-		//hack for cc sector
-		// save piece info to /var/tmp/s-piece-infos-<SectorSize>
-		buf, err := json.Marshal(out)
-		if err != nil {
-			return nil, err
-		}
+	if !bDeal {
+		psFile := storiface.DefaultUnsealedFile(ssize)
+		if bExist, _ := storiface.FileExists(psFile); bExist {
+			//hack for cc sector
+			// save piece info to /var/tmp/s-piece-infos-<SectorSize>
+			buf, err := json.Marshal(out)
+			if err != nil {
+				return nil, err
+			}
 
-		log.Infof("default pieceInfo file: %s, buf: %s", pisFile, buf)
-		if err := ioutil.WriteFile(pisFile, buf, 0644); err != nil {
-			return nil, xerrors.Errorf("persisting (%s): %w", pisFile, err)
+			log.Infof("default pieceInfo file: %s, buf: %s", pisFile, buf)
+			if err := ioutil.WriteFile(pisFile, buf, 0644); err != nil {
+				return nil, xerrors.Errorf("persisting (%s): %w", pisFile, err)
+			}
 		}
 	}
 
