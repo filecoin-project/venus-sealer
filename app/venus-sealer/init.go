@@ -132,8 +132,14 @@ var initCmd = &cli.Command{
 		},
 
 		&cli.StringFlag{
-			Name:  "market-url",
-			Usage: "market url",
+			Name:  "market-node",
+			Value: "solo",
+			Usage: "indicate the deployment method of the venus-market, one of `solo`, `pool`, Default: `solo`",
+		},
+		&cli.StringFlag{
+			Name:     "market-url",
+			Usage:    "market url",
+			Required: true,
 		},
 		&cli.StringFlag{
 			Name:  "market-token",
@@ -152,11 +158,8 @@ var initCmd = &cli.Command{
 	},
 	Action: func(cctx *cli.Context) error {
 		ctx := api.ReqContext(cctx)
+
 		log.Info("Initializing venus sealer")
-		gasPrice, err := types.BigFromString(cctx.String("gas-premium"))
-		if err != nil {
-			return xerrors.Errorf("failed to parse gas-price flag: %s", err)
-		}
 
 		symlink := cctx.Bool("symlink-imported-sectors")
 		if symlink {
@@ -169,16 +172,28 @@ var initCmd = &cli.Command{
 			return err
 		}
 
-		setAuthToken(defaultCfg, cctx)
-		err = parseFlag(defaultCfg, cctx)
+		err = parseServiceFlag(defaultCfg, cctx)
 		if err != nil {
 			return err
 		}
-		if err := checkURL(defaultCfg); err != nil {
+
+		if err := checkServiceConfig(defaultCfg); err != nil {
 			return err
 		}
 
+		log.Info("Checking if repo exists")
+
+		defaultCfg.ConfigPath = config.FsConfig(defaultCfg.DataDir)
+		exit, err := config.ConfigExist(defaultCfg.DataDir)
+		if err != nil {
+			return err
+		}
+		if exit {
+			return xerrors.Errorf("repo is already initialized at %s", defaultCfg.DataDir)
+		}
+
 		log.Info("Checking proof parameters")
+
 		ps, err := asset.Asset("fixtures/_assets/proof-params/parameters.json")
 		if err != nil {
 			return err
@@ -204,17 +219,6 @@ var initCmd = &cli.Command{
 			}
 		}
 
-		log.Info("Checking if repo exists")
-
-		defaultCfg.ConfigPath = config.FsConfig(defaultCfg.DataDir)
-		exit, err := config.ConfigExist(defaultCfg.DataDir)
-		if err != nil {
-			return err
-		}
-		if exit {
-			return xerrors.Errorf("repo is already initialized at %s", defaultCfg.DataDir)
-		}
-
 		log.Info("Checking full node version")
 
 		v, err := fullNode.Version(ctx)
@@ -227,16 +231,8 @@ var initCmd = &cli.Command{
 		}
 
 		log.Info("Initializing repo")
-		messagerClient, closer, err := api.NewMessageRPC(&defaultCfg.Messager)
-		if err != nil {
-			return err
-		}
-		defer closer()
-
-		log.Info("Initializing repo")
-
 		{
-			//write config
+			// write config
 			err = config.SaveConfig(defaultCfg.ConfigPath, defaultCfg)
 			if err != nil {
 				return err
@@ -289,10 +285,22 @@ var initCmd = &cli.Command{
 			}
 		}
 
+		messagerClient, closer, err := api.NewMessageRPC(&defaultCfg.Messager)
+		if err != nil {
+			return err
+		}
+		defer closer()
+
 		ssize, err := units.RAMInBytes(cctx.String("sector-size"))
 		if err != nil {
 			return fmt.Errorf("failed to parse sector size: %w", err)
 		}
+
+		gasPrice, err := types.BigFromString(cctx.String("gas-premium"))
+		if err != nil {
+			return xerrors.Errorf("failed to parse gas-price flag: %s", err)
+		}
+
 		minerAddr, err := storageMinerInit(ctx, cctx, fullNode, messagerClient, defaultCfg, abi.SectorSize(ssize), gasPrice)
 		if err != nil {
 			log.Errorf("Failed to initialize venus-miner: %+v", err)
@@ -320,52 +328,55 @@ var initCmd = &cli.Command{
 	},
 }
 
-func setAuthToken(cfg *config.StorageMiner, cctx *cli.Context) {
-	if cctx.IsSet("auth-token") {
-		authToken := cctx.String("auth-token")
-		cfg.Node.Token = authToken
-		cfg.Messager.Token = authToken
-		cfg.RegisterProof.Token = authToken
-		cfg.RegisterMarket.Token = authToken
-		cfg.RegisterMarket.Token = authToken
-	}
-}
-
-func parseFlag(cfg *config.StorageMiner, cctx *cli.Context) error {
+func parseServiceFlag(cfg *config.StorageMiner, cctx *cli.Context) error {
 	cfg.DataDir = cctx.String("repo")
 
-	if cctx.IsSet("messager-url") {
-		cfg.Messager.Url = cctx.String("messager-url")
+	if cctx.IsSet("auth-token") {
+		authToken := cctx.String("auth-token")
+
+		cfg.Node.Token = authToken
+
+		cfg.Messager.Token = authToken
+
+		cfg.RegisterProof.Token = authToken
+
+		cfg.MarketNode.Token = authToken
+
+		cfg.RegisterMarket.Token = authToken
 	}
 
 	if cctx.IsSet("node-url") {
 		cfg.Node.Url = cctx.String("node-url")
 	}
-
-	if cctx.IsSet("gateway-url") {
-		cfg.RegisterProof.Urls = cctx.StringSlice("gateway-url")
-	}
-
-	if cctx.IsSet("market-url") {
-		cfg.RegisterMarket.Urls = []string{cctx.String("market-url")}
-		cfg.Market.Url = cctx.String("market-url")
-	}
-
 	if cctx.IsSet("node-token") {
 		cfg.Node.Token = cctx.String("node-token")
 	}
 
+	if cctx.IsSet("messager-url") {
+		cfg.Messager.Url = cctx.String("messager-url")
+	}
 	if cctx.IsSet("messager-token") {
 		cfg.Messager.Token = cctx.String("messager-token")
 	}
 
+	if cctx.IsSet("gateway-url") {
+		cfg.RegisterProof.Urls = cctx.StringSlice("gateway-url")
+	}
 	if cctx.IsSet("gateway-token") {
 		cfg.RegisterProof.Token = cctx.String("gateway-token")
 	}
 
+	cfg.MarketNode.Mode = cctx.String("market-node")
+	cfg.MarketNode.Url = cctx.String("market-url")
 	if cctx.IsSet("market-token") {
-		cfg.Market.Token = cctx.String("market-token")
-		cfg.RegisterMarket.Token = cctx.String("market-token")
+		cfg.MarketNode.Token = cctx.String("market-token")
+	}
+	if cfg.MarketNode.Mode == "solo" { // when venus-market is deployed independently, it not only provides services but also handles events
+		cfg.RegisterMarket.Urls = []string{cfg.MarketNode.Url}
+		cfg.RegisterMarket.Token = cfg.MarketNode.Token
+	} else {
+		cfg.RegisterMarket.Urls = cfg.RegisterProof.Urls
+		cfg.RegisterMarket.Token = cfg.RegisterProof.Token
 	}
 
 	if cctx.IsSet("piecestorage") {
@@ -389,9 +400,9 @@ func parseMultiAddr(url string) error {
 	return err
 }
 
-func checkURL(cfg *config.StorageMiner) error {
+func checkServiceConfig(cfg *config.StorageMiner) error {
 	if err := parseMultiAddr(cfg.Messager.Url); err != nil {
-		return xerrors.Errorf("message url: %w", err)
+		return xerrors.Errorf("messager node url: %w", err)
 	}
 
 	if err := parseMultiAddr(cfg.Node.Url); err != nil {
@@ -400,7 +411,17 @@ func checkURL(cfg *config.StorageMiner) error {
 
 	for _, url := range cfg.RegisterProof.Urls {
 		if err := parseMultiAddr(url); err != nil {
-			return xerrors.Errorf("gateway url:[%s]: %w", url, err)
+			return xerrors.Errorf("gateway node url:[%s]: %w", url, err)
+		}
+	}
+
+	if err := parseMultiAddr(cfg.MarketNode.Url); err != nil {
+		return xerrors.Errorf("market node url: %w", err)
+	}
+
+	for _, url := range cfg.RegisterMarket.Urls {
+		if err := parseMultiAddr(url); err != nil {
+			return xerrors.Errorf("register market node url:[%s]: %w", url, err)
 		}
 	}
 
