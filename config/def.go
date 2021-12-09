@@ -54,7 +54,7 @@ type StorageMiner struct {
 	JWT        JWTConfig
 	Messager   MessagerConfig
 
-	Market         MarketConfig
+	MarketNode     MarketNodeConfig
 	PieceStorage   config.PieceStorage
 	RegisterProof  RegisterProofConfig
 	RegisterMarket RegisterMarketConfig
@@ -80,7 +80,8 @@ type MessagerConfig struct {
 	Token string
 }
 
-type MarketConfig struct {
+type MarketNodeConfig struct {
+	Mode  string
 	Url   string
 	Token string
 }
