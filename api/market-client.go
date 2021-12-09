@@ -9,15 +9,15 @@ import (
 	"go.uber.org/fx"
 )
 
-func NewMarketRPC(lc fx.Lifecycle, marketCfg *config.MarketConfig) (api.MarketFullNode, error) {
-	if marketCfg.Url == "" {
-		log.Warnf("market config is empty ...")
+func NewMarketNodeRPCAPIV0(lc fx.Lifecycle, mCfg *config.MarketNodeConfig) (api.MarketFullNode, error) {
+	if mCfg.Url == "" {
+		log.Warnf("market node config is empty ...")
 		return &api.MarketFullNodeStruct{}, nil
 	}
 
 	apiInfo := apiinfo.APIInfo{
-		Addr:  marketCfg.Url,
-		Token: []byte(marketCfg.Token),
+		Addr:  mCfg.Url,
+		Token: []byte(mCfg.Token),
 	}
 
 	addr, err := apiInfo.DialArgs("v0")
