@@ -23,6 +23,7 @@ type ProofEvent struct {
 }
 
 func (e *ProofEvent) listenProofRequest(ctx context.Context) {
+	log.Infof("start proof event listening")
 	for {
 		if err := e.listenProofRequestOnce(ctx); err != nil {
 			log.Errorf("listen head changes errored: %s", err)

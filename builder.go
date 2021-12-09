@@ -2,11 +2,20 @@ package venus_sealer
 
 import (
 	"context"
+
+	logging "github.com/ipfs/go-log/v2"
+	metricsi "github.com/ipfs/go-metrics-interface"
+	"github.com/multiformats/go-multiaddr"
+	"go.uber.org/fx"
+	"golang.org/x/xerrors"
+
 	"github.com/filecoin-project/go-state-types/abi"
 	storage2 "github.com/filecoin-project/specs-storage/storage"
-	api2 "github.com/filecoin-project/venus-market/api"
-	config2 "github.com/filecoin-project/venus-market/config"
+
+	api3 "github.com/filecoin-project/venus-market/api"
+	config3 "github.com/filecoin-project/venus-market/config"
 	"github.com/filecoin-project/venus-market/piecestorage"
+
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/api/impl"
 	"github.com/filecoin-project/venus-sealer/config"
@@ -15,7 +24,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/models"
 	"github.com/filecoin-project/venus-sealer/models/repo"
 	"github.com/filecoin-project/venus-sealer/proof_client"
-	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
+	"github.com/filecoin-project/venus-sealer/sector-storage"
 	"github.com/filecoin-project/venus-sealer/sector-storage/ffiwrapper"
 	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
@@ -23,11 +32,6 @@ import (
 	"github.com/filecoin-project/venus-sealer/storage"
 	"github.com/filecoin-project/venus-sealer/storage/sectorblocks"
 	"github.com/filecoin-project/venus-sealer/types"
-	logging "github.com/ipfs/go-log/v2"
-	metricsi "github.com/ipfs/go-metrics-interface"
-	"github.com/multiformats/go-multiaddr"
-	"go.uber.org/fx"
-	"golang.org/x/xerrors"
 )
 
 var log = logging.Logger("modules")
@@ -51,7 +55,7 @@ const (
 
 	//proof
 	StartProofEventKey
-	StartWalletEventKey
+	StartMarketEventKey
 	WarmupKey
 	_nInvokes // keep this last
 )
@@ -145,6 +149,7 @@ func Online(cfg *config.StorageMiner) Option {
 		Override(new(storage2.Prover), From(new(sectorstorage.SectorManager))),
 		Override(new(storiface.WorkerReturn), From(new(sectorstorage.SectorManager))),
 
+		Override(new(types.MarketMode), types.MarketMode(cfg.MarketNode.Mode)),
 		Override(new(types.GetSealingConfigFunc), NewGetSealConfigFunc),
 		Override(new(*sectorblocks.SectorBlocks), sectorblocks.NewSectorBlocks),
 		Override(new(*storage.Miner), StorageMiner(config.DefaultMainnetStorageMiner().Fees)),
@@ -154,7 +159,7 @@ func Online(cfg *config.StorageMiner) Option {
 		Override(AutoMigrateKey, models.AutoMigrate),
 		Override(SetNetParamsKey, SetupNetParams),
 		Override(StartProofEventKey, proof_client.StartProofEvent),
-		Override(StartWalletEventKey, market_client.StartMarketEvent),
+		Override(StartMarketEventKey, market_client.StartMarketEvent),
 		Override(WarmupKey, DoPoStWarmup),
 	)
 }
@@ -169,19 +174,17 @@ func Repo(cfg *config.StorageMiner) Option {
 			Override(new(sectorstorage.SealerConfig), cfg.Storage),
 			Override(new(*storage.AddressSelector), AddressSelector(&cfg.Addresses)),
 			Override(new(*config.DbConfig), &cfg.DB),
-			Override(new(*config2.PieceStorage), &cfg.PieceStorage),
+			Override(new(*config3.PieceStorage), &cfg.PieceStorage),
 			Override(new(*config.StorageMiner), cfg),
 			Override(new(*config.MessagerConfig), &cfg.Messager),
-			Override(new(*config.MarketConfig), &cfg.Market),
+			Override(new(*config.MarketNodeConfig), &cfg.MarketNode),
 			Override(new(*config.RegisterMarketConfig), &cfg.RegisterMarket),
 			Override(new(*config.RegisterProofConfig), &cfg.RegisterProof),
 			ConfigAPI(cfg),
 
 			Override(new(api.IMessager), api.NewMessageRPC),
-			Override(new(api2.MarketFullNode), api.NewMarketRPC),
+			Override(new(api3.MarketFullNode), api.NewMarketNodeRPCAPIV0),
 			Override(new(piecestorage.IPieceStorage), NewPieceStorage),
-			Override(new(*market_client.MarketEventClient), market_client.NewMarketEventClient),
-			Override(new(*proof_client.ProofEventClient), proof_client.NewProofEventClient),
 			Override(new(repo.Repo), models.SetDataBase),
 			Providers(
 				service.NewDealRefServiceService,

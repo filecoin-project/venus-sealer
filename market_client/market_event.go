@@ -39,6 +39,7 @@ type MarketEvent struct {
 }
 
 func (e *MarketEvent) listenMarketRequest(ctx context.Context) {
+	log.Infof("start market event listening")
 	for {
 		if err := e.listenMarketRequestOnce(ctx); err != nil {
 			log.Errorf("listen market event errored: %s", err)

@@ -2,19 +2,24 @@ package market_client
 
 import (
 	"context"
+
+	"go.uber.org/fx"
+
 	"github.com/filecoin-project/go-jsonrpc"
+
 	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
 	"github.com/ipfs-force-community/venus-gateway/marketevent"
-	"github.com/ipfs-force-community/venus-gateway/types"
-	"go.uber.org/fx"
+	types2 "github.com/ipfs-force-community/venus-gateway/types"
+
+	"github.com/filecoin-project/venus-sealer/types"
 )
 
 type MarketEventClient struct {
-	ResponseMarketEvent func(ctx context.Context, resp *types.ResponseEvent) error
-	ListenMarketEvent   func(ctx context.Context, policy *marketevent.MarketRegisterPolicy) (<-chan *types.RequestEvent, error)
+	ResponseMarketEvent func(ctx context.Context, resp *types2.ResponseEvent) error
+	ListenMarketEvent   func(ctx context.Context, policy *marketevent.MarketRegisterPolicy) (<-chan *types2.RequestEvent, error)
 }
 
-func NewMarketEventClient(lc fx.Lifecycle, url, token string) (*MarketEventClient, error) {
+func NewMarketEventClient(lc fx.Lifecycle, mode types.MarketMode, url, token string) (*MarketEventClient, error) {
 	pvc := &MarketEventClient{}
 	apiInfo := apiinfo.APIInfo{
 		Addr:  url,
@@ -24,7 +29,15 @@ func NewMarketEventClient(lc fx.Lifecycle, url, token string) (*MarketEventClien
 	if err != nil {
 		return nil, err
 	}
-	closer, err := jsonrpc.NewMergeClient(context.Background(), addr, "VENUS_MARKET", []interface{}{pvc}, apiInfo.AuthHeader())
+
+	namespace := "VENUS_MARKET"
+	if mode == types.MarketPool {
+		namespace = "Gateway"
+	} else if mode == types.MarketSolo {
+		namespace = "VENUS_MARKET"
+	}
+
+	closer, err := jsonrpc.NewMergeClient(context.Background(), addr, namespace, []interface{}{pvc}, apiInfo.AuthHeader())
 	if err != nil {
 		return nil, err
 	}
