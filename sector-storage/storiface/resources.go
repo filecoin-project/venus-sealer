@@ -1,18 +1,32 @@
-package sectorstorage
+package storiface
 
 import (
+	"fmt"
+	"reflect"
+	"strconv"
+	"strings"
+
+	"golang.org/x/xerrors"
+
 	"github.com/filecoin-project/go-state-types/abi"
+
 	"github.com/filecoin-project/venus-sealer/types"
 )
 
 type Resources struct {
-	MinMemory uint64 // What Must be in RAM for decent perf
-	MaxMemory uint64 // Memory required (swap + ram)
+	MinMemory uint64 `envname:"MIN_MEMORY"` // What Must be in RAM for decent perf
+	MaxMemory uint64 `envname:"MAX_MEMORY"` // Memory required (swap + ram; peak memory usage during task execution)
 
-	MaxParallelism int // -1 = multithread
-	CanGPU         bool
+	// GPUUtilization specifes the number of GPUs a task can use
+	GPUUtilization float64 `envname:"GPU_UTILIZATION"`
 
-	BaseMinMemory uint64 // What Must be in RAM for decent perf (shared between threads)
+	// MaxParallelism specifies the number of CPU cores when GPU is NOT in use
+	MaxParallelism int `envname:"MAX_PARALLELISM"` // -1 = multithread
+
+	// MaxParallelismGPU specifies the number of CPU cores when GPU is in use
+	MaxParallelismGPU int `envname:"MAX_PARALLELISM_GPU"` // when 0, inherits MaxParallelism
+
+	BaseMinMemory uint64 `envname:"BASE_MIN_MEMORY"` // What Must be in RAM for decent perf (shared between threads)
 }
 
 /*
@@ -31,8 +45,14 @@ var ParallelNum uint64 = 92
 var ParallelDenom uint64 = 100
 
 // TODO: Take NUMA into account
-func (r Resources) Threads(wcpus uint64) uint64 {
-	if r.MaxParallelism == -1 {
+func (r Resources) Threads(wcpus uint64, gpus int) uint64 {
+	mp := r.MaxParallelism
+
+	if r.GPUUtilization > 0 && gpus > 0 && r.MaxParallelismGPU != 0 { // task can use GPUs and worker has some
+		mp = r.MaxParallelismGPU
+	}
+
+	if mp == -1 {
 		n := (wcpus * ParallelNum) / ParallelDenom
 		if n == 0 {
 			return wcpus
@@ -40,7 +60,7 @@ func (r Resources) Threads(wcpus uint64) uint64 {
 		return n
 	}
 
-	return uint64(r.MaxParallelism)
+	return uint64(mp)
 }
 
 var ResourceTable = map[types.TaskType]map[abi.RegisteredSealProof]Resources{
@@ -133,8 +153,9 @@ var ResourceTable = map[types.TaskType]map[abi.RegisteredSealProof]Resources{
 			MaxMemory: 30 << 30,
 			MinMemory: 30 << 30,
 
-			MaxParallelism: -1,
-			CanGPU:         true,
+			MaxParallelism:    -1,
+			MaxParallelismGPU: 6,
+			GPUUtilization:    1.0,
 
 			BaseMinMemory: 1 << 30,
 		},
@@ -142,8 +163,9 @@ var ResourceTable = map[types.TaskType]map[abi.RegisteredSealProof]Resources{
 			MaxMemory: 15 << 30,
 			MinMemory: 15 << 30,
 
-			MaxParallelism: -1,
-			CanGPU:         true,
+			MaxParallelism:    -1,
+			MaxParallelismGPU: 6,
+			GPUUtilization:    1.0,
 
 			BaseMinMemory: 1 << 30,
 		},
@@ -219,8 +241,9 @@ var ResourceTable = map[types.TaskType]map[abi.RegisteredSealProof]Resources{
 			MaxMemory: 190 << 30, // TODO: Confirm
 			MinMemory: 60 << 30,
 
-			MaxParallelism: -1,
-			CanGPU:         true,
+			MaxParallelism:    -1,
+			MaxParallelismGPU: 6,
+			GPUUtilization:    1.0,
 
 			BaseMinMemory: 64 << 30, // params
 		},
@@ -228,8 +251,9 @@ var ResourceTable = map[types.TaskType]map[abi.RegisteredSealProof]Resources{
 			MaxMemory: 150 << 30, // TODO: ~30G of this should really be BaseMaxMemory
 			MinMemory: 30 << 30,
 
-			MaxParallelism: -1,
-			CanGPU:         true,
+			MaxParallelism:    -1,
+			MaxParallelismGPU: 6,
+			GPUUtilization:    1.0,
 
 			BaseMinMemory: 32 << 30, // params
 		},
@@ -238,7 +262,7 @@ var ResourceTable = map[types.TaskType]map[abi.RegisteredSealProof]Resources{
 			MinMemory: 1 << 30,
 
 			MaxParallelism: 1, // This is fine
-			CanGPU:         true,
+			GPUUtilization: 1.0,
 
 			BaseMinMemory: 10 << 30,
 		},
@@ -247,7 +271,7 @@ var ResourceTable = map[types.TaskType]map[abi.RegisteredSealProof]Resources{
 			MinMemory: 2 << 10,
 
 			MaxParallelism: 1,
-			CanGPU:         true,
+			GPUUtilization: 1.0,
 
 			BaseMinMemory: 2 << 10,
 		},
@@ -256,7 +280,7 @@ var ResourceTable = map[types.TaskType]map[abi.RegisteredSealProof]Resources{
 			MinMemory: 8 << 20,
 
 			MaxParallelism: 1,
-			CanGPU:         true,
+			GPUUtilization: 1.0,
 
 			BaseMinMemory: 8 << 20,
 		},
@@ -267,7 +291,7 @@ var ResourceTable = map[types.TaskType]map[abi.RegisteredSealProof]Resources{
 			MinMemory: 1 << 20,
 
 			MaxParallelism: 0,
-			CanGPU:         false,
+			GPUUtilization: 0,
 
 			BaseMinMemory: 0,
 		},
@@ -276,7 +300,7 @@ var ResourceTable = map[types.TaskType]map[abi.RegisteredSealProof]Resources{
 			MinMemory: 1 << 20,
 
 			MaxParallelism: 0,
-			CanGPU:         false,
+			GPUUtilization: 0,
 
 			BaseMinMemory: 0,
 		},
@@ -285,7 +309,7 @@ var ResourceTable = map[types.TaskType]map[abi.RegisteredSealProof]Resources{
 			MinMemory: 1 << 20,
 
 			MaxParallelism: 0,
-			CanGPU:         false,
+			GPUUtilization: 0,
 
 			BaseMinMemory: 0,
 		},
@@ -294,7 +318,7 @@ var ResourceTable = map[types.TaskType]map[abi.RegisteredSealProof]Resources{
 			MinMemory: 1 << 20,
 
 			MaxParallelism: 0,
-			CanGPU:         false,
+			GPUUtilization: 0,
 
 			BaseMinMemory: 0,
 		},
@@ -303,7 +327,7 @@ var ResourceTable = map[types.TaskType]map[abi.RegisteredSealProof]Resources{
 			MinMemory: 1 << 20,
 
 			MaxParallelism: 0,
-			CanGPU:         false,
+			GPUUtilization: 0,
 
 			BaseMinMemory: 0,
 		},
@@ -321,4 +345,84 @@ func init() {
 		m[abi.RegisteredSealProof_StackedDrg32GiBV1_1] = m[abi.RegisteredSealProof_StackedDrg32GiBV1]
 		m[abi.RegisteredSealProof_StackedDrg64GiBV1_1] = m[abi.RegisteredSealProof_StackedDrg64GiBV1]
 	}
+}
+
+func ParseResourceEnv(lookup func(key, def string) (string, bool)) (map[types.TaskType]map[abi.RegisteredSealProof]Resources, error) {
+	out := map[types.TaskType]map[abi.RegisteredSealProof]Resources{}
+
+	for taskType, defTT := range ResourceTable {
+		out[taskType] = map[abi.RegisteredSealProof]Resources{}
+
+		for spt, defRes := range defTT {
+			r := defRes // copy
+
+			spsz, err := spt.SectorSize()
+			if err != nil {
+				return nil, xerrors.Errorf("getting sector size: %w", err)
+			}
+			shortSize := strings.TrimSuffix(spsz.ShortString(), "iB")
+
+			rr := reflect.ValueOf(&r)
+			for i := 0; i < rr.Elem().Type().NumField(); i++ {
+				f := rr.Elem().Type().Field(i)
+
+				envname := f.Tag.Get("envname")
+				if envname == "" {
+					return nil, xerrors.Errorf("no envname for field '%s'", f.Name)
+				}
+
+				envval, found := lookup(taskType.Short()+"_"+shortSize+"_"+envname, fmt.Sprint(rr.Elem().Field(i).Interface()))
+				if !found {
+					// special multicore SDR handling
+					if (taskType == types.TTPreCommit1 || taskType == types.TTUnseal) && envname == "MAX_PARALLELISM" {
+						v, ok := rr.Elem().Field(i).Addr().Interface().(*int)
+						if !ok {
+							// can't happen, but let's not panic
+							return nil, xerrors.Errorf("res.MAX_PARALLELISM is not int (!?): %w", err)
+						}
+						*v, err = getSDRThreads(lookup)
+						if err != nil {
+							return nil, err
+						}
+					}
+
+					continue
+				}
+
+				v := rr.Elem().Field(i).Addr().Interface()
+				switch fv := v.(type) {
+				case *uint64:
+					*fv, err = strconv.ParseUint(envval, 10, 64)
+				case *int:
+					*fv, err = strconv.Atoi(envval)
+				case *float64:
+					*fv, err = strconv.ParseFloat(envval, 64)
+				default:
+					return nil, xerrors.Errorf("unknown resource field type")
+				}
+			}
+
+			out[taskType][spt] = r
+		}
+	}
+
+	return out, nil
+}
+
+func getSDRThreads(lookup func(key, def string) (string, bool)) (_ int, err error) {
+	producers := 0
+
+	if v, _ := lookup("FIL_PROOFS_USE_MULTICORE_SDR", ""); v == "1" {
+		producers = 3
+
+		if penv, found := lookup("FIL_PROOFS_MULTICORE_SDR_PRODUCERS", ""); found {
+			producers, err = strconv.Atoi(penv)
+			if err != nil {
+				return 0, xerrors.Errorf("parsing (atoi) FIL_PROOFS_MULTICORE_SDR_PRODUCERS: %w", err)
+			}
+		}
+	}
+
+	// producers + the one core actually doing the work
+	return producers + 1, nil
 }

@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/filecoin-project/venus-sealer/api"
+	"math"
 	"os"
 	"sort"
 	"strings"
@@ -16,6 +16,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
+	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
 
 	"github.com/filecoin-project/venus/pkg/types"
@@ -32,14 +33,31 @@ var sealingCmd = &cli.Command{
 	},
 }
 
+var barCols = float64(64)
+
+func barString(total, y, g float64) string {
+	yBars := int(math.Round(y / total * barCols))
+	gBars := int(math.Round(g / total * barCols))
+	eBars := int(barCols) - yBars - gBars
+	return color.YellowString(strings.Repeat("|", yBars)) +
+		color.GreenString(strings.Repeat("|", gBars)) +
+		strings.Repeat(" ", eBars)
+}
+
 var sealingWorkersCmd = &cli.Command{
 	Name:  "workers",
 	Usage: "list workers",
 	Flags: []cli.Flag{
-		&cli.BoolFlag{Name: "color"},
+		&cli.BoolFlag{
+			Name:        "color",
+			Usage:       "use color in display output",
+			DefaultText: "depends on output being a TTY",
+		},
 	},
 	Action: func(cctx *cli.Context) error {
-		color.NoColor = !cctx.Bool("color")
+		if cctx.IsSet("color") {
+			color.NoColor = !cctx.Bool("color")
+		}
 
 		nodeApi, closer, err := api.GetStorageMinerAPI(cctx)
 		if err != nil {
@@ -71,7 +89,7 @@ var sealingWorkersCmd = &cli.Command{
 		for _, stat := range st {
 			gpuUse := "not "
 			gpuCol := color.FgBlue
-			if stat.GpuUsed {
+			if stat.GpuUsed > 0 {
 				gpuCol = color.FgGreen
 				gpuUse = ""
 			}
@@ -83,37 +101,43 @@ var sealingWorkersCmd = &cli.Command{
 
 			fmt.Printf("Worker %s, host %s%s\n", stat.id, color.MagentaString(stat.Info.Hostname), disabled)
 
-			var barCols = uint64(64)
-			cpuBars := int(stat.CpuUse * barCols / stat.Info.Resources.CPUs)
-			cpuBar := strings.Repeat("|", cpuBars) + strings.Repeat(" ", int(barCols)-cpuBars)
-
 			fmt.Printf("\tCPU:  [%s] %d/%d core(s) in use\n",
-				color.GreenString(cpuBar), stat.CpuUse, stat.Info.Resources.CPUs)
+				barString(float64(stat.Info.Resources.CPUs), 0, float64(stat.CpuUse)), stat.CpuUse, stat.Info.Resources.CPUs)
 
-			ramBarsRes := int(stat.Info.Resources.MemReserved * barCols / stat.Info.Resources.MemPhysical)
-			ramBarsUsed := int(stat.MemUsedMin * barCols / stat.Info.Resources.MemPhysical)
-			ramBar := color.YellowString(strings.Repeat("|", ramBarsRes)) +
-				color.GreenString(strings.Repeat("|", ramBarsUsed)) +
-				strings.Repeat(" ", int(barCols)-ramBarsUsed-ramBarsRes)
-
-			vmem := stat.Info.Resources.MemPhysical + stat.Info.Resources.MemSwap
-
-			vmemBarsRes := int(stat.Info.Resources.MemReserved * barCols / vmem)
-			vmemBarsUsed := int(stat.MemUsedMax * barCols / vmem)
-			vmemBar := color.YellowString(strings.Repeat("|", vmemBarsRes)) +
-				color.GreenString(strings.Repeat("|", vmemBarsUsed)) +
-				strings.Repeat(" ", int(barCols)-vmemBarsUsed-vmemBarsRes)
+			ramTotal := stat.Info.Resources.MemPhysical
+			ramTasks := stat.MemUsedMin
+			ramUsed := stat.Info.Resources.MemUsed
+			var ramReserved uint64 = 0
+			if ramUsed > ramTasks {
+				ramReserved = ramUsed - ramTasks
+			}
+			ramBar := barString(float64(ramTotal), float64(ramReserved), float64(ramTasks))
 
 			fmt.Printf("\tRAM:  [%s] %d%% %s/%s\n", ramBar,
-				(stat.Info.Resources.MemReserved+stat.MemUsedMin)*100/stat.Info.Resources.MemPhysical,
-				types.SizeStr(types.NewInt(stat.Info.Resources.MemReserved+stat.MemUsedMin)),
+				(ramTasks+ramReserved)*100/stat.Info.Resources.MemPhysical,
+				types.SizeStr(types.NewInt(ramTasks+ramUsed)),
 				types.SizeStr(types.NewInt(stat.Info.Resources.MemPhysical)))
 
-			fmt.Printf("\tVMEM: [%s] %d%% %s/%s\n", vmemBar,
-				(stat.Info.Resources.MemReserved+stat.MemUsedMax)*100/vmem,
-				types.SizeStr(types.NewInt(stat.Info.Resources.MemReserved+stat.MemUsedMax)),
-				types.SizeStr(types.NewInt(vmem)))
+			vmemTotal := stat.Info.Resources.MemPhysical + stat.Info.Resources.MemSwap
+			vmemTasks := stat.MemUsedMax
+			vmemUsed := stat.Info.Resources.MemUsed + stat.Info.Resources.MemSwapUsed
+			var vmemReserved uint64 = 0
+			if vmemUsed > vmemTasks {
+				vmemReserved = vmemUsed - vmemTasks
+			}
+			vmemBar := barString(float64(vmemTotal), float64(vmemReserved), float64(vmemTasks))
 
+			fmt.Printf("\tVMEM: [%s] %d%% %s/%s\n", vmemBar,
+				(vmemTasks+vmemReserved)*100/vmemTotal,
+				types.SizeStr(types.NewInt(vmemTasks+vmemReserved)),
+				types.SizeStr(types.NewInt(vmemTotal)))
+
+			if len(stat.Info.Resources.GPUs) > 0 {
+				gpuBar := barString(float64(len(stat.Info.Resources.GPUs)), 0, stat.GpuUsed)
+				fmt.Printf("\tGPU:  [%s] %.f%% %.2f/%d gpu(s) in use\n", color.GreenString(gpuBar),
+					stat.GpuUsed*100/float64(len(stat.Info.Resources.GPUs)),
+					stat.GpuUsed, len(stat.Info.Resources.GPUs))
+			}
 			for _, gpu := range stat.Info.Resources.GPUs {
 				fmt.Printf("\tGPU: %s\n", color.New(gpuCol).Sprintf("%s, %sused", gpu, gpuUse))
 			}
@@ -127,14 +151,20 @@ var sealingJobsCmd = &cli.Command{
 	Name:  "jobs",
 	Usage: "list running jobs",
 	Flags: []cli.Flag{
-		&cli.BoolFlag{Name: "color"},
+		&cli.BoolFlag{
+			Name:        "color",
+			Usage:       "use color in display output",
+			DefaultText: "depends on output being a TTY",
+		},
 		&cli.BoolFlag{
 			Name:  "show-ret-done",
 			Usage: "show returned but not consumed calls",
 		},
 	},
 	Action: func(cctx *cli.Context) error {
-		color.NoColor = !cctx.Bool("color")
+		if cctx.IsSet("color") {
+			color.NoColor = !cctx.Bool("color")
+		}
 
 		nodeApi, closer, err := api.GetStorageMinerAPI(cctx)
 		if err != nil {
@@ -193,8 +223,10 @@ var sealingJobsCmd = &cli.Command{
 		for _, l := range lines {
 			state := "running"
 			switch {
-			case l.RunWait > 0:
+			case l.RunWait > 1:
 				state = fmt.Sprintf("assigned(%d)", l.RunWait-1)
+			case l.RunWait == storiface.RWPrepared:
+				state = "prepared"
 			case l.RunWait == storiface.RWRetDone:
 				if !cctx.Bool("show-ret-done") {
 					continue
@@ -207,7 +239,7 @@ var sealingJobsCmd = &cli.Command{
 			}
 			dur := "n/a"
 			if !l.Start.IsZero() {
-				dur = time.Since(l.Start).Truncate(time.Millisecond * 100).String()
+				dur = time.Now().Sub(l.Start).Truncate(time.Millisecond * 100).String()
 			}
 
 			hostname, ok := workerHostnames[l.wid]
