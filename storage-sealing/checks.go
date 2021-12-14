@@ -112,7 +112,7 @@ func checkPrecommit(ctx context.Context, maddr address.Address, si types.SectorI
 		return &ErrPrecommitOnChain{xerrors.Errorf("precommit already on chain")}
 	}
 
-	//never commit P2 message before, check ticket expiration
+	// never commit P2 message before, check ticket expiration
 	ticketEarliest := height - policy.MaxPreCommitRandomnessLookback
 
 	if si.TicketEpoch < ticketEarliest {
