@@ -317,6 +317,46 @@ func (m *Sealing) handlePreCommit1(ctx statemachine.Context, sector types.Sector
 }
 
 func (m *Sealing) handlePreCommit2(ctx statemachine.Context, sector types.SectorInfo) error {
+	// Check if the ticket has expired
+	tok, height, err := m.api.ChainHead(ctx.Context())
+	if err != nil {
+		log.Errorf("handlePreCommit2: api error, not proceeding: %+v", err)
+		return nil
+	}
+
+	if checkTicketExpired(sector.TicketEpoch, height) {
+		pci, err := m.api.StateSectorPreCommitInfo(ctx.Context(), m.maddr, sector.SectorNumber, tok)
+		if err != nil {
+			log.Errorf("handlePreCommit2: StateSectorPreCommitInfo: api error, not proceeding: %+v", err)
+			return nil
+		}
+
+		if pci == nil {
+			return ctx.Send(SectorOldTicket{}) // go get new ticket
+		}
+
+		nv, err := m.api.StateNetworkVersion(ctx.Context(), tok)
+		if err != nil {
+			log.Errorf("handlePreCommit2: StateNetworkVersion: api error, not proceeding: %+v", err)
+			return nil
+		}
+
+		av, err := actors.VersionForNetwork(nv)
+		if err != nil {
+			log.Errorf("handlePreCommit2: VersionForNetwork error, not proceeding: %w", err)
+			return nil
+		}
+		msd, err := policy.GetMaxProveCommitDuration(av, sector.SectorType)
+		if err != nil {
+			log.Errorf("handlePreCommit2: GetMaxProveCommitDuration error, not proceeding: %w", err)
+			return nil
+		}
+		// if height >  PreCommitEpoch + msd, there is no need to recalculate
+		if checkProveCommitExpired(pci.PreCommitEpoch, msd, height) {
+			return ctx.Send(SectorOldTicket{}) // will be removed
+		}
+	}
+
 	cids, err := m.sealer.SealPreCommit2(sector.SealingCtx(ctx.Context()), m.minerSector(sector.SectorType, sector.SectorNumber), sector.PreCommit1Out)
 	if err != nil {
 		return ctx.Send(SectorSealPreCommit2Failed{xerrors.Errorf("seal pre commit(2) failed: %w", err)})

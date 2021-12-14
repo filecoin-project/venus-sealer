@@ -72,6 +72,7 @@ var fsmPlanners = map[types.SectorState]func(events []statemachine.Event, state 
 		on(SectorPreCommit2{}, types.PreCommitting),
 		on(SectorSealPreCommit2Failed{}, types.SealPreCommit2Failed),
 		on(SectorSealPreCommit1Failed{}, types.SealPreCommit1Failed),
+		on(SectorOldTicket{}, types.GetTicket),
 	),
 	types.PreCommitting: planOne(
 		on(SectorPreCommitBatch{}, types.SubmitPreCommitBatch),
