@@ -113,16 +113,20 @@ func (wt *workTracker) worker(wid storiface.WorkerID, wi storiface.WorkerInfo, w
 	}
 }
 
-func (wt *workTracker) Running() []trackedWork {
+func (wt *workTracker) Running() ([]trackedWork, []trackedWork) {
 	wt.lk.Lock()
 	defer wt.lk.Unlock()
 
-	out := make([]trackedWork, 0, len(wt.running))
+	running := make([]trackedWork, 0, len(wt.running))
 	for _, job := range wt.running {
-		out = append(out, job)
+		running = append(running, job)
+	}
+	prepared := make([]trackedWork, 0, len(wt.prepared))
+	for _, job := range wt.prepared {
+		prepared = append(prepared, job)
 	}
 
-	return out
+	return running, prepared
 }
 
 type trackedWorker struct {

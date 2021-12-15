@@ -25,7 +25,6 @@ func (s *SectorRedoParams) SectorStorePath(sid abi.SectorID, fileType SectorFile
 	return filepath.Join(s.StorePath, fileType.String(), SectorName(sid))
 }
 
-
 const (
 	FTUnsealed SectorFileType = 1 << iota
 	FTSealed
