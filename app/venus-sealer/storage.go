@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	sealing "github.com/filecoin-project/lotus/extern/storage-sealing"
-	types2 "github.com/filecoin-project/venus-sealer/types"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -28,6 +26,8 @@ import (
 	"github.com/filecoin-project/venus-sealer/sector-storage/fsutil"
 	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
+	types2 "github.com/filecoin-project/venus-sealer/types"
+
 	"github.com/filecoin-project/venus/pkg/types"
 )
 
@@ -699,20 +699,20 @@ var storageLocksCmd = &cli.Command{
 	Name:  "locks",
 	Usage: "show active sector locks",
 	Action: func(cctx *cli.Context) error {
-		api, closer, err := api.GetStorageMinerAPI(cctx)
+		storageAPI, closer, err := api.GetStorageMinerAPI(cctx)
 		if err != nil {
 			return err
 		}
 		defer closer()
 		ctx := api.ReqContext(cctx)
 
-		locks, err := api.StorageGetLocks(ctx)
+		locks, err := storageAPI.StorageGetLocks(ctx)
 		if err != nil {
 			return err
 		}
 
 		for _, lock := range locks.Locks {
-			st, err := api.SectorsStatus(ctx, lock.Sector.Number, false)
+			st, err := storageAPI.SectorsStatus(ctx, lock.Sector.Number, false)
 			if err != nil {
 				return xerrors.Errorf("getting sector status(%d): %w", lock.Sector.Number, err)
 			}

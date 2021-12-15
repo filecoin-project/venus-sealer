@@ -3,20 +3,21 @@ package stores_test
 import (
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 
-	"github.com/filecoin-project/go-state-types/abi"
-	"github.com/filecoin-project/specs-storage/storage"
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
 	logging "github.com/ipfs/go-log/v2"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/xerrors"
 
+	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/specs-storage/storage"
 	"github.com/filecoin-project/venus-sealer/sector-storage/partialfile"
 	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
 	"github.com/filecoin-project/venus-sealer/sector-storage/stores/mocks"
@@ -47,7 +48,7 @@ func TestReader(t *testing.T) {
 
 	tcs := map[string]struct {
 		storeFnc func(s *mocks.MockStore)
-		pfFunc   func(s *mocks.MockpartialFileHandler)
+		pfFunc   func(s *mocks.MockPartialFileHandler)
 		indexFnc func(s *mocks.MockSectorIndex, serverURL string)
 
 		needHttpServer bool
@@ -77,7 +78,7 @@ func TestReader(t *testing.T) {
 				mockSectorAcquire(l, sectorRef, pfPath, nil)
 			},
 
-			pfFunc: func(pf *mocks.MockpartialFileHandler) {
+			pfFunc: func(pf *mocks.MockPartialFileHandler) {
 				mockPartialFileOpen(pf, sectorSize, pfPath, xerrors.New("pf open error"))
 			},
 			errStr: "pf open error",
@@ -88,7 +89,7 @@ func TestReader(t *testing.T) {
 				mockSectorAcquire(l, sectorRef, pfPath, nil)
 			},
 
-			pfFunc: func(pf *mocks.MockpartialFileHandler) {
+			pfFunc: func(pf *mocks.MockPartialFileHandler) {
 				mockPartialFileOpen(pf, sectorSize, pfPath, nil)
 				mockCheckAllocation(pf, offset, size, emptyPartialFile,
 					true, xerrors.New("piece check error"))
@@ -102,7 +103,7 @@ func TestReader(t *testing.T) {
 				mockSectorAcquire(l, sectorRef, pfPath, nil)
 			},
 
-			pfFunc: func(pf *mocks.MockpartialFileHandler) {
+			pfFunc: func(pf *mocks.MockPartialFileHandler) {
 				mockPartialFileOpen(pf, sectorSize, pfPath, nil)
 				mockCheckAllocation(pf, offset, size, emptyPartialFile,
 					false, nil)
@@ -116,7 +117,7 @@ func TestReader(t *testing.T) {
 				mockSectorAcquire(l, sectorRef, pfPath, nil)
 			},
 
-			pfFunc: func(pf *mocks.MockpartialFileHandler) {
+			pfFunc: func(pf *mocks.MockPartialFileHandler) {
 				mockPartialFileOpen(pf, sectorSize, pfPath, nil)
 				mockCheckAllocation(pf, offset, size, emptyPartialFile,
 					true, nil)
@@ -158,7 +159,7 @@ func TestReader(t *testing.T) {
 				mockSectorAcquire(l, sectorRef, pfPath, nil)
 			},
 
-			pfFunc: func(pf *mocks.MockpartialFileHandler) {
+			pfFunc: func(pf *mocks.MockPartialFileHandler) {
 				mockPartialFileOpen(pf, sectorSize, pfPath, nil)
 				mockCheckAllocation(pf, offset, size, emptyPartialFile,
 					false, nil)
@@ -224,7 +225,7 @@ func TestReader(t *testing.T) {
 				mockSectorAcquire(l, sectorRef, pfPath, nil)
 			},
 
-			pfFunc: func(pf *mocks.MockpartialFileHandler) {
+			pfFunc: func(pf *mocks.MockPartialFileHandler) {
 				mockPartialFileOpen(pf, sectorSize, pfPath, nil)
 				mockCheckAllocation(pf, offset, size, emptyPartialFile,
 					true, nil)
@@ -252,7 +253,7 @@ func TestReader(t *testing.T) {
 				mockSectorAcquire(l, sectorRef, pfPath, nil)
 			},
 
-			pfFunc: func(pf *mocks.MockpartialFileHandler) {
+			pfFunc: func(pf *mocks.MockPartialFileHandler) {
 				mockPartialFileOpen(pf, sectorSize, pfPath, nil)
 				mockCheckAllocation(pf, offset, size, emptyPartialFile,
 					false, nil)
@@ -309,7 +310,7 @@ func TestReader(t *testing.T) {
 
 			// create them mocks
 			lstore := mocks.NewMockStore(mockCtrl)
-			pfhandler := mocks.NewMockpartialFileHandler(mockCtrl)
+			pfhandler := mocks.NewMockPartialFileHandler(mockCtrl)
 			index := mocks.NewMockSectorIndex(mockCtrl)
 
 			if tc.storeFnc != nil {
@@ -341,12 +342,20 @@ func TestReader(t *testing.T) {
 
 			remoteStore := stores.NewRemote(lstore, index, nil, 6000, pfhandler)
 
-			rd, err := remoteStore.Reader(ctx, sectorRef, offset, size)
+			rdg, err := remoteStore.Reader(ctx, sectorRef, offset, size)
+			var rd io.ReadCloser
 
 			if tc.errStr != "" {
-				require.Error(t, err)
-				require.Nil(t, rd)
-				require.Contains(t, err.Error(), tc.errStr)
+				if rdg == nil {
+					require.Error(t, err)
+					require.Nil(t, rdg)
+					require.Contains(t, err.Error(), tc.errStr)
+				} else {
+					rd, err = rdg(0)
+					require.Error(t, err)
+					require.Nil(t, rd)
+					require.Contains(t, err.Error(), tc.errStr)
+				}
 			} else {
 				require.NoError(t, err)
 			}
@@ -354,7 +363,10 @@ func TestReader(t *testing.T) {
 			if !tc.expectedNonNilReader {
 				require.Nil(t, rd)
 			} else {
-				require.NotNil(t, rd)
+				require.NotNil(t, rdg)
+				rd, err := rdg(0)
+				require.NoError(t, err)
+
 				defer func() {
 					require.NoError(t, rd.Close())
 				}()
@@ -394,7 +406,7 @@ func TestCheckIsUnsealed(t *testing.T) {
 
 	tcs := map[string]struct {
 		storeFnc func(s *mocks.MockStore)
-		pfFunc   func(s *mocks.MockpartialFileHandler)
+		pfFunc   func(s *mocks.MockPartialFileHandler)
 		indexFnc func(s *mocks.MockSectorIndex, serverURL string)
 
 		needHttpServer bool
@@ -422,7 +434,7 @@ func TestCheckIsUnsealed(t *testing.T) {
 				mockSectorAcquire(l, sectorRef, pfPath, nil)
 			},
 
-			pfFunc: func(pf *mocks.MockpartialFileHandler) {
+			pfFunc: func(pf *mocks.MockPartialFileHandler) {
 				mockPartialFileOpen(pf, sectorSize, pfPath, xerrors.New("pf open error"))
 			},
 			errStr: "pf open error",
@@ -433,7 +445,7 @@ func TestCheckIsUnsealed(t *testing.T) {
 				mockSectorAcquire(l, sectorRef, pfPath, nil)
 			},
 
-			pfFunc: func(pf *mocks.MockpartialFileHandler) {
+			pfFunc: func(pf *mocks.MockPartialFileHandler) {
 				mockPartialFileOpen(pf, sectorSize, pfPath, nil)
 				mockCheckAllocation(pf, offset, size, emptyPartialFile,
 					true, xerrors.New("piece check error"))
@@ -447,7 +459,7 @@ func TestCheckIsUnsealed(t *testing.T) {
 				mockSectorAcquire(l, sectorRef, pfPath, nil)
 			},
 
-			pfFunc: func(pf *mocks.MockpartialFileHandler) {
+			pfFunc: func(pf *mocks.MockPartialFileHandler) {
 				mockPartialFileOpen(pf, sectorSize, pfPath, nil)
 
 				mockCheckAllocation(pf, offset, size, emptyPartialFile,
@@ -489,7 +501,7 @@ func TestCheckIsUnsealed(t *testing.T) {
 				mockSectorAcquire(l, sectorRef, pfPath, nil)
 			},
 
-			pfFunc: func(pf *mocks.MockpartialFileHandler) {
+			pfFunc: func(pf *mocks.MockPartialFileHandler) {
 				mockPartialFileOpen(pf, sectorSize, pfPath, nil)
 				mockCheckAllocation(pf, offset, size, emptyPartialFile,
 					false, nil)
@@ -534,7 +546,7 @@ func TestCheckIsUnsealed(t *testing.T) {
 				mockSectorAcquire(l, sectorRef, pfPath, nil)
 			},
 
-			pfFunc: func(pf *mocks.MockpartialFileHandler) {
+			pfFunc: func(pf *mocks.MockPartialFileHandler) {
 				mockPartialFileOpen(pf, sectorSize, pfPath, nil)
 				mockCheckAllocation(pf, offset, size, emptyPartialFile,
 					true, nil)
@@ -570,7 +582,7 @@ func TestCheckIsUnsealed(t *testing.T) {
 				mockSectorAcquire(l, sectorRef, pfPath, nil)
 			},
 
-			pfFunc: func(pf *mocks.MockpartialFileHandler) {
+			pfFunc: func(pf *mocks.MockPartialFileHandler) {
 				mockPartialFileOpen(pf, sectorSize, pfPath, nil)
 				mockCheckAllocation(pf, offset, size, emptyPartialFile,
 					false, nil)
@@ -603,7 +615,7 @@ func TestCheckIsUnsealed(t *testing.T) {
 
 			// create them mocks
 			lstore := mocks.NewMockStore(mockCtrl)
-			pfhandler := mocks.NewMockpartialFileHandler(mockCtrl)
+			pfhandler := mocks.NewMockPartialFileHandler(mockCtrl)
 			index := mocks.NewMockSectorIndex(mockCtrl)
 
 			if tc.storeFnc != nil {
@@ -657,18 +669,18 @@ func mockSectorAcquire(l *mocks.MockStore, sectorRef storage.SectorRef, pfPath s
 		storiface.SectorPaths{}, err).Times(1)
 }
 
-func mockPartialFileOpen(pf *mocks.MockpartialFileHandler, sectorSize abi.SectorSize, pfPath string, err error) {
+func mockPartialFileOpen(pf *mocks.MockPartialFileHandler, sectorSize abi.SectorSize, pfPath string, err error) {
 	pf.EXPECT().OpenPartialFile(abi.PaddedPieceSize(sectorSize), pfPath).Return(&partialfile.PartialFile{},
 		err).Times(1)
 }
 
-func mockCheckAllocation(pf *mocks.MockpartialFileHandler, offset, size abi.PaddedPieceSize, file *partialfile.PartialFile,
+func mockCheckAllocation(pf *mocks.MockPartialFileHandler, offset, size abi.PaddedPieceSize, file *partialfile.PartialFile,
 	out bool, err error) {
 	pf.EXPECT().HasAllocated(file, storiface.UnpaddedByteIndex(offset.Unpadded()),
 		size.Unpadded()).Return(out, err).Times(1)
 }
 
-func mockPfReader(pf *mocks.MockpartialFileHandler, file *partialfile.PartialFile, offset, size abi.PaddedPieceSize,
+func mockPfReader(pf *mocks.MockPartialFileHandler, file *partialfile.PartialFile, offset, size abi.PaddedPieceSize,
 	outFile *os.File, err error) {
 	pf.EXPECT().Reader(file, storiface.PaddedByteIndex(offset), size).Return(outFile, err)
 }

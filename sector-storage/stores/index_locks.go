@@ -152,6 +152,10 @@ func (i *indexLocks) StorageLock(ctx context.Context, sector abi.SectorID, read 
 	return nil
 }
 
+func (i *indexLocks) StorageTryLock(ctx context.Context, sector abi.SectorID, read storiface.SectorFileType, write storiface.SectorFileType) (bool, error) {
+	return i.lockWith(ctx, (*sectorLock).tryLockSafe, sector, read, write)
+}
+
 func (i *indexLocks) StorageGetLocks(context.Context) (storiface.SectorLocks, error) {
 	i.lk.Lock()
 	defer i.lk.Unlock()
@@ -179,8 +183,4 @@ func (i *indexLocks) StorageGetLocks(context.Context) (storiface.SectorLocks, er
 	})
 
 	return out, nil
-}
-
-func (i *indexLocks) StorageTryLock(ctx context.Context, sector abi.SectorID, read storiface.SectorFileType, write storiface.SectorFileType) (bool, error) {
-	return i.lockWith(ctx, (*sectorLock).tryLockSafe, sector, read, write)
 }
