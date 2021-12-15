@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	sealing "github.com/filecoin-project/lotus/extern/storage-sealing"
 	types2 "github.com/filecoin-project/venus-sealer/types"
 	"io/ioutil"
 	"os"
@@ -44,6 +45,7 @@ stored while moving through the sealing pipeline (references as 'seal').`,
 		storageListCmd,
 		storageFindCmd,
 		storageCleanupCmd,
+		storageLocksCmd,
 	},
 }
 
@@ -691,4 +693,44 @@ func cleanupRemovedSectorData(ctx context.Context, api api.StorageMiner, napi ap
 	}
 
 	return nil
+}
+
+var storageLocksCmd = &cli.Command{
+	Name:  "locks",
+	Usage: "show active sector locks",
+	Action: func(cctx *cli.Context) error {
+		api, closer, err := api.GetStorageMinerAPI(cctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+		ctx := api.ReqContext(cctx)
+
+		locks, err := api.StorageGetLocks(ctx)
+		if err != nil {
+			return err
+		}
+
+		for _, lock := range locks.Locks {
+			st, err := api.SectorsStatus(ctx, lock.Sector.Number, false)
+			if err != nil {
+				return xerrors.Errorf("getting sector status(%d): %w", lock.Sector.Number, err)
+			}
+
+			lockstr := fmt.Sprintf("%d\t%s\t", lock.Sector.Number, color.New(stateOrder[types2.SectorState(st.State)].col).Sprint(st.State))
+
+			for i := 0; i < storiface.FileTypes; i++ {
+				if lock.Write[i] > 0 {
+					lockstr += fmt.Sprintf("%s(%s) ", storiface.SectorFileType(1<<i).String(), color.RedString("W"))
+				}
+				if lock.Read[i] > 0 {
+					lockstr += fmt.Sprintf("%s(%s:%d) ", storiface.SectorFileType(1<<i).String(), color.GreenString("R"), lock.Read[i])
+				}
+			}
+
+			fmt.Println(lockstr)
+		}
+
+		return nil
+	},
 }
