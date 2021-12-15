@@ -242,6 +242,7 @@ type StorageMinerStruct struct {
 		StorageReportHealth  func(ctx context.Context, id stores.ID, report stores.HealthReport) error                                                                    `perm:"admin"`
 		StorageLock          func(ctx context.Context, sector abi.SectorID, read storiface.SectorFileType, write storiface.SectorFileType) error                          `perm:"admin"`
 		StorageTryLock       func(ctx context.Context, sector abi.SectorID, read storiface.SectorFileType, write storiface.SectorFileType) (bool, error)                  `perm:"admin"`
+		StorageGetLocks      func(ctx context.Context) (storiface.SectorLocks, error)                                                                                     `perm:"admin"`
 
 		DealsImportData                        func(ctx context.Context, dealPropCid cid.Cid, file string) error `perm:"write"`
 		DealsList                              func(ctx context.Context) ([]apitypes.MarketDeal, error)          `perm:"read"`
@@ -526,6 +527,10 @@ func (c *StorageMinerStruct) StorageLock(ctx context.Context, sector abi.SectorI
 
 func (c *StorageMinerStruct) StorageTryLock(ctx context.Context, sector abi.SectorID, read storiface.SectorFileType, write storiface.SectorFileType) (bool, error) {
 	return c.Internal.StorageTryLock(ctx, sector, read, write)
+}
+
+func (c *StorageMinerStruct) StorageGetLocks(ctx context.Context) (storiface.SectorLocks, error) {
+	return c.Internal.StorageGetLocks(ctx)
 }
 
 func (c *StorageMinerStruct) DealsImportData(ctx context.Context, dealPropCid cid.Cid, file string) error {
