@@ -71,9 +71,9 @@ type SealingAPI interface {
 	ChainBaseFee(context.Context, types2.TipSetToken) (abi.TokenAmount, error)
 	ChainGetMessage(ctx context.Context, mc cid.Cid) (*types.Message, error)
 	StateGetRandomnessFromBeacon(ctx context.Context, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte, tok types2.TipSetToken) (abi.Randomness, error)
-	StateGetRandomnessFromTickets(ctx context.Context,personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte, tok types2.TipSetToken) (abi.Randomness, error)
+	StateGetRandomnessFromTickets(ctx context.Context, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte, tok types2.TipSetToken) (abi.Randomness, error)
 	ChainReadObj(context.Context, cid.Cid) ([]byte, error)
-	
+
 	//for messager
 	MessagerWaitMsg(context.Context, string) (types2.MsgLookup, error)
 	MessagerSearchMsg(context.Context, string) (*types2.MsgLookup, error)
@@ -90,7 +90,7 @@ type SectorStateNotifee func(before, after types2.SectorInfo)
 type AddrSel func(ctx context.Context, mi miner.MinerInfo, use api.AddrUse, goodFunds, minFunds abi.TokenAmount) (address.Address, abi.TokenAmount, error)
 
 type Sealing struct {
-	api    SealingAPI
+	api      SealingAPI
 	DealInfo *CurrentDealInfoManager
 
 	feeCfg config.MinerFeeConfig
@@ -148,12 +148,11 @@ type pendingPiece struct {
 	accepted func(abi.SectorNumber, abi.UnpaddedPieceSize, error)
 }
 
-func New(mctx context.Context, api SealingAPI, fc config.MinerFeeConfig, events Events, maddr address.Address, metaDataService *service.MetadataService, sectorInfoService *service.SectorInfoService, logService *service.LogService, sealer sectorstorage.SectorManager, sc types2.SectorIDCounter, verif ffiwrapper.Verifier, prov ffiwrapper.Prover, pcp PreCommitPolicy, gc types2.GetSealingConfigFunc, notifee SectorStateNotifee, as AddrSel, networkParams *config.NetParamsConfig) *Sealing {
+func New(mctx context.Context, api SealingAPI, fc config.MinerFeeConfig, maddr address.Address, sectorInfoService *service.SectorInfoService, logService *service.LogService, sealer sectorstorage.SectorManager, sc types2.SectorIDCounter, verif ffiwrapper.Verifier, prov ffiwrapper.Prover, pcp PreCommitPolicy, gc types2.GetSealingConfigFunc, notifee SectorStateNotifee, as AddrSel, networkParams *config.NetParamsConfig) *Sealing {
 	s := &Sealing{
-		api:    api,
+		api:      api,
 		DealInfo: &CurrentDealInfoManager{api},
-		feeCfg: fc,
-		events: events,
+		feeCfg:   fc,
 
 		networkParams: networkParams,
 		maddr:         maddr,

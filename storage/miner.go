@@ -3,9 +3,10 @@ package storage
 import (
 	"context"
 	"errors"
+	"time"
+
 	fbig "github.com/filecoin-project/go-state-types/big"
 	api2 "github.com/filecoin-project/venus-market/api"
-	"time"
 
 	"github.com/ipfs/go-cid"
 	logging "github.com/ipfs/go-log/v2"
@@ -23,7 +24,6 @@ import (
 
 	"github.com/filecoin-project/venus/app/submodule/apitypes"
 	"github.com/filecoin-project/venus/pkg/chain"
-	"github.com/filecoin-project/venus/pkg/events"
 	"github.com/filecoin-project/venus/pkg/types"
 	"github.com/filecoin-project/venus/pkg/types/specactors/builtin"
 	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
@@ -189,16 +189,7 @@ func (m *Miner) Run(ctx context.Context) error {
 		return xerrors.Errorf("getting miner info: %w", err)
 	}
 
-	evts, err := events.NewEvents(ctx, m.api)
-	if err != nil {
-		return xerrors.Errorf("new events: %w", err)
-	}
-
 	var (
-		// consumer of chain head changes.
-
-		evtsAdapter = NewEventsAdapter(evts)
-
 		// Create a shim to glue the API required by the sealing component
 		// with the API that Lotus is capable of providing.
 		// The shim translates between "tipset tokens" and tipset keys, and
@@ -222,7 +213,7 @@ func (m *Miner) Run(ctx context.Context) error {
 	cfg := types2.GetSealingConfigFunc(m.getSealConfig)
 
 	// Instantiate the sealing FSM.
-	m.sealing = sealing.New(ctx, adaptedAPI, m.feeCfg, evtsAdapter, m.maddr, m.metadataService, m.sectorInfoService, m.logService, m.sealer, m.sc, m.verif, m.prover,
+	m.sealing = sealing.New(ctx, adaptedAPI, m.feeCfg, m.maddr, m.sectorInfoService, m.logService, m.sealer, m.sc, m.verif, m.prover,
 		&pcp, cfg, m.handleSealingNotifications, as, m.networkParams)
 
 	// Run the sealing FSM.
