@@ -2,6 +2,7 @@ package stores
 
 import (
 	"context"
+	"sort"
 	"sync"
 
 	"golang.org/x/xerrors"
@@ -149,6 +150,35 @@ func (i *indexLocks) StorageLock(ctx context.Context, sector abi.SectorID, read 
 	}
 
 	return nil
+}
+
+func (i *indexLocks) StorageGetLocks(context.Context) (storiface.SectorLocks, error) {
+	i.lk.Lock()
+	defer i.lk.Unlock()
+
+	out := storiface.SectorLocks{
+		Locks: []storiface.SectorLock{},
+	}
+
+	for id, lock := range i.locks {
+		l := storiface.SectorLock{Sector: id}
+
+		for t, b := range lock.w.All() {
+			if b {
+				l.Write[t]++
+			}
+		}
+
+		copy(l.Read[:], lock.r[:])
+
+		out.Locks = append(out.Locks, l)
+	}
+
+	sort.Slice(out.Locks, func(i, j int) bool {
+		return out.Locks[i].Sector.Number < out.Locks[j].Sector.Number
+	})
+
+	return out, nil
 }
 
 func (i *indexLocks) StorageTryLock(ctx context.Context, sector abi.SectorID, read storiface.SectorFileType, write storiface.SectorFileType) (bool, error) {
