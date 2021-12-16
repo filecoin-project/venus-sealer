@@ -29,15 +29,6 @@ func (s *taskSelector) Ok(ctx context.Context, task types.TaskType, spt abi.Regi
 	}
 	_, supported := tasks[task]
 
-	// whether the task of the previous stage is on this machine
-	bExist, err := whnd.workerRpc.SectorExists(ctx, task, sector)
-	if err != nil {
-		return false, xerrors.Errorf("getting supported worker for same machine: %w", err)
-	}
-	if !bExist {
-		return false, nil
-	}
-
 	// Check the number of tasks
 	taskNum, err := whnd.workerRpc.TaskNumbers(ctx)
 	if err != nil {
