@@ -191,7 +191,7 @@ type CurrentDealInfoTskAPI interface {
 	ChainGetMessage(ctx context.Context, mc cid.Cid) (*types.Message, error)
 	StateLookupID(context.Context, address.Address, types.TipSetKey) (address.Address, error)
 	StateMarketStorageDeal(context.Context, abi.DealID, types.TipSetKey) (*apitypes.MarketDeal, error)
-	StateNetworkVersion(ctx context.Context, tok types2.TipSetToken) (network.Version, error)
+	StateNetworkVersion(ctx context.Context, tok types.TipSetKey) (network.Version, error)
 	StateSearchMsg(ctx context.Context, from types.TipSetKey, msg cid.Cid, limit abi.ChainEpoch, allowReplaced bool) (*apitypes.MsgLookup, error)
 }
 
@@ -239,8 +239,12 @@ func (c *CurrentDealInfoAPIAdapter) StateSearchMsg(ctx context.Context, k cid.Ci
 }
 
 func (c *CurrentDealInfoAPIAdapter) StateNetworkVersion(ctx context.Context, tok types2.TipSetToken) (network.Version, error) {
+	tsk, err := types.TipSetKeyFromBytes(tok)
+	if err != nil {
+		return network.VersionMax, xerrors.Errorf("failed to unmarshal TipSetToken to TipSetKey: %w", err)
+	}
 
-	return c.CurrentDealInfoTskAPI.StateNetworkVersion(ctx, tok)
+	return c.CurrentDealInfoTskAPI.StateNetworkVersion(ctx, tsk)
 }
 
 var _ CurrentDealInfoAPI = (*CurrentDealInfoAPIAdapter)(nil)

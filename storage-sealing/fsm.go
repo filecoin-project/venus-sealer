@@ -116,7 +116,7 @@ var fsmPlanners = map[types.SectorState]func(events []statemachine.Event, state 
 		on(SectorCommitFailed{}, types.CommitFailed),
 	),
 	types.SubmitCommitAggregate: planOne(
-		on(SectorCommitAggregateSent{}, types.CommitWait),
+		on(SectorCommitAggregateSent{}, types.CommitAggregateWait),
 		on(SectorCommitFailed{}, types.CommitFailed),
 		on(SectorRetrySubmitCommit{}, types.SubmitCommit),
 	),
