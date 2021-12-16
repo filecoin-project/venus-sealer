@@ -21,7 +21,8 @@ const (
 type SectorStats struct {
 	lk sync.Mutex
 
-	BySector map[abi.SectorID]StatSectorState
+	BySector map[abi.SectorID]SectorState
+	ByState  map[SectorState]int64
 	Totals   [Nsst]uint64
 }
 
@@ -35,12 +36,14 @@ func (ss *SectorStats) UpdateSector(cfg sealiface.Config, id abi.SectorID, st Se
 	// update totals
 	oldst, found := ss.BySector[id]
 	if found {
-		ss.Totals[oldst]--
+		ss.Totals[toStatState(oldst, cfg.FinalizeEarly)]--
+		ss.ByState[oldst]--
 	}
 
 	sst := toStatState(st, cfg.FinalizeEarly)
-	ss.BySector[id] = sst
+	ss.BySector[id] = st
 	ss.Totals[sst]++
+	ss.ByState[st]++
 
 	// check if we may need be able to process more deals
 	sealing := ss.curSealingLocked()

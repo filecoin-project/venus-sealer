@@ -61,6 +61,10 @@ func (m *Sealing) handleWaitDeals(ctx statemachine.Context, sector types.SectorI
 				return ctx.Send(SectorAddPiece{})
 			},
 		}
+	} else {
+		// make sure we're only accounting for pieces which were correctly added
+		// (note that m.assignedPieces[sid] will always be empty here)
+		m.openSectors[sid].used = used
 	}
 
 	go func() {
