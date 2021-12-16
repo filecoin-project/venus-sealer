@@ -51,7 +51,8 @@ func TestHappyPath(t *testing.T) {
 		s: &Sealing{
 			maddr: ma,
 			stats: types.SectorStats{
-				BySector: map[abi.SectorID]types.StatSectorState{},
+				BySector: map[abi.SectorID]types.SectorState{},
+				ByState:  map[types.SectorState]int64{},
 			},
 			notifee: func(before, after types.SectorInfo) {
 				notif = append(notif, struct{ before, after types.SectorInfo }{before, after})
@@ -113,7 +114,8 @@ func TestHappyPathFinalizeEarly(t *testing.T) {
 		s: &Sealing{
 			maddr: ma,
 			stats: types.SectorStats{
-				BySector: map[abi.SectorID]types.StatSectorState{},
+				BySector: map[abi.SectorID]types.SectorState{},
+				ByState:  map[types.SectorState]int64{},
 			},
 			notifee: func(before, after types.SectorInfo) {
 				notif = append(notif, struct{ before, after types.SectorInfo }{before, after})
@@ -181,7 +183,8 @@ func TestCommitFinalizeFailed(t *testing.T) {
 		s: &Sealing{
 			maddr: ma,
 			stats: types.SectorStats{
-				BySector: map[abi.SectorID]types.StatSectorState{},
+				BySector: map[abi.SectorID]types.SectorState{},
+				ByState:  map[types.SectorState]int64{},
 			},
 			notifee: func(before, after types.SectorInfo) {
 				notif = append(notif, struct{ before, after types.SectorInfo }{before, after})
@@ -220,7 +223,8 @@ func TestSeedRevert(t *testing.T) {
 		s: &Sealing{
 			maddr: ma,
 			stats: types.SectorStats{
-				BySector: map[abi.SectorID]types.StatSectorState{},
+				BySector: map[abi.SectorID]types.SectorState{},
+				ByState:  map[types.SectorState]int64{},
 			},
 			logService: newLogService(t),
 		},
@@ -274,7 +278,8 @@ func TestPlanCommittingHandlesSectorCommitFailed(t *testing.T) {
 		s: &Sealing{
 			maddr: ma,
 			stats: types.SectorStats{
-				BySector: map[abi.SectorID]types.StatSectorState{},
+				BySector: map[abi.SectorID]types.SectorState{},
+				ByState:  map[types.SectorState]int64{},
 			},
 			logService: newLogService(t),
 		},
@@ -312,7 +317,8 @@ func TestBrokenState(t *testing.T) {
 		s: &Sealing{
 			maddr: ma,
 			stats: types.SectorStats{
-				BySector: map[abi.SectorID]types.StatSectorState{},
+				BySector: map[abi.SectorID]types.SectorState{},
+				ByState:  map[types.SectorState]int64{},
 			},
 			notifee: func(before, after types.SectorInfo) {
 				notif = append(notif, struct{ before, after types.SectorInfo }{before, after})
@@ -348,7 +354,8 @@ func TestTicketExpired(t *testing.T) {
 		s: &Sealing{
 			maddr: ma,
 			stats: types.SectorStats{
-				BySector: map[abi.SectorID]types.StatSectorState{},
+				BySector: map[abi.SectorID]types.SectorState{},
+				ByState:  map[types.SectorState]int64{},
 			},
 			notifee: func(before, after types.SectorInfo) {
 				notif = append(notif, struct{ before, after types.SectorInfo }{before, after})

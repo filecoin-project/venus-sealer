@@ -3,9 +3,6 @@ package storage
 import (
 	"context"
 	"errors"
-	fbig "github.com/filecoin-project/go-state-types/big"
-	api2 "github.com/filecoin-project/venus-market/api"
-	"github.com/filecoin-project/venus-market/piecestorage"
 	"time"
 
 	"github.com/ipfs/go-cid"
@@ -15,12 +12,16 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-bitfield"
 	"github.com/filecoin-project/go-state-types/abi"
+	fbig "github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/go-state-types/crypto"
 	"github.com/filecoin-project/go-state-types/dline"
 	"github.com/filecoin-project/go-state-types/network"
 	"github.com/filecoin-project/specs-storage/storage"
 
 	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
+
+	api2 "github.com/filecoin-project/venus-market/api"
+	"github.com/filecoin-project/venus-market/piecestorage"
 
 	"github.com/filecoin-project/venus/app/submodule/apitypes"
 	"github.com/filecoin-project/venus/pkg/chain"
@@ -197,33 +198,24 @@ func (m *Miner) Run(ctx context.Context) error {
 	if err != nil {
 		return xerrors.Errorf("new events: %w", err)
 	}
+	evtsAdapter := NewEventsAdapter(evts)
 
-	var (
-		// consumer of chain head changes.
+	// Create a shim to glue the API required by the sealing component
+	// with the API that Lotus is capable of providing.
+	// The shim translates between "tipset tokens" and tipset keys, and
+	// provides extra methods.
+	adaptedAPI := NewSealingAPIAdapter(m.api, m.messager, m.marketClient)
 
-		evtsAdapter = NewEventsAdapter(evts)
+	// Instantiate a precommit policy.
+	cfg := types2.GetSealingConfigFunc(m.getSealConfig)
+	provingBuffer := md.WPoStProvingPeriod * 2
 
-		// Create a shim to glue the API required by the sealing component
-		// with the API that Lotus is capable of providing.
-		// The shim translates between "tipset tokens" and tipset keys, and
-		// provides extra methods.
-		adaptedAPI = NewSealingAPIAdapter(m.api, m.messager, m.marketClient)
-
-		// Instantiate a precommit policy.
-		defaultDuration = getDefaultSectorExpirationExtension(m.getSealConfig)
-		provingBuffer   = md.WPoStProvingPeriod * 2
-	)
-
-	// TODO: Maybe we update this policy after actor upgrades?
-	pcp := sealing.NewBasicPreCommitPolicy(adaptedAPI, defaultDuration, provingBuffer)
+	pcp := sealing.NewBasicPreCommitPolicy(adaptedAPI, cfg, provingBuffer)
 
 	// address selector.
 	as := func(ctx context.Context, mi miner.MinerInfo, use api.AddrUse, goodFunds, minFunds abi.TokenAmount) (address.Address, abi.TokenAmount, error) {
 		return m.addrSel.AddressFor(ctx, m.api, m.messager, mi, use, goodFunds, minFunds)
 	}
-
-	// sealing configuration.
-	cfg := types2.GetSealingConfigFunc(m.getSealConfig)
 
 	// Instantiate the sealing FSM.
 	m.sealing = sealing.New(ctx, adaptedAPI, m.feeCfg, evtsAdapter, m.maddr, m.metadataService, m.sectorInfoService, m.logService, m.sealer, m.sc, m.verif, m.prover,

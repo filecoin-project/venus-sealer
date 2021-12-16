@@ -3,6 +3,7 @@ package sealing_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/ipfs/go-cid"
 	"github.com/stretchr/testify/assert"
@@ -12,13 +13,33 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/network"
 
+	"github.com/filecoin-project/venus/pkg/types/specactors/builtin"
+	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
+
 	"github.com/filecoin-project/venus-sealer/constants"
 	sealing "github.com/filecoin-project/venus-sealer/storage-sealing"
+	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 	"github.com/filecoin-project/venus-sealer/types"
 )
 
 type fakeChain struct {
 	h abi.ChainEpoch
+}
+
+type fakeConfigStub struct {
+	CCSectorLifetime time.Duration
+}
+
+func fakeConfigGetter(stub *fakeConfigStub) types.GetSealingConfigFunc {
+	return func() (sealiface.Config, error) {
+		if stub == nil {
+			return sealiface.Config{}, nil
+		}
+
+		return sealiface.Config{
+			CommittedCapacitySectorLifetime: stub.CCSectorLifetime,
+		}, nil
+	}
 }
 
 func (f *fakeChain) StateNetworkVersion(ctx context.Context, tok types.TipSetToken) (network.Version, error) {
@@ -37,21 +58,42 @@ func fakePieceCid(t *testing.T) cid.Cid {
 }
 
 func TestBasicPolicyEmptySector(t *testing.T) {
-	policy := sealing.NewBasicPreCommitPolicy(&fakeChain{
-		h: abi.ChainEpoch(55),
-	}, 10, 0)
+	cfg := fakeConfigGetter(nil)
+	h := abi.ChainEpoch(55)
+	pBuffer := abi.ChainEpoch(2)
+	pcp := sealing.NewBasicPreCommitPolicy(&fakeChain{h: h}, cfg, pBuffer)
+	exp, err := pcp.Expiration(context.Background())
 
-	exp, err := policy.Expiration(context.Background())
 	require.NoError(t, err)
 
-	assert.Equal(t, 2879, int(exp))
+	// as set when there are no deal pieces
+	expected := h + policy.GetMaxSectorExpirationExtension() - pBuffer
+	assert.Equal(t, int(expected), int(exp))
+}
+
+func TestCustomCCSectorConfig(t *testing.T) {
+	customLifetime := 200 * 24 * time.Hour
+	customLifetimeEpochs := abi.ChainEpoch(int64(customLifetime.Seconds()) / builtin.EpochDurationSeconds)
+	cfgStub := fakeConfigStub{CCSectorLifetime: customLifetime}
+	cfg := fakeConfigGetter(&cfgStub)
+	h := abi.ChainEpoch(55)
+	pBuffer := abi.ChainEpoch(2)
+	pcp := sealing.NewBasicPreCommitPolicy(&fakeChain{h: h}, cfg, pBuffer)
+	exp, err := pcp.Expiration(context.Background())
+
+	require.NoError(t, err)
+
+	// as set when there are no deal pieces
+	expected := h + customLifetimeEpochs - pBuffer
+	assert.Equal(t, int(expected), int(exp))
 }
 
 func TestBasicPolicyMostConstrictiveSchedule(t *testing.T) {
+	cfg := fakeConfigGetter(nil)
 	policy := sealing.NewBasicPreCommitPolicy(&fakeChain{
 		h: abi.ChainEpoch(55),
-	}, 100, 11)
-
+	}, cfg, 2)
+	longestDealEpochEnd := abi.ChainEpoch(547300)
 	pieces := []types.Piece{
 		{
 			Piece: abi.PieceInfo{
@@ -62,7 +104,7 @@ func TestBasicPolicyMostConstrictiveSchedule(t *testing.T) {
 				DealID: abi.DealID(42),
 				DealSchedule: types.DealSchedule{
 					StartEpoch: abi.ChainEpoch(70),
-					EndEpoch:   abi.ChainEpoch(75),
+					EndEpoch:   abi.ChainEpoch(547275),
 				},
 			},
 		},
@@ -71,11 +113,11 @@ func TestBasicPolicyMostConstrictiveSchedule(t *testing.T) {
 				Size:     abi.PaddedPieceSize(1024),
 				PieceCID: fakePieceCid(t),
 			},
-			DealInfo: & types.PieceDealInfo{
+			DealInfo: &types.PieceDealInfo{
 				DealID: abi.DealID(43),
 				DealSchedule: types.DealSchedule{
 					StartEpoch: abi.ChainEpoch(80),
-					EndEpoch:   abi.ChainEpoch(100),
+					EndEpoch:   longestDealEpochEnd,
 				},
 			},
 		},
@@ -88,9 +130,10 @@ func TestBasicPolicyMostConstrictiveSchedule(t *testing.T) {
 }
 
 func TestBasicPolicyIgnoresExistingScheduleIfExpired(t *testing.T) {
+	cfg := fakeConfigGetter(nil)
 	policy := sealing.NewBasicPreCommitPolicy(&fakeChain{
 		h: abi.ChainEpoch(55),
-	}, 100, 0)
+	}, cfg, 0)
 
 	pieces := []types.Piece{
 		{
@@ -111,13 +154,15 @@ func TestBasicPolicyIgnoresExistingScheduleIfExpired(t *testing.T) {
 	exp, err := policy.Expiration(context.Background(), pieces...)
 	require.NoError(t, err)
 
-	assert.Equal(t, 2879, int(exp))
+	// Treated as a CC sector, so expiration becomes currEpoch + maxLifetime = 55 + 1555200
+	assert.Equal(t, 1555255, int(exp))
 }
 
 func TestMissingDealIsIgnored(t *testing.T) {
+	cfg := fakeConfigGetter(nil)
 	policy := sealing.NewBasicPreCommitPolicy(&fakeChain{
 		h: abi.ChainEpoch(55),
-	}, 100, 11)
+	}, cfg, 0)
 
 	pieces := []types.Piece{
 		{
