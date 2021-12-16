@@ -45,6 +45,14 @@ var storageAttachCmd = &cli.Command{
 			Name:  "store",
 			Usage: "(for init) use path for long-term storage",
 		},
+		&cli.StringSliceFlag{
+			Name:  "groups",
+			Usage: "path group names",
+		},
+		&cli.StringSliceFlag{
+			Name:  "allow-to",
+			Usage: "path groups allowed to pull data from this path (allow all if not specified)",
+		},
 	},
 	Action: func(cctx *cli.Context) error {
 		workerApi, closer, err := api.GetWorkerAPI(cctx)
@@ -83,6 +91,8 @@ var storageAttachCmd = &cli.Command{
 				Weight:   cctx.Uint64("weight"),
 				CanSeal:  cctx.Bool("seal"),
 				CanStore: cctx.Bool("store"),
+				Groups:   cctx.StringSlice("groups"),
+				AllowTo:  cctx.StringSlice("allow-to"),
 			}
 
 			if !(cfg.CanStore || cfg.CanSeal) {

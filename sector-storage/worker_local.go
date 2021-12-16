@@ -41,7 +41,6 @@ type WorkerConfig struct {
 	IgnoreResourceFiltering bool
 
 	TaskTotal  int64
-	IsBindP1P2 bool
 }
 
 // used do provide custom proofs impl (mostly used in testing)
@@ -64,8 +63,6 @@ type LocalWorker struct {
 	taskLk      sync.Mutex
 	taskNumber  int64
 	taskTotal   int64
-
-	isBindP1P2 bool
 
 	session     uuid.UUID
 	testDisable int64
@@ -94,7 +91,6 @@ func newLocalWorker(executor ExecutorFunc, wcfg WorkerConfig, store stores.Store
 		ignoreResources: wcfg.IgnoreResourceFiltering,
 		session:         uuid.New(),
 		closing:         make(chan struct{}),
-		isBindP1P2:      wcfg.IsBindP1P2,
 	}
 
 	if w.executor == nil {
@@ -491,29 +487,6 @@ func (l *LocalWorker) Paths(ctx context.Context) ([]stores.StoragePath, error) {
 func (l *LocalWorker) TaskNumbers(context.Context) (string, error) {
 	str := fmt.Sprintf("%d-%d", l.taskNumber, l.taskTotal)
 	return str, nil
-}
-
-func (l *LocalWorker) SectorExists(ctx context.Context, task types.TaskType, sector storage.SectorRef) (bool, error) {
-	if l.isBindP1P2 && task == types.TTPreCommit2 {
-		paths, _, err := l.storage.AcquireSector(ctx, sector, 0, storiface.FTSealed, storiface.PathSealing, storiface.AcquireMode(""))
-		if err != nil {
-			log.Errorf("try to find sector paths err: %s", err.Error())
-			return true, nil
-		}
-
-		log.Infof("find acquire sector paths: %v", paths)
-		bExist, err := storiface.FileExists(paths.Sealed)
-		if err != nil {
-			log.Errorf("check %s exist err: %s", paths.Sealed)
-			return true, nil
-		}
-
-		if !bExist {
-			return false, nil
-		}
-	}
-
-	return true, nil
 }
 
 func (l *LocalWorker) Info(context.Context) (storiface.WorkerInfo, error) {

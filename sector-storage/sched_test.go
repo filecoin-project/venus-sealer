@@ -124,10 +124,6 @@ func (t *schedTestWorker) TaskNumbers(ctx context.Context) (string, error) {
 	return "0-0", nil
 }
 
-func (s *schedTestWorker) SectorExists(context.Context, types.TaskType, storage.SectorRef) (bool, error) {
-	return true, nil
-}
-
 func (s *schedTestWorker) Paths(ctx context.Context) ([]stores.StoragePath, error) {
 	return s.paths, nil
 }

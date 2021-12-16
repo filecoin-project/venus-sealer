@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/filecoin-project/go-state-types/abi"
-	"github.com/filecoin-project/specs-storage/storage"
 
 	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
@@ -23,8 +22,6 @@ type WorkerAPI interface {
 	Info(context.Context) (storiface.WorkerInfo, error)
 
 	TaskNumbers(context.Context) (string, error)
-
-	SectorExists(context.Context, types.TaskType, storage.SectorRef) (bool, error)
 
 	storiface.WorkerCalls
 

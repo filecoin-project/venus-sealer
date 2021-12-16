@@ -38,8 +38,6 @@ type Worker interface {
 
 	TaskNumbers(context.Context) (string, error)
 
-	SectorExists(context.Context, types.TaskType, storage.SectorRef) (bool, error)
-
 	// Returns paths accessible to the worker
 	Paths(context.Context) ([]stores.StoragePath, error)
 

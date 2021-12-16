@@ -166,11 +166,6 @@ var runCmd = &cli.Command{
 			Usage: "total number of task",
 			Value: 100,
 		},
-		&cli.BoolFlag{
-			Name:  "bindP1P2",
-			Usage: "P1 and P2 phase tasks are bound to the same machine",
-			Value: false,
-		},
 	},
 	Action: func(cctx *cli.Context) error {
 		log.Info("Starting venus worker")
@@ -418,7 +413,6 @@ var runCmd = &cli.Command{
 				TaskTypes:  taskTypes,
 				NoSwap:     cctx.Bool("no-swap"),
 				TaskTotal:  cctx.Int64("task-total"),
-				IsBindP1P2: cctx.Bool("bindP1P2"),
 			}, remote, localStore, nodeApi, nodeApi, wsts),
 			localStore: localStore,
 			ls:         localStorage,
