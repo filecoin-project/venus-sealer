@@ -137,9 +137,8 @@ var initCmd = &cli.Command{
 			Usage: "indicate the deployment method of the venus-market, one of `solo`, `pool`, Default: `solo`",
 		},
 		&cli.StringFlag{
-			Name:     "market-url",
-			Usage:    "market url",
-			Required: true,
+			Name:  "market-url",
+			Usage: "market url",
 		},
 		&cli.StringFlag{
 			Name:  "market-token",
