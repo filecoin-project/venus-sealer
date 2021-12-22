@@ -389,8 +389,8 @@ github.com/filecoin-project/venus-auth v1.2.2-0.20210721103851-593a379c4916/go.m
 github.com/filecoin-project/venus-auth v1.3.1-0.20210809053831-012d55d5f578/go.mod h1:/cbLZYvQhinVFUG4TP2Uy1o7LtF+guT21qZIMTmKk0g=
 github.com/filecoin-project/venus-auth v1.3.1 h1:3FGPK6zCxZIpQA+VTY01wNaCvcgyLWPa61zuFY+br9c=
 github.com/filecoin-project/venus-auth v1.3.1/go.mod h1:DZwxRN2SVvRjw4UOMw2PBO1+hwAusksaWJe6BoGkjec=
-github.com/filecoin-project/venus-market v1.0.2-0.20211206084715-070874dc17eb h1:MNupB2v1fBye/Niq2dpN24UN+tztP6FJwpffq/6xFa8=
-github.com/filecoin-project/venus-market v1.0.2-0.20211206084715-070874dc17eb/go.mod h1:yDx6bwthenirxF9TIWUAZ20cpySvw45ktBqY2yAmGYQ=
+github.com/filecoin-project/venus-market v1.0.2-0.20211217074314-b0f03a224ab5 h1:8tS6dzNZgYjgzERHXgEtMcwcm+jrmriHZG0VBKG8Q7A=
+github.com/filecoin-project/venus-market v1.0.2-0.20211217074314-b0f03a224ab5/go.mod h1:yDx6bwthenirxF9TIWUAZ20cpySvw45ktBqY2yAmGYQ=
 github.com/filecoin-project/venus-messager v1.2.2-rc1.0.20211201075617-c9dd295b905c h1:eLyzMO+gCk/zmiajbk7BQTCD8lm85NpNPAHdWH3jtYM=
 github.com/filecoin-project/venus-messager v1.2.2-rc1.0.20211201075617-c9dd295b905c/go.mod h1:6bIzQHF9SMavQWRwxntjAocxz95LUBuT2Q52Q8TkQ3c=
 github.com/filecoin-project/venus-wallet v1.2.0/go.mod h1:RsBPnMOv0qqL1bwB4SdstSecIRF9WY1OZFE/0BshyrM=
