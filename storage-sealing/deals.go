@@ -2,6 +2,7 @@ package sealing
 
 import (
 	"context"
+	"github.com/filecoin-project/go-padreader"
 
 	types2 "github.com/filecoin-project/venus-market/types"
 	"github.com/filecoin-project/venus-sealer/types"
@@ -19,13 +20,18 @@ func (m *Sealing) DealSector(ctx context.Context) ([]types.DealAssign, error) {
 
 	var assigned []types.DealAssign
 	for _, deal := range deals {
-		r, err := m.pieceStorage.Read(ctx, deal.PieceStorage)
+		r, err := m.pieceStorage.Read(ctx, deal.PieceCID.String())
 		if err != nil {
 			log.Errorf("read piece from piece storage %v", err)
 			continue
 		}
 
-		so, err := m.SectorAddPieceToAny(ctx, deal.Length.Unpadded(), r, types.PieceDealInfo{
+		padR, err := padreader.NewInflator(r, uint64(deal.PayloadSize), deal.PieceSize.Unpadded())
+		if err != nil {
+			return nil, err
+		}
+
+		so, err := m.SectorAddPieceToAny(ctx, deal.Length.Unpadded(), padR, types.PieceDealInfo{
 			PublishCid:   &deal.PublishCid,
 			DealID:       deal.DealID,
 			DealProposal: &deal.DealProposal,
