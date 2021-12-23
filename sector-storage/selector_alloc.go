@@ -44,7 +44,7 @@ func (s *allocSelector) Ok(ctx context.Context, task types.TaskType, spt abi.Reg
 		return false, xerrors.Errorf("getting supported worker task number: %w", err)
 	}
 
-	log.Infof("tasks allocate: %s for %s", taskNum, whnd.info.Hostname)
+	log.Debugf("tasks allocate: %s for %s", taskNum, whnd.info.Hostname)
 	nums := strings.Split(taskNum, "-")
 	if len(nums) == 2 {
 		curNum, _ := strconv.ParseInt(nums[0], 10, 64)

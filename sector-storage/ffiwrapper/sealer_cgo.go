@@ -691,6 +691,7 @@ func (sb *Sealer) FinalizeSector(ctx context.Context, sector storage.SectorRef, 
 	if err != nil {
 		return xerrors.Errorf("acquiring sector cache path: %w", err)
 	}
+	log.Debugf("Sector %v store-cache: %v", sector.ID.Number, paths)
 	defer done()
 
 	return ffi.ClearCache(uint64(ssize), paths.Cache)

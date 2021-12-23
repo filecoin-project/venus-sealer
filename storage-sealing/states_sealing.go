@@ -720,6 +720,21 @@ func (m *Sealing) handleCommitting(ctx statemachine.Context, sector types.Sector
 		return ctx.Send(SectorComputeProofFailed{xerrors.Errorf("computing seal proof failed(1): %w", err)})
 	}
 
+	//
+	{
+		// TODO: Maybe wait for some finality
+
+		cfg, err := m.getConfig()
+		if err != nil {
+			return xerrors.Errorf("getting sealing config: %w", err)
+		}
+
+		if err := m.sealer.FinalizeSector(sector.SealingCtx(ctx.Context()), m.minerSector(sector.SectorType, sector.SectorNumber), sector.KeepUnsealedRanges(false, cfg.AlwaysKeepUnsealedCopy)); err != nil {
+			log.Warnf("sector %v finalize handle err: %s", sector.SectorNumber, err.Error())
+			// return ctx.Send(SectorFinalizeFailed{xerrors.Errorf("finalize sector: %w", err)})
+		}
+	}
+
 	proof, err := m.sealer.SealCommit2(sector.SealingCtx(ctx.Context()), m.minerSector(sector.SectorType, sector.SectorNumber), c2in)
 	if err != nil {
 		return ctx.Send(SectorComputeProofFailed{xerrors.Errorf("computing seal proof failed(2): %w", err)})
@@ -913,16 +928,18 @@ func (m *Sealing) handleCommitWait(ctx statemachine.Context, sector types.Sector
 }
 
 func (m *Sealing) handleFinalizeSector(ctx statemachine.Context, sector types.SectorInfo) error {
-	// TODO: Maybe wait for some finality
+	// TODO: Advance to the end of C1 ???
 
-	cfg, err := m.getConfig()
-	if err != nil {
-		return xerrors.Errorf("getting sealing config: %w", err)
-	}
-
-	if err := m.sealer.FinalizeSector(sector.SealingCtx(ctx.Context()), m.minerSector(sector.SectorType, sector.SectorNumber), sector.KeepUnsealedRanges(false, cfg.AlwaysKeepUnsealedCopy)); err != nil {
-		return ctx.Send(SectorFinalizeFailed{xerrors.Errorf("finalize sector: %w", err)})
-	}
+	//// TODO: Maybe wait for some finality
+	//
+	//cfg, err := m.getConfig()
+	//if err != nil {
+	//	return xerrors.Errorf("getting sealing config: %w", err)
+	//}
+	//
+	//if err := m.sealer.FinalizeSector(sector.SealingCtx(ctx.Context()), m.minerSector(sector.SectorType, sector.SectorNumber), sector.KeepUnsealedRanges(false, cfg.AlwaysKeepUnsealedCopy)); err != nil {
+	//	return ctx.Send(SectorFinalizeFailed{xerrors.Errorf("finalize sector: %w", err)})
+	//}
 
 	return ctx.Send(SectorFinalized{})
 }
