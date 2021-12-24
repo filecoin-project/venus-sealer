@@ -568,6 +568,10 @@ func (st *Local) Remove(ctx context.Context, sid abi.SectorID, typ storiface.Sec
 	}
 
 	for _, info := range si {
+		if info.CanStore {
+			log.Warnf("Remove store file [%v] for [%s], be rejected.", info.ID, storiface.SectorName(sid))
+			continue
+		}
 		if err := st.removeSector(ctx, sid, typ, info.ID); err != nil {
 			return err
 		}
