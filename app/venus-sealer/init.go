@@ -132,7 +132,7 @@ var initCmd = &cli.Command{
 		},
 
 		&cli.StringFlag{
-			Name:  "market-node",
+			Name:  "market-mode",
 			Value: "solo",
 			Usage: "indicate the deployment method of the venus-market, one of `solo`, `pool`, Default: `solo`",
 		},
@@ -365,7 +365,7 @@ func parseServiceFlag(cfg *config.StorageMiner, cctx *cli.Context) error {
 		cfg.RegisterProof.Token = cctx.String("gateway-token")
 	}
 
-	cfg.MarketNode.Mode = cctx.String("market-node")
+	cfg.MarketNode.Mode = cctx.String("market-mode")
 	cfg.MarketNode.Url = cctx.String("market-url")
 	if cctx.IsSet("market-token") {
 		cfg.MarketNode.Token = cctx.String("market-token")
