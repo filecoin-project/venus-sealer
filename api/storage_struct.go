@@ -49,6 +49,9 @@ type StorageMiner interface {
 	// Redo
 	RedoSector(ctx context.Context, rsi storiface.SectorRedoParams) error
 
+	// Test WdPoSt
+    MockWindowPoSt(ctx context.Context, sis []proof2.SectorInfo, rand abi.PoStRandomness) error
+
 	// Get the status of a given sector by ID
 	SectorsStatus(ctx context.Context, sid abi.SectorNumber, showOnChainInfo bool) (SectorInfo, error)
 
@@ -184,6 +187,8 @@ type StorageMinerStruct struct {
 
 		RedoSector func(ctx context.Context, rsi storiface.SectorRedoParams) error `perm:"write"`
 
+		MockWindowPoSt func(ctx context.Context, sis []proof2.SectorInfo, rand abi.PoStRandomness) error `perm:"write"`
+
 		SectorsList                   func(context.Context) ([]abi.SectorNumber, error)                                                `perm:"read"`
 		SectorsListInStates           func(context.Context, []SectorState) ([]abi.SectorNumber, error)                                 `perm:"read"`
 		SectorsInfoListInStates       func(ctx context.Context, ss []SectorState, showOnChainInfo, skipLog bool) ([]SectorInfo, error) `perm:"read"`
@@ -317,6 +322,10 @@ func (c *StorageMinerStruct) CurrentSectorID(ctx context.Context) (abi.SectorNum
 // Redo
 func (c *StorageMinerStruct) RedoSector(ctx context.Context, rsi storiface.SectorRedoParams) error {
 	return c.Internal.RedoSector(ctx, rsi)
+}
+
+func (c *StorageMinerStruct) MockWindowPoSt(ctx context.Context, sis []proof2.SectorInfo, rand abi.PoStRandomness) error {
+	return c.Internal.MockWindowPoSt(ctx, sis, rand)
 }
 
 // Get the status of a given sector by ID

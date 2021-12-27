@@ -3,8 +3,6 @@ package impl
 import (
 	"context"
 	"encoding/json"
-	api2 "github.com/filecoin-project/venus-market/api"
-	"github.com/filecoin-project/venus-market/piece"
 	"net/http"
 	"strconv"
 	"time"
@@ -41,6 +39,9 @@ import (
 	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 	"github.com/filecoin-project/venus-sealer/storage/sectorblocks"
 	types2 "github.com/filecoin-project/venus-sealer/types"
+
+	api2 "github.com/filecoin-project/venus-market/api"
+	"github.com/filecoin-project/venus-market/piece"
 )
 
 var log = logging.Logger("sealer")
@@ -815,6 +816,10 @@ func (sm *StorageMinerAPI) MessagerGetMessage(ctx context.Context, uuid string) 
 	}
 
 	return msg, nil
+}
+
+func (sm *StorageMinerAPI) MockWindowPoSt(ctx context.Context, sis []proof2.SectorInfo, rand abi.PoStRandomness) error {
+	return sm.Miner.MockWindowPoSt(ctx, sis, rand)
 }
 
 var _ api.StorageMiner = &StorageMinerAPI{}

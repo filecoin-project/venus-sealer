@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+
 	"text/tabwriter"
 
 	"github.com/fatih/color"
@@ -11,9 +12,12 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/go-bitfield"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/specs-actors/actors/builtin"
 	"github.com/filecoin-project/specs-storage/storage"
+
+	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 
 	"github.com/filecoin-project/venus/pkg/chain"
 	"github.com/filecoin-project/venus/pkg/types"
@@ -36,6 +40,7 @@ var provingCmd = &cli.Command{
 		provingDeadlineInfoCmd,
 		provingFaultsCmd,
 		provingCheckProvableCmd,
+		provingMockWdPoStTaskCmd,
 	},
 }
 
@@ -525,5 +530,115 @@ var provingCheckProvableCmd = &cli.Command{
 		}
 
 		return tw.Flush()
+	},
+}
+
+var provingMockWdPoStTaskCmd = &cli.Command{
+	Name:  "mock-wdPoSt-task",
+	Usage: "mock a wdPoSt task, Please do not execute during normal wdPoSt operation, so as not to occupy sectors or gpu",
+	Flags: []cli.Flag{
+		&cli.Uint64Flag{
+			Name:     "ddl-idx",
+			Required: true,
+			Usage:    "specify the ddl which need mock",
+		},
+		&cli.Uint64Flag{
+			Name:     "partition-idx",
+			Required: true,
+			Usage:    "specify the partition which need mock",
+		},
+	},
+	Action: func(cctx *cli.Context) error {
+
+		nodeAPI, closer, err := api.GetFullNodeAPIV2(cctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+
+		storageAPI, scloser, err := api.GetStorageMinerAPI(cctx)
+		if err != nil {
+			return err
+		}
+		defer scloser()
+
+		addr, err := storageAPI.ActorAddress(cctx.Context)
+		if err != nil {
+			return err
+		}
+
+		ts, err := nodeAPI.ChainHead(cctx.Context)
+		if err != nil {
+			return fmt.Errorf("get chain head failed: %w", err)
+		}
+
+		partitions, err := nodeAPI.StateMinerPartitions(cctx.Context, addr, cctx.Uint64("ddl-idx"), ts.Key())
+		if err != nil {
+			return fmt.Errorf("get parttion info failed: %w", err)
+		}
+		pidx := cctx.Uint64("partition-idx")
+		if uint64(len(partitions)) <= pidx {
+			return fmt.Errorf("partition-idx is range out of partitions array: %d <= %d", len(partitions), pidx)
+		}
+
+		toProve, err := bitfield.SubtractBitField(partitions[pidx].LiveSectors, partitions[pidx].FaultySectors)
+		if err != nil {
+			return err
+		}
+
+		toProve, err = bitfield.MergeBitFields(toProve, partitions[pidx].RecoveringSectors)
+		if err != nil {
+			return err
+		}
+
+		sset, err := nodeAPI.StateMinerSectors(cctx.Context, addr, &toProve, ts.Key())
+		if err != nil {
+			return fmt.Errorf("get miner sectors failed: %w", err)
+		}
+
+		if len(sset) == 0 {
+			return fmt.Errorf("no lived sector in that partition")
+		}
+
+		substitute := proof2.SectorInfo{
+			SectorNumber: sset[0].SectorNumber,
+			SealedCID:    sset[0].SealedCID,
+			SealProof:    sset[0].SealProof,
+		}
+
+		sectorByID := make(map[uint64]proof2.SectorInfo, len(sset))
+		for _, sector := range sset {
+			sectorByID[uint64(sector.SectorNumber)] = proof2.SectorInfo{
+				SectorNumber: sector.SectorNumber,
+				SealedCID:    sector.SealedCID,
+				SealProof:    sector.SealProof,
+			}
+		}
+
+		proofSectors := make([]proof2.SectorInfo, 0, len(sset))
+		if err := partitions[pidx].AllSectors.ForEach(func(sectorNo uint64) error {
+			if info, found := sectorByID[sectorNo]; found {
+				proofSectors = append(proofSectors, info)
+			} else {
+				proofSectors = append(proofSectors, substitute)
+			}
+			return nil
+		}); err != nil {
+			return fmt.Errorf("iterating partition sector bitmap: %w", err)
+		}
+
+		rand := abi.PoStRandomness{}
+		for i := 0; i < 32; i++ {
+			rand = append(rand, 0)
+		}
+
+		err = storageAPI.MockWindowPoSt(cctx.Context, proofSectors, rand)
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("mock sectors %v wdpost start, please retrieve `mock generate window post` from the log to view execution information.\n", proofSectors)
+
+		return nil
 	},
 }
