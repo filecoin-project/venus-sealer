@@ -731,7 +731,7 @@ func (m *Sealing) handleCommitting(ctx statemachine.Context, sector types.Sector
 		}
 
 		if err := m.checkCommit(ctx.Context(), sector, proof, tok); err != nil {
-			return ctx.Send(SectorComputeProofFailed{xerrors.Errorf("commit check error: %w", err)})
+			return ctx.Send(SectorCommitFailed{xerrors.Errorf("commit check error: %w", err)})
 		}
 	}
 
