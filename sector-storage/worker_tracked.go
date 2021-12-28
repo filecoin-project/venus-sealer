@@ -177,4 +177,22 @@ func (t *trackedWorker) UnsealPiece(ctx context.Context, id storage.SectorRef, i
 	return t.tracker.track(ctx, t.execute, t.wid, t.workerInfo, id, types.TTUnseal, func() (types.CallID, error) { return t.Worker.UnsealPiece(ctx, id, index, size, randomness, cid) })
 }
 
+func (t *trackedWorker) ReplicaUpdate(ctx context.Context, sector storage.SectorRef, pieces []abi.PieceInfo) (types.CallID, error) {
+	return t.tracker.track(ctx, t.execute, t.wid, t.workerInfo, sector, types.TTReplicaUpdate, func() (types.CallID, error) {
+		return t.Worker.ReplicaUpdate(ctx, sector, pieces)
+	})
+}
+
+func (t *trackedWorker) ProveReplicaUpdate1(ctx context.Context, sector storage.SectorRef, sectorKey, newSealed, newUnsealed cid.Cid) (types.CallID, error) {
+	return t.tracker.track(ctx, t.execute, t.wid, t.workerInfo, sector, types.TTProveReplicaUpdate1, func() (types.CallID, error) {
+		return t.Worker.ProveReplicaUpdate1(ctx, sector, sectorKey, newSealed, newUnsealed)
+	})
+}
+
+func (t *trackedWorker) ProveReplicaUpdate2(ctx context.Context, sector storage.SectorRef, sectorKey, newSealed, newUnsealed cid.Cid, vanillaProofs storage.ReplicaVanillaProofs) (types.CallID, error) {
+	return t.tracker.track(ctx, t.execute, t.wid, t.workerInfo, sector, types.TTProveReplicaUpdate2, func() (types.CallID, error) {
+		return t.Worker.ProveReplicaUpdate2(ctx, sector, sectorKey, newSealed, newUnsealed, vanillaProofs)
+	})
+}
+
 var _ Worker = &trackedWorker{}

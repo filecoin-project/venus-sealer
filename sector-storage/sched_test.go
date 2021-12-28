@@ -102,6 +102,22 @@ func (s *schedTestWorker) AddPiece(ctx context.Context, sector storage.SectorRef
 	panic("implement me")
 }
 
+func (s *schedTestWorker) ReplicaUpdate(ctx context.Context, sector storage.SectorRef, peices []abi.PieceInfo) (types.CallID, error) {
+	panic("implement me")
+}
+
+func (s *schedTestWorker) ProveReplicaUpdate1(ctx context.Context, sector storage.SectorRef, sectorKey, newSealed, newUnsealed cid.Cid) (types.CallID, error) {
+	panic("implement me")
+}
+
+func (s *schedTestWorker) ProveReplicaUpdate2(ctx context.Context, sector storage.SectorRef, sectorKey, newSealed, newUnsealed cid.Cid, vanillaProofs storage.ReplicaVanillaProofs) (types.CallID, error) {
+	panic("implement me")
+}
+
+func (s *schedTestWorker) GenerateSectorKeyFromData(ctx context.Context, sector storage.SectorRef, commD cid.Cid) (types.CallID, error) {
+	panic("implement me")
+}
+
 func (s *schedTestWorker) MoveStorage(ctx context.Context, sector storage.SectorRef, types storiface.SectorFileType) (types.CallID, error) {
 	panic("implement me")
 }
