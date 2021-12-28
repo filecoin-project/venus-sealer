@@ -108,6 +108,9 @@ type WorkerCalls interface {
 	SealCommit2(ctx context.Context, sector storage.SectorRef, c1o storage.Commit1Out) (types.CallID, error)
 	FinalizeSector(ctx context.Context, sector storage.SectorRef, keepUnsealed []storage.Range) (types.CallID, error)
 	ReleaseUnsealed(ctx context.Context, sector storage.SectorRef, safeToFree []storage.Range) (types.CallID, error)
+	ReplicaUpdate(ctx context.Context, sector storage.SectorRef, pieces []abi.PieceInfo) (types.CallID, error)
+	ProveReplicaUpdate1(ctx context.Context, sector storage.SectorRef, sectorKey, newSealed, newUnsealed cid.Cid) (types.CallID, error)
+	ProveReplicaUpdate2(ctx context.Context, sector storage.SectorRef, sectorKey, newSealed, newUnsealed cid.Cid, vanillaProofs storage.ReplicaVanillaProofs) (types.CallID, error)
 	MoveStorage(ctx context.Context, sector storage.SectorRef, types SectorFileType) (types.CallID, error)
 	UnsealPiece(context.Context, storage.SectorRef, UnpaddedByteIndex, abi.UnpaddedPieceSize, abi.SealRandomness, cid.Cid) (types.CallID, error)
 	Fetch(context.Context, storage.SectorRef, SectorFileType, PathType, AcquireMode) (types.CallID, error)
@@ -161,6 +164,9 @@ type WorkerReturn interface {
 	ReturnSealCommit2(ctx context.Context, callID types.CallID, proof storage.Proof, err *CallError) error
 	ReturnFinalizeSector(ctx context.Context, callID types.CallID, err *CallError) error
 	ReturnReleaseUnsealed(ctx context.Context, callID types.CallID, err *CallError) error
+	ReturnReplicaUpdate(ctx context.Context, callID types.CallID, out storage.ReplicaUpdateOut, err *CallError) error
+	ReturnProveReplicaUpdate1(ctx context.Context, callID types.CallID, proofs storage.ReplicaVanillaProofs, err *CallError) error
+	ReturnProveReplicaUpdate2(ctx context.Context, callID types.CallID, proof storage.ReplicaUpdateProof, err *CallError) error
 	ReturnMoveStorage(ctx context.Context, callID types.CallID, err *CallError) error
 	ReturnUnsealPiece(ctx context.Context, callID types.CallID, err *CallError) error
 	ReturnReadPiece(ctx context.Context, callID types.CallID, ok bool, err *CallError) error

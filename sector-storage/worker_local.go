@@ -29,7 +29,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/types"
 )
 
-var pathTypes = []storiface.SectorFileType{storiface.FTUnsealed, storiface.FTSealed, storiface.FTCache}
+var pathTypes = []storiface.SectorFileType{storiface.FTUnsealed, storiface.FTSealed, storiface.FTCache, storiface.FTUpdate, storiface.FTUpdateCache}
 
 type WorkerConfig struct {
 	TaskTypes []types.TaskType
@@ -40,7 +40,7 @@ type WorkerConfig struct {
 	// with the local worker.
 	IgnoreResourceFiltering bool
 
-	TaskTotal  int64
+	TaskTotal int64
 }
 
 // used do provide custom proofs impl (mostly used in testing)
@@ -154,7 +154,6 @@ func (l *localWorkerPathProvider) AcquireSector(ctx context.Context, sector stor
 			}
 
 			sid := storiface.PathByType(storageIDs, fileType)
-
 			if err := l.w.sindex.StorageDeclareSector(ctx, stores.ID(sid), sector.ID, fileType, l.op == storiface.AcquireMove); err != nil {
 				log.Errorf("declare sector error: %+v", err)
 			}
@@ -201,16 +200,19 @@ func rfunc(in interface{}) func(context.Context, types.CallID, storiface.WorkerR
 }
 
 var returnFunc = map[types.ReturnType]func(context.Context, types.CallID, storiface.WorkerReturn, interface{}, *storiface.CallError) error{
-	types.ReturnAddPiece:        rfunc(storiface.WorkerReturn.ReturnAddPiece),
-	types.ReturnSealPreCommit1:  rfunc(storiface.WorkerReturn.ReturnSealPreCommit1),
-	types.ReturnSealPreCommit2:  rfunc(storiface.WorkerReturn.ReturnSealPreCommit2),
-	types.ReturnSealCommit1:     rfunc(storiface.WorkerReturn.ReturnSealCommit1),
-	types.ReturnSealCommit2:     rfunc(storiface.WorkerReturn.ReturnSealCommit2),
-	types.ReturnFinalizeSector:  rfunc(storiface.WorkerReturn.ReturnFinalizeSector),
-	types.ReturnReleaseUnsealed: rfunc(storiface.WorkerReturn.ReturnReleaseUnsealed),
-	types.ReturnMoveStorage:     rfunc(storiface.WorkerReturn.ReturnMoveStorage),
-	types.ReturnUnsealPiece:     rfunc(storiface.WorkerReturn.ReturnUnsealPiece),
-	types.ReturnFetch:           rfunc(storiface.WorkerReturn.ReturnFetch),
+	types.ReturnAddPiece:            rfunc(storiface.WorkerReturn.ReturnAddPiece),
+	types.ReturnSealPreCommit1:      rfunc(storiface.WorkerReturn.ReturnSealPreCommit1),
+	types.ReturnSealPreCommit2:      rfunc(storiface.WorkerReturn.ReturnSealPreCommit2),
+	types.ReturnSealCommit1:         rfunc(storiface.WorkerReturn.ReturnSealCommit1),
+	types.ReturnSealCommit2:         rfunc(storiface.WorkerReturn.ReturnSealCommit2),
+	types.ReturnFinalizeSector:      rfunc(storiface.WorkerReturn.ReturnFinalizeSector),
+	types.ReturnReleaseUnsealed:     rfunc(storiface.WorkerReturn.ReturnReleaseUnsealed),
+	types.ReturnReplicaUpdate:       rfunc(storiface.WorkerReturn.ReturnReplicaUpdate),
+	types.ReturnProveReplicaUpdate1: rfunc(storiface.WorkerReturn.ReturnProveReplicaUpdate1),
+	types.ReturnProveReplicaUpdate2: rfunc(storiface.WorkerReturn.ReturnProveReplicaUpdate2),
+	types.ReturnMoveStorage:         rfunc(storiface.WorkerReturn.ReturnMoveStorage),
+	types.ReturnUnsealPiece:         rfunc(storiface.WorkerReturn.ReturnUnsealPiece),
+	types.ReturnFetch:               rfunc(storiface.WorkerReturn.ReturnFetch),
 }
 
 func (l *LocalWorker) asyncCall(ctx context.Context, sector storage.SectorRef, rt types.ReturnType, work func(ctx context.Context, ci types.CallID) (interface{}, error)) (types.CallID, error) {
@@ -245,7 +247,6 @@ func (l *LocalWorker) asyncCall(ctx context.Context, sector storage.SectorRef, r
 		}
 
 		res, err := work(ctx, ci)
-
 		if err != nil {
 			rb, err := json.Marshal(res)
 			if err != nil {
@@ -263,7 +264,6 @@ func (l *LocalWorker) asyncCall(ctx context.Context, sector storage.SectorRef, r
 			}
 		}
 	}()
-
 	return ci, nil
 }
 
@@ -384,6 +384,40 @@ func (l *LocalWorker) SealCommit2(ctx context.Context, sector storage.SectorRef,
 
 	return l.asyncCall(ctx, sector, types.ReturnSealCommit2, func(ctx context.Context, ci types.CallID) (interface{}, error) {
 		return sb.SealCommit2(ctx, sector, phase1Out)
+	})
+}
+
+func (l *LocalWorker) ReplicaUpdate(ctx context.Context, sector storage.SectorRef, pieces []abi.PieceInfo) (types.CallID, error) {
+	sb, err := l.executor()
+	if err != nil {
+		return types.UndefCall, err
+	}
+
+	return l.asyncCall(ctx, sector, types.ReturnReplicaUpdate, func(ctx context.Context, ci types.CallID) (interface{}, error) {
+		sealerOut, err := sb.ReplicaUpdate(ctx, sector, pieces)
+		return sealerOut, err
+	})
+}
+
+func (l *LocalWorker) ProveReplicaUpdate1(ctx context.Context, sector storage.SectorRef, sectorKey, newSealed, newUnsealed cid.Cid) (types.CallID, error) {
+	sb, err := l.executor()
+	if err != nil {
+		return types.UndefCall, err
+	}
+
+	return l.asyncCall(ctx, sector, types.ReturnProveReplicaUpdate1, func(ctx context.Context, ci types.CallID) (interface{}, error) {
+		return sb.ProveReplicaUpdate1(ctx, sector, sectorKey, newSealed, newUnsealed)
+	})
+}
+
+func (l *LocalWorker) ProveReplicaUpdate2(ctx context.Context, sector storage.SectorRef, sectorKey, newSealed, newUnsealed cid.Cid, vanillaProofs storage.ReplicaVanillaProofs) (types.CallID, error) {
+	sb, err := l.executor()
+	if err != nil {
+		return types.UndefCall, err
+	}
+
+	return l.asyncCall(ctx, sector, types.ReturnProveReplicaUpdate2, func(ctx context.Context, ci types.CallID) (interface{}, error) {
+		return sb.ProveReplicaUpdate2(ctx, sector, sectorKey, newSealed, newUnsealed, vanillaProofs)
 	})
 }
 

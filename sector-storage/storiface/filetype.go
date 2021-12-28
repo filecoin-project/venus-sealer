@@ -29,6 +29,8 @@ const (
 	FTUnsealed SectorFileType = 1 << iota
 	FTSealed
 	FTCache
+	FTUpdate
+	FTUpdateCache
 
 	FileTypes = iota
 )
@@ -121,9 +123,11 @@ func (t SectorFileType) All() [FileTypes]bool {
 type SectorPaths struct {
 	ID abi.SectorID
 
-	Unsealed string
-	Sealed   string
-	Cache    string
+	Unsealed    string
+	Sealed      string
+	Cache       string
+	Update      string
+	UpdateCache string
 }
 
 func DefaultPieceInfosFile(ssize abi.SectorSize) string {
@@ -196,6 +200,10 @@ func PathByType(sps SectorPaths, fileType SectorFileType) string {
 		return sps.Sealed
 	case FTCache:
 		return sps.Cache
+	case FTUpdate:
+		return sps.Update
+	case FTUpdateCache:
+		return sps.UpdateCache
 	}
 
 	panic("requested unknown path type")
@@ -209,5 +217,9 @@ func SetPathByType(sps *SectorPaths, fileType SectorFileType, p string) {
 		sps.Sealed = p
 	case FTCache:
 		sps.Cache = p
+	case FTUpdate:
+		sps.Update = p
+	case FTUpdateCache:
+		sps.UpdateCache = p
 	}
 }
