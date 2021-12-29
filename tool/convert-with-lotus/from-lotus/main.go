@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -213,7 +214,7 @@ func ImportFromLotus(lmRepo, vsRepo string, sid abi.SectorNumber, taskType int) 
 
 	var maxSectorID abi.SectorNumber = 0
 	var sectors []types.SectorInfo
-	res, err := ds.Query(query.Query{})
+	res, err := ds.Query(context.TODO(), query.Query{})
 	if err != nil {
 		return err
 	}

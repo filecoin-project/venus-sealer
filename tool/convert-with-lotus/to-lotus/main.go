@@ -280,7 +280,7 @@ func ImportToLotusMiner(lmRepo, vsRepo string, sid abi.SectorNumber, taskType in
 			}
 
 			sectorKey := datastore.NewKey(SectorStorePrefix).ChildString(fmt.Sprint(sector.SectorNumber))
-			err = ds.Put(sectorKey, b)
+			err = ds.Put(context.TODO(), sectorKey, b)
 			if err != nil {
 				fmt.Printf("put [%s] err: %s \n", sectorKey, err.Error())
 			}
@@ -304,7 +304,7 @@ func ImportToLotusMiner(lmRepo, vsRepo string, sid abi.SectorNumber, taskType in
 
 	buf := make([]byte, binary.MaxVarintLen64)
 	size := binary.PutUvarint(buf, uint64(sid))
-	err = ds.Put(datastore.NewKey("/storage/nextid"), buf[:size])
+	err = ds.Put(context.TODO(), datastore.NewKey("/storage/nextid"), buf[:size])
 	if err != nil {
 		return xerrors.Errorf("fail to update latest sector id: %v", err)
 	}

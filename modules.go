@@ -11,10 +11,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/filecoin-project/go-bitfield"
-	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
-	api2 "github.com/filecoin-project/venus-market/api"
-
 	"github.com/gbrlsnchs/jwt/v3"
 	"github.com/ipfs/go-datastore"
 	"github.com/mitchellh/go-homedir"
@@ -23,6 +19,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/go-bitfield"
 	"github.com/filecoin-project/go-jsonrpc/auth"
 	paramfetch "github.com/filecoin-project/go-paramfetch"
 	"github.com/filecoin-project/go-state-types/abi"
@@ -39,6 +36,11 @@ import (
 	"github.com/filecoin-project/venus-sealer/storage"
 	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 	types2 "github.com/filecoin-project/venus-sealer/types"
+
+	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
+
+	api2 "github.com/filecoin-project/venus-market/api"
+
 	"github.com/filecoin-project/venus/fixtures/asset"
 	"github.com/filecoin-project/venus/pkg/types"
 	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
