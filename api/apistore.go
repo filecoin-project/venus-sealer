@@ -25,35 +25,35 @@ func NewAPIBlockstore(cio ChainIO) blockstore.Blockstore {
 	}
 }
 
-func (a *apiBStore) DeleteBlock(cid.Cid) error {
+func (a *apiBStore) DeleteBlock(context.Context, cid.Cid) error {
 	return xerrors.New("not supported")
 }
 
-func (a *apiBStore) Has(c cid.Cid) (bool, error) {
-	return a.api.ChainHasObj(context.TODO(), c)
+func (a *apiBStore) Has(ctx context.Context, c cid.Cid) (bool, error) {
+	return a.api.ChainHasObj(ctx, c)
 }
 
-func (a *apiBStore) Get(c cid.Cid) (blocks.Block, error) {
-	bb, err := a.api.ChainReadObj(context.TODO(), c)
+func (a *apiBStore) Get(ctx context.Context, c cid.Cid) (blocks.Block, error) {
+	bb, err := a.api.ChainReadObj(ctx, c)
 	if err != nil {
 		return nil, err
 	}
 	return blocks.NewBlockWithCid(bb, c)
 }
 
-func (a *apiBStore) GetSize(c cid.Cid) (int, error) {
-	bb, err := a.api.ChainReadObj(context.TODO(), c)
+func (a *apiBStore) GetSize(ctx context.Context, c cid.Cid) (int, error) {
+	bb, err := a.api.ChainReadObj(ctx, c)
 	if err != nil {
 		return 0, err
 	}
 	return len(bb), nil
 }
 
-func (a *apiBStore) Put(blocks.Block) error {
+func (a *apiBStore) Put(context.Context, blocks.Block) error {
 	return xerrors.New("not supported")
 }
 
-func (a *apiBStore) PutMany([]blocks.Block) error {
+func (a *apiBStore) PutMany(context.Context, []blocks.Block) error {
 	return xerrors.New("not supported")
 }
 

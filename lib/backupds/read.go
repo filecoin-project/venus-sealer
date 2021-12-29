@@ -2,6 +2,7 @@ package backupds
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"io"
 
@@ -76,13 +77,13 @@ func ReadBackup(r io.Reader, cb func(key datastore.Key, value []byte) error) err
 }
 
 func RestoreInto(r io.Reader, dest datastore.Batching) error {
-	batch, err := dest.Batch()
+	batch, err := dest.Batch(context.TODO())
 	if err != nil {
 		return xerrors.Errorf("creating batch: %w", err)
 	}
 
 	err = ReadBackup(r, func(key datastore.Key, value []byte) error {
-		if err := batch.Put(key, value); err != nil {
+		if err := batch.Put(context.TODO(),key, value); err != nil {
 			return xerrors.Errorf("put key: %w", err)
 		}
 
@@ -92,7 +93,7 @@ func RestoreInto(r io.Reader, dest datastore.Batching) error {
 		return xerrors.Errorf("reading backup: %w", err)
 	}
 
-	if err := batch.Commit(); err != nil {
+	if err := batch.Commit(context.TODO()); err != nil {
 		return xerrors.Errorf("committing batch: %w", err)
 	}
 
