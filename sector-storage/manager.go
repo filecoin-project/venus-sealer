@@ -599,18 +599,60 @@ func (m *Manager) ReleaseSectorKey(ctx context.Context, sector storage.SectorRef
 }
 
 func (m *Manager) GenerateSectorKeyFromData(ctx context.Context, sector storage.SectorRef, commD cid.Cid) error {
-	panic("implement me")
-}
 
-func (m *Manager) ReleaseSealed(ctx context.Context, sector storage.SectorRef) error {
-	return nil
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	wk, wait, cancel, err := m.getWork(ctx, types.TTRegenSectorKey, sector, commD)
+	if err != nil {
+		return xerrors.Errorf("getWork: %w", err)
+	}
+	defer cancel()
+
+	var waitErr error
+	waitRes := func() {
+		_, werr := m.waitWork(ctx, wk)
+		if werr != nil {
+			waitErr = werr
+			return
+		}
+	}
+
+	if wait { // already in progress
+		waitRes()
+		return waitErr
+	}
+
+	if err := m.index.StorageLock(ctx, sector.ID, storiface.FTUnsealed|storiface.FTUpdate|storiface.FTUpdateCache, storiface.FTSealed|storiface.FTCache); err != nil {
+		return xerrors.Errorf("acquiring sector lock: %w", err)
+	}
+
+	// NOTE: We set allowFetch to false in so that we always execute on a worker
+	// with direct access to the data. We want to do that because this step is
+	// generally very cheap / fast, and transferring data is not worth the effort
+	selector := newExistingSelector(m.index, sector.ID, storiface.FTUnsealed|storiface.FTUpdate|storiface.FTUpdateCache|storiface.FTCache, true)
+
+	err = m.sched.Schedule(ctx, sector, types.TTRegenSectorKey, selector, m.schedFetch(sector, storiface.FTUpdate|storiface.FTUnsealed, storiface.PathSealing, storiface.AcquireMove), func(ctx context.Context, w Worker) error {
+		err := m.startWork(ctx, w, wk)(w.GenerateSectorKeyFromData(ctx, sector, commD))
+		if err != nil {
+			return err
+		}
+
+		waitRes()
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return waitErr
 }
 
 func (m *Manager) Remove(ctx context.Context, sector storage.SectorRef) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	if err := m.index.StorageLock(ctx, sector.ID, storiface.FTNone, storiface.FTSealed|storiface.FTUnsealed|storiface.FTCache); err != nil {
+	if err := m.index.StorageLock(ctx, sector.ID, storiface.FTNone, storiface.FTSealed|storiface.FTUnsealed|storiface.FTCache|storiface.FTUpdate|storiface.FTUpdateCache); err != nil {
 		return xerrors.Errorf("acquiring sector lock: %w", err)
 	}
 

@@ -532,23 +532,23 @@ func (mgr *SectorMgr) ReturnReadPiece(ctx context.Context, callID types.CallID, 
 	panic("not supported")
 }
 
-func (mgr *SectorMgr) ReturnFetch(ctx context.Context, callID storiface.CallID, err *storiface.CallError) error {
+func (mgr *SectorMgr) ReturnFetch(ctx context.Context, callID types.CallID, err *storiface.CallError) error {
 	panic("not supported")
 }
 
-func (mgr *SectorMgr) ReturnReplicaUpdate(ctx context.Context, callID storiface.CallID, out storage.ReplicaUpdateOut, err *storiface.CallError) error {
+func (mgr *SectorMgr) ReturnReplicaUpdate(ctx context.Context, callID types.CallID, out storage.ReplicaUpdateOut, err *storiface.CallError) error {
 	panic("not supported")
 }
 
-func (mgr *SectorMgr) ReturnProveReplicaUpdate1(ctx context.Context, callID storiface.CallID, out storage.ReplicaVanillaProofs, err *storiface.CallError) error {
+func (mgr *SectorMgr) ReturnProveReplicaUpdate1(ctx context.Context, callID types.CallID, out storage.ReplicaVanillaProofs, err *storiface.CallError) error {
 	panic("not supported")
 }
 
-func (mgr *SectorMgr) ReturnProveReplicaUpdate2(ctx context.Context, callID storiface.CallID, out storage.ReplicaUpdateProof, err *storiface.CallError) error {
+func (mgr *SectorMgr) ReturnProveReplicaUpdate2(ctx context.Context, callID types.CallID, out storage.ReplicaUpdateProof, err *storiface.CallError) error {
 	panic("not supported")
 }
 
-func (mgr *SectorMgr) ReturnGenerateSectorKeyFromData(ctx context.Context, callID storiface.CallID, err *storiface.CallError) error {
+func (mgr *SectorMgr) ReturnGenerateSectorKeyFromData(ctx context.Context, callID types.CallID, err *storiface.CallError) error {
 	panic("not supported")
 }
 

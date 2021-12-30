@@ -20,14 +20,14 @@ require (
 	github.com/filecoin-project/go-commp-utils v0.1.3
 	github.com/filecoin-project/go-data-transfer v1.11.4
 	github.com/filecoin-project/go-fil-commcid v0.1.0
-	github.com/filecoin-project/go-fil-markets v1.12.0
+	github.com/filecoin-project/go-fil-markets v1.14.1
 	github.com/filecoin-project/go-jsonrpc v0.1.4-0.20210217175800-45ea43ac2bec
 	github.com/filecoin-project/go-padreader v0.0.0-20210723183308-812a16dc01b1
 	github.com/filecoin-project/go-paramfetch v0.0.2
 	github.com/filecoin-project/go-state-types v0.1.1
 	github.com/filecoin-project/go-statemachine v1.0.1
-	github.com/filecoin-project/go-statestore v0.1.1
-	github.com/filecoin-project/go-storedcounter v0.0.0-20200421200003-1c99c62e8a5b
+	github.com/filecoin-project/go-statestore v0.2.0
+	github.com/filecoin-project/go-storedcounter v0.1.0
 	github.com/filecoin-project/specs-actors v0.9.14
 	github.com/filecoin-project/specs-actors/v2 v2.3.5
 	github.com/filecoin-project/specs-actors/v3 v3.1.1
@@ -39,7 +39,7 @@ require (
 	github.com/filecoin-project/venus-messager v1.2.2-rc1.0.20211201075617-c9dd295b905c
 	github.com/gbrlsnchs/jwt/v3 v3.0.0
 	github.com/golang/mock v1.6.0
-	github.com/google/uuid v1.2.0
+	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
 	github.com/hako/durafmt v0.0.0-20200710122514-c0fb7b4da026
 	github.com/hashicorp/go-multierror v1.1.1
@@ -59,12 +59,12 @@ require (
 	github.com/ipfs/go-metrics-interface v0.0.1
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/libp2p/go-buffer-pool v0.0.2
-	github.com/libp2p/go-libp2p-core v0.8.6
+	github.com/libp2p/go-libp2p-core v0.11.0
 	github.com/libp2p/go-libp2p-pubsub v0.5.4
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/modern-go/reflect2 v1.0.1
 	github.com/multiformats/go-base32 v0.0.3
-	github.com/multiformats/go-multiaddr v0.3.3
+	github.com/multiformats/go-multiaddr v0.4.0
 	github.com/polydawn/refmt v0.0.0-20201211092308-30ac6d18308e
 	github.com/raulk/clock v1.1.0
 	github.com/stretchr/testify v1.7.0
@@ -91,6 +91,6 @@ replace github.com/ipfs/go-ipfs-cmds => github.com/ipfs-force-community/go-ipfs-
 
 replace github.com/filecoin-project/go-jsonrpc => github.com/ipfs-force-community/go-jsonrpc v0.1.4-0.20210721095535-a67dff16de21
 
-replace github.com/filecoin-project/go-statemachine => github.com/hunjixin/go-statemachine v0.0.0-20210309063909-a65119041e93
+replace github.com/filecoin-project/go-statemachine => github.com/hunjixin/go-statemachine v0.0.0-20211229094051-1d541f0cddbb
 
 replace github.com/filecoin-project/go-statestore => github.com/hunjixin/go-statestore v0.1.1-0.20211111090520-981ada391e33
