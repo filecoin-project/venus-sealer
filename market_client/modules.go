@@ -14,14 +14,14 @@ import (
 	"github.com/filecoin-project/venus-sealer/types"
 )
 
-func StartMarketEvent(lc fx.Lifecycle, stores *stores.Remote, pieceStorage piecestorage.IPieceStorage, sectorBlocks *sectorblocks.SectorBlocks, storageMgr *sectorstorage.Manager, index stores.SectorIndex, mode types.MarketMode, cfg *config.RegisterMarketConfig, mAddr types.MinerAddress) error {
+func StartMarketEvent(lc fx.Lifecycle, stores *stores.Remote, pieceStorage piecestorage.IPieceStorage, sectorBlocks *sectorblocks.SectorBlocks, storageMgr *sectorstorage.Manager, index stores.SectorIndex, cfg *config.RegisterMarketConfig, mAddr types.MinerAddress) error {
 	if len(cfg.Urls) == 0 {
 		log.Warnf("register market config is empty ...")
 		return nil
 	}
 
 	for _, url := range cfg.Urls {
-		client, err := NewMarketEventClient(lc, mode, url, cfg.Token)
+		client, err := NewMarketEventClient(lc, url, cfg.Token)
 		if err != nil {
 			return err
 		}

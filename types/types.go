@@ -235,10 +235,3 @@ type DealAssign struct {
 	Offset   abi.PaddedPieceSize
 	Size     abi.PaddedPieceSize
 }
-
-type MarketMode string
-
-const (
-	MarketSolo MarketMode = "solo"
-	MarketPool MarketMode = "pool"
-)

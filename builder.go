@@ -149,7 +149,6 @@ func Online(cfg *config.StorageMiner) Option {
 		Override(new(storage2.Prover), From(new(sectorstorage.SectorManager))),
 		Override(new(storiface.WorkerReturn), From(new(sectorstorage.SectorManager))),
 
-		Override(new(types.MarketMode), types.MarketMode(cfg.MarketNode.Mode)),
 		Override(new(types.GetSealingConfigFunc), NewGetSealConfigFunc),
 		Override(new(*sectorblocks.SectorBlocks), sectorblocks.NewSectorBlocks),
 		Override(new(*storage.Miner), StorageMiner(config.DefaultMainnetStorageMiner().Fees)),
