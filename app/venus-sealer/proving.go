@@ -24,6 +24,7 @@ import (
 	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
 
 	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
 )
 
 var provingCmd = &cli.Command{
@@ -447,6 +448,10 @@ var provingCheckProvableCmd = &cli.Command{
 			Name:  "slow",
 			Usage: "run slower checks",
 		},
+		&cli.StringFlag{
+			Name:  "storage-id",
+			Usage: "filter sectors by storage path (path id)",
+		},
 	},
 	Action: func(cctx *cli.Context) error {
 		if cctx.Args().Len() != 1 {
@@ -495,6 +500,21 @@ var provingCheckProvableCmd = &cli.Command{
 		tw := tabwriter.NewWriter(os.Stdout, 2, 4, 2, ' ', 0)
 		_, _ = fmt.Fprintln(tw, "deadline\tpartition\tsector\tstatus")
 
+		var filter map[abi.SectorID]struct{}
+
+		if cctx.IsSet("storage-id") {
+			sl, err := storageAPI.StorageList(ctx)
+			if err != nil {
+				return err
+			}
+			decls := sl[stores.ID(cctx.String("storage-id"))]
+
+			filter = map[abi.SectorID]struct{}{}
+			for _, decl := range decls {
+				filter[decl.SectorID] = struct{}{}
+			}
+		}
+
 		for parIdx, par := range partitions {
 			sectors := make(map[abi.SectorNumber]struct{})
 
@@ -505,13 +525,21 @@ var provingCheckProvableCmd = &cli.Command{
 
 			var tocheck []storage.SectorRef
 			for _, info := range sectorInfos {
+				si := abi.SectorID{
+					Miner:  abi.ActorID(mid),
+					Number: info.SectorNumber,
+				}
+
+				if filter != nil {
+					if _, found := filter[si]; !found {
+						continue
+					}
+				}
+
 				sectors[info.SectorNumber] = struct{}{}
 				tocheck = append(tocheck, storage.SectorRef{
 					ProofType: info.SealProof,
-					ID: abi.SectorID{
-						Miner:  abi.ActorID(mid),
-						Number: info.SectorNumber,
-					},
+					ID:        si,
 				})
 			}
 
