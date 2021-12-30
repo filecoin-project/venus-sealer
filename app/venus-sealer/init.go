@@ -20,6 +20,8 @@ import (
 	"github.com/filecoin-project/venus/fixtures/asset"
 	"github.com/filecoin-project/venus/pkg/gen/genesis"
 
+	power6 "github.com/filecoin-project/specs-actors/v6/actors/builtin/power"
+
 	"github.com/docker/go-units"
 	"github.com/google/uuid"
 	"github.com/mitchellh/go-homedir"
@@ -524,11 +526,26 @@ func createStorageMiner(ctx context.Context, nodeAPI api.FullNode, messagerClien
 		}
 	}
 
+	sender := owner
+	if fromstr := cctx.String("from"); fromstr != "" {
+		faddr, err := address.NewFromString(fromstr)
+		if err != nil {
+			return address.Undef, fmt.Errorf("could not parse from address: %w", err)
+		}
+		sender = faddr
+	}
+
+	// make sure the sender account exists on chain
+	_, err = nodeAPI.StateLookupID(ctx, owner, types.EmptyTSK)
+	if err != nil {
+		return address.Undef, xerrors.Errorf("sender must exist on chain: %w", err)
+	}
+
 	// make sure the worker account exists on chain
 	_, err = nodeAPI.StateLookupID(ctx, worker, types.EmptyTSK)
 	if err != nil {
 		msgUid, err := messagerClient.PushMessage(ctx, &types.Message{
-			From:  owner,
+			From:  sender,
 			To:    worker,
 			Value: types.NewInt(0),
 		}, nil)
@@ -548,32 +565,51 @@ func createStorageMiner(ctx context.Context, nodeAPI api.FullNode, messagerClien
 		}
 	}
 
-	nv, err := nodeAPI.StateNetworkVersion(ctx, types.EmptyTSK)
+	// make sure the owner account exists on chain
+	_, err = nodeAPI.StateLookupID(ctx, owner, types.EmptyTSK)
 	if err != nil {
-		return address.Undef, xerrors.Errorf("getting network version: %w", err)
+		msgUid, err := messagerClient.PushMessage(ctx, &types.Message{
+			From:  sender,
+			To:    owner,
+			Value: types.NewInt(0),
+		}, nil)
+		if err != nil {
+			return address.Undef, xerrors.Errorf("push owner init: %w", err)
+		}
+
+		log.Infof("Initializing owner account %s, message: %s", worker, msgUid)
+		log.Infof("Waiting for confirmation")
+
+		mw, err := messagerClient.WaitMessage(ctx, msgUid, constants.MessageConfidence)
+		if err != nil {
+			return address.Undef, xerrors.Errorf("waiting for owner init: %w", err)
+		}
+		if mw.Receipt.ExitCode != 0 {
+			return address.Undef, xerrors.Errorf("initializing owner account failed: exit code %d", mw.Receipt.ExitCode)
+		}
 	}
 
-	spt, err := miner.SealProofTypeFromSectorSize(abi.SectorSize(ssize), nv)
+	// Note: the correct thing to do would be to call SealProofTypeFromSectorSize if actors version is v3 or later, but this still works
+	spt, err := miner.WindowPoStProofTypeFromSectorSize(abi.SectorSize(ssize))
 	if err != nil {
-		return address.Undef, xerrors.Errorf("getting seal proof type: %w", err)
+		return address.Undef, xerrors.Errorf("getting post proof type: %w", err)
 	}
 
+<<<<<<< HEAD
 	params, err := actors.SerializeParams(&power2.CreateMinerParams{
 		Owner:         owner,
 		Worker:        worker,
 		SealProofType: spt,
+=======
+	params, err := actors.SerializeParams(&power6.CreateMinerParams{
+		Owner:               owner,
+		Worker:              worker,
+		WindowPoStProofType: spt,
+		Peer:                abi.PeerID(peerid),
+>>>>>>> Add a util to create miners more easily
 	})
 	if err != nil {
 		return address.Undef, err
-	}
-
-	sender := owner
-	if fromstr := cctx.String("from"); fromstr != "" {
-		faddr, err := address.NewFromString(fromstr)
-		if err != nil {
-			return address.Undef, fmt.Errorf("could not parse from address: %w", err)
-		}
-		sender = faddr
 	}
 
 	createStorageMinerMsg := &types.Message{
