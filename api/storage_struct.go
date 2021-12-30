@@ -226,20 +226,21 @@ type StorageMinerStruct struct {
 		WorkerStats   func(context.Context) (map[uuid.UUID]storiface.WorkerStats, error) `perm:"admin"`
 		WorkerJobs    func(context.Context) (map[uuid.UUID][]storiface.WorkerJob, error) `perm:"admin"`
 
-		ReturnAddPiece            func(ctx context.Context, callID types.CallID, pi abi.PieceInfo, err *storiface.CallError) error                               `perm:"admin" retry:"true"`
-		ReturnSealPreCommit1      func(ctx context.Context, callID types.CallID, p1o storage.PreCommit1Out, err *storiface.CallError) error                      `perm:"admin" retry:"true"`
-		ReturnSealPreCommit2      func(ctx context.Context, callID types.CallID, sealed storage.SectorCids, err *storiface.CallError) error                      `perm:"admin" retry:"true"`
-		ReturnSealCommit1         func(ctx context.Context, callID types.CallID, out storage.Commit1Out, err *storiface.CallError) error                         `perm:"admin" retry:"true"`
-		ReturnSealCommit2         func(ctx context.Context, callID types.CallID, proof storage.Proof, err *storiface.CallError) error                            `perm:"admin" retry:"true"`
-		ReturnFinalizeSector      func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                                                 `perm:"admin" retry:"true"`
-		ReturnReplicaUpdate       func(ctx context.Context, callID storiface.CallID, out storage.ReplicaUpdateOut, err *storiface.CallError) error               `perm:"admin" retry:"true"`
-		ReturnProveReplicaUpdate1 func(ctx context.Context, callID storiface.CallID, vanillaProofs storage.ReplicaVanillaProofs, err *storiface.CallError) error `perm:"admin" retry:"true"`
-		ReturnProveReplicaUpdate2 func(ctx context.Context, callID storiface.CallID, proof storage.ReplicaUpdateProof, err *storiface.CallError) error           `perm:"admin" retry:"true"`
-		ReturnReleaseUnsealed     func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                                                 `perm:"admin" retry:"true"`
-		ReturnMoveStorage         func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                                                 `perm:"admin" retry:"true"`
-		ReturnUnsealPiece         func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                                                 `perm:"admin" retry:"true"`
-		ReturnReadPiece           func(ctx context.Context, callID types.CallID, ok bool, err *storiface.CallError) error                                        `perm:"admin" retry:"true"`
-		ReturnFetch               func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                                                 `perm:"admin" retry:"true"`
+		ReturnAddPiece                  func(ctx context.Context, callID types.CallID, pi abi.PieceInfo, err *storiface.CallError) error                               `perm:"admin" retry:"true"`
+		ReturnSealPreCommit1            func(ctx context.Context, callID types.CallID, p1o storage.PreCommit1Out, err *storiface.CallError) error                      `perm:"admin" retry:"true"`
+		ReturnSealPreCommit2            func(ctx context.Context, callID types.CallID, sealed storage.SectorCids, err *storiface.CallError) error                      `perm:"admin" retry:"true"`
+		ReturnSealCommit1               func(ctx context.Context, callID types.CallID, out storage.Commit1Out, err *storiface.CallError) error                         `perm:"admin" retry:"true"`
+		ReturnSealCommit2               func(ctx context.Context, callID types.CallID, proof storage.Proof, err *storiface.CallError) error                            `perm:"admin" retry:"true"`
+		ReturnFinalizeSector            func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                                                 `perm:"admin" retry:"true"`
+		ReturnReplicaUpdate             func(ctx context.Context, callID types.CallID, out storage.ReplicaUpdateOut, err *storiface.CallError) error               `perm:"admin" retry:"true"`
+		ReturnProveReplicaUpdate1       func(ctx context.Context, callID types.CallID, vanillaProofs storage.ReplicaVanillaProofs, err *storiface.CallError) error `perm:"admin" retry:"true"`
+		ReturnProveReplicaUpdate2       func(ctx context.Context, callID types.CallID, proof storage.ReplicaUpdateProof, err *storiface.CallError) error           `perm:"admin" retry:"true"`
+		ReturnGenerateSectorKeyFromData func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                                             `perm:"admin" retry:"true"`
+		ReturnReleaseUnsealed           func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                                                 `perm:"admin" retry:"true"`
+		ReturnMoveStorage               func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                                                 `perm:"admin" retry:"true"`
+		ReturnUnsealPiece               func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                                                 `perm:"admin" retry:"true"`
+		ReturnReadPiece                 func(ctx context.Context, callID types.CallID, ok bool, err *storiface.CallError) error                                        `perm:"admin" retry:"true"`
+		ReturnFetch                     func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                                                 `perm:"admin" retry:"true"`
 
 		SealingSchedDiag func(context.Context, bool) (interface{}, error)   `perm:"admin"`
 		SealingAbort     func(ctx context.Context, call types.CallID) error `perm:"admin"`
@@ -467,16 +468,20 @@ func (c *StorageMinerStruct) ReturnFinalizeSector(ctx context.Context, callID ty
 	return c.Internal.ReturnFinalizeSector(ctx, callID, err)
 }
 
-func (c *StorageMinerStruct) ReturnReplicaUpdate(ctx context.Context, callID storiface.CallID, out storage.ReplicaUpdateOut, err *storiface.CallError) error {
+func (c *StorageMinerStruct) ReturnReplicaUpdate(ctx context.Context, callID types.CallID, out storage.ReplicaUpdateOut, err *storiface.CallError) error {
 	return c.Internal.ReturnReplicaUpdate(ctx, callID, out, err)
 }
 
-func (c *StorageMinerStruct) ReturnProveReplicaUpdate1(ctx context.Context, callID storiface.CallID, vanillaProofs storage.ReplicaVanillaProofs, err *storiface.CallError) error {
+func (c *StorageMinerStruct) ReturnProveReplicaUpdate1(ctx context.Context, callID types.CallID, vanillaProofs storage.ReplicaVanillaProofs, err *storiface.CallError) error {
 	return c.Internal.ReturnProveReplicaUpdate1(ctx, callID, vanillaProofs, err)
 }
 
-func (c *StorageMinerStruct) ReturnProveReplicaUpdate2(ctx context.Context, callID storiface.CallID, proof storage.ReplicaUpdateProof, err *storiface.CallError) error {
+func (c *StorageMinerStruct) ReturnProveReplicaUpdate2(ctx context.Context, callID types.CallID, proof storage.ReplicaUpdateProof, err *storiface.CallError) error {
 	return c.Internal.ReturnProveReplicaUpdate2(ctx, callID, proof, err)
+}
+
+func (c *StorageMinerStruct) ReturnGenerateSectorKeyFromData(ctx context.Context, callID types.CallID, err *storiface.CallError) error {
+	return c.Internal.ReturnGenerateSectorKeyFromData(ctx, callID, err)
 }
 
 func (c *StorageMinerStruct) ReturnReleaseUnsealed(ctx context.Context, callID types.CallID, err *storiface.CallError) error {
