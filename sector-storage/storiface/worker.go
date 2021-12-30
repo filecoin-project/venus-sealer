@@ -111,6 +111,7 @@ type WorkerCalls interface {
 	ReplicaUpdate(ctx context.Context, sector storage.SectorRef, pieces []abi.PieceInfo) (types.CallID, error)
 	ProveReplicaUpdate1(ctx context.Context, sector storage.SectorRef, sectorKey, newSealed, newUnsealed cid.Cid) (types.CallID, error)
 	ProveReplicaUpdate2(ctx context.Context, sector storage.SectorRef, sectorKey, newSealed, newUnsealed cid.Cid, vanillaProofs storage.ReplicaVanillaProofs) (types.CallID, error)
+	GenerateSectorKeyFromData(ctx context.Context, sector storage.SectorRef, commD cid.Cid) (types.CallID, error)
 	MoveStorage(ctx context.Context, sector storage.SectorRef, types SectorFileType) (types.CallID, error)
 	UnsealPiece(context.Context, storage.SectorRef, UnpaddedByteIndex, abi.UnpaddedPieceSize, abi.SealRandomness, cid.Cid) (types.CallID, error)
 	Fetch(context.Context, storage.SectorRef, SectorFileType, PathType, AcquireMode) (types.CallID, error)
@@ -167,6 +168,7 @@ type WorkerReturn interface {
 	ReturnReplicaUpdate(ctx context.Context, callID types.CallID, out storage.ReplicaUpdateOut, err *CallError) error
 	ReturnProveReplicaUpdate1(ctx context.Context, callID types.CallID, proofs storage.ReplicaVanillaProofs, err *CallError) error
 	ReturnProveReplicaUpdate2(ctx context.Context, callID types.CallID, proof storage.ReplicaUpdateProof, err *CallError) error
+	ReturnGenerateSectorKeyFromData(ctx context.Context, callID types.CallID, err *CallError) error
 	ReturnMoveStorage(ctx context.Context, callID types.CallID, err *CallError) error
 	ReturnUnsealPiece(ctx context.Context, callID types.CallID, err *CallError) error
 	ReturnReadPiece(ctx context.Context, callID types.CallID, ok bool, err *CallError) error

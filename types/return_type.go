@@ -12,9 +12,9 @@ const (
 	ReturnReplicaUpdate       ReturnType = "ReturnReplicaUpdate"
 	ReturnProveReplicaUpdate1 ReturnType = "ReturnProveReplicaUpdate1"
 	ReturnProveReplicaUpdate2 ReturnType = "ReturnProveReplicaUpdate2"
+	ReturnGenerateSectorKey   ReturnType = "ReturnGenerateSectorKey"
 	ReturnReleaseUnsealed     ReturnType = "ReturnReleaseUnsealed"
 	ReturnMoveStorage         ReturnType = "ReturnMoveStorage"
 	ReturnUnsealPiece         ReturnType = "ReturnUnsealPiece"
-	ReturnReadPiece           ReturnType = "ReturnReadPiece"
 	ReturnFetch               ReturnType = "ReturnFetch"
 )

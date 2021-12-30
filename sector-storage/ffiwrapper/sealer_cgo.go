@@ -279,6 +279,23 @@ func (sb *Sealer) pieceCid(spt abi.RegisteredSealProof, in []byte) (cid.Cid, err
 	return pieceCID, werr()
 }
 
+func (sb *Sealer) tryDecodeUpdatedReplica(ctx context.Context, sector storage.SectorRef, commD cid.Cid, unsealedPath string) (bool, error) {
+	paths, done, err := sb.sectors.AcquireSector(ctx, sector, storiface.FTUpdate|storiface.FTSealed|storiface.FTCache, storiface.FTNone, storiface.PathStorage)
+	if xerrors.Is(err, storiface.ErrSectorNotFound) {
+		return false, nil
+	} else if err != nil {
+		return false, xerrors.Errorf("reading updated replica: %w", err)
+	}
+	defer done()
+
+	// Sector data stored in replica update
+	updateProof, err := sector.ProofType.RegisteredUpdateProof()
+	if err != nil {
+		return false, err
+	}
+	return true, ffi.SectorUpdate.DecodeFrom(updateProof, unsealedPath, paths.Update, paths.Sealed, paths.Cache, commD)
+}
+
 func (sb *Sealer) UnsealPiece(ctx context.Context, sector storage.SectorRef, offset storiface.UnpaddedByteIndex, size abi.UnpaddedPieceSize, randomness abi.SealRandomness, commd cid.Cid) error {
 	ssize, err := sector.ProofType.SectorSize()
 	if err != nil {
@@ -329,6 +346,16 @@ func (sb *Sealer) UnsealPiece(ctx context.Context, sector storage.SectorRef, off
 		return nil
 	}
 
+	// If piece data stored in updated replica decode whole sector
+	decoded, err := sb.tryDecodeUpdatedReplica(ctx, sector, commd, unsealedPath.Unsealed)
+	if err != nil {
+		return xerrors.Errorf("decoding sector from replica: %w", err)
+	}
+	if decoded {
+		return pf.MarkAllocated(0, maxPieceSize)
+	}
+
+	// Piece data sealed in sector
 	srcPaths, srcDone, err := sb.sectors.AcquireSector(ctx, sector, storiface.FTCache|storiface.FTSealed, storiface.FTNone, storiface.PathStorage)
 	if err != nil {
 		return xerrors.Errorf("acquire sealed sector paths: %w", err)
