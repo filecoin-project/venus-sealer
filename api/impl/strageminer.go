@@ -42,9 +42,6 @@ import (
 	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 	"github.com/filecoin-project/venus-sealer/storage/sectorblocks"
 	types2 "github.com/filecoin-project/venus-sealer/types"
-
-	api2 "github.com/filecoin-project/venus-market/api"
-	"github.com/filecoin-project/venus-market/piece"
 )
 
 var log = logging.Logger("sealer")
