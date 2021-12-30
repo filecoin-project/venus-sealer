@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"github.com/filecoin-project/venus-market/piecestorage"
@@ -23,8 +22,6 @@ import (
 
 	"github.com/docker/go-units"
 	"github.com/google/uuid"
-	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/mitchellh/go-homedir"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
@@ -441,15 +438,6 @@ func storageMinerInit(ctx context.Context, cctx *cli.Context, api api.FullNode, 
 
 	metaDataService := service.NewMetadataService(repo)
 	sectorInfoService := service.NewSectorInfoService(repo)
-	p2pSk, _, err := crypto.GenerateEd25519Key(rand.Reader)
-	if err != nil {
-		return address.Undef, xerrors.Errorf("make host key: %w", err)
-	}
-
-	peerid, err := peer.IDFromPrivateKey(p2pSk)
-	if err != nil {
-		return address.Undef, xerrors.Errorf("peer ID from private key: %w", err)
-	}
 
 	var addr address.Address
 	if act := cctx.String("actor"); act != "" {
@@ -494,7 +482,7 @@ func storageMinerInit(ctx context.Context, cctx *cli.Context, api api.FullNode, 
 
 		addr = a
 	} else {
-		a, err := createStorageMiner(ctx, api, messagerClient, peerid, gasPrice, cctx)
+		a, err := createStorageMiner(ctx, api, messagerClient, gasPrice, cctx)
 		if err != nil {
 			return address.Undef, xerrors.Errorf("creating miner failed: %w", err)
 		}
@@ -511,7 +499,7 @@ func storageMinerInit(ctx context.Context, cctx *cli.Context, api api.FullNode, 
 	return addr, nil
 }
 
-func createStorageMiner(ctx context.Context, nodeAPI api.FullNode, messagerClient api.IMessager, peerid peer.ID, gasPrice types.BigInt, cctx *cli.Context) (address.Address, error) {
+func createStorageMiner(ctx context.Context, nodeAPI api.FullNode, messagerClient api.IMessager, gasPrice types.BigInt, cctx *cli.Context) (address.Address, error) {
 	var err error
 	var owner address.Address
 	if cctx.String("owner") != "" {
@@ -574,7 +562,6 @@ func createStorageMiner(ctx context.Context, nodeAPI api.FullNode, messagerClien
 		Owner:         owner,
 		Worker:        worker,
 		SealProofType: spt,
-		Peer:          abi.PeerID(peerid),
 	})
 	if err != nil {
 		return address.Undef, err
