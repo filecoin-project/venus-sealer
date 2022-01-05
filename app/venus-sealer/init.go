@@ -30,11 +30,11 @@ import (
 
 	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
 
-	"github.com/filecoin-project/venus/pkg/types"
-	actors "github.com/filecoin-project/venus/pkg/types/specactors"
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/power"
-	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
+	"github.com/filecoin-project/venus/venus-shared/types"
+	actors "github.com/filecoin-project/venus/venus-shared/actors"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin/power"
+	"github.com/filecoin-project/venus/venus-shared/actors/policy"
 
 	types3 "github.com/filecoin-project/venus-messager/types"
 
@@ -595,18 +595,10 @@ func createStorageMiner(ctx context.Context, nodeAPI api.FullNode, messagerClien
 		return address.Undef, xerrors.Errorf("getting post proof type: %w", err)
 	}
 
-<<<<<<< HEAD
-	params, err := actors.SerializeParams(&power2.CreateMinerParams{
-		Owner:         owner,
-		Worker:        worker,
-		SealProofType: spt,
-=======
 	params, err := actors.SerializeParams(&power6.CreateMinerParams{
 		Owner:               owner,
 		Worker:              worker,
 		WindowPoStProofType: spt,
-		Peer:                abi.PeerID(peerid),
->>>>>>> Add a util to create miners more easily
 	})
 	if err != nil {
 		return address.Undef, err
@@ -642,7 +634,7 @@ func createStorageMiner(ctx context.Context, nodeAPI api.FullNode, messagerClien
 	}
 
 	var retval power2.CreateMinerReturn
-	if err := retval.UnmarshalCBOR(bytes.NewReader(mw.Receipt.ReturnValue)); err != nil {
+	if err := retval.UnmarshalCBOR(bytes.NewReader(mw.Receipt.Return)); err != nil {
 		return address.Undef, err
 	}
 

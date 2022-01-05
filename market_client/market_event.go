@@ -141,9 +141,20 @@ func (e *MarketEvent) processSectorUnsealed(ctx context.Context, reqId uuid.UUID
 	// Reader returns a reader for an unsealed piece at the given offset in the given sector.
 	// The returned reader will be nil if none of the workers has an unsealed sector file containing
 	// the unsealed piece.
-	r, err := e.stor.Reader(ctx, req.Sector, abi.PaddedPieceSize(req.Offset), req.Size)
+	rg, err := e.stor.Reader(ctx, req.Sector, abi.PaddedPieceSize(req.Offset), req.Size)
 	if err != nil {
 		log.Debugf("did not get storage reader;sector=%+v, err:%s", req.Sector.ID, err)
+		e.error(ctx, reqId, err)
+		return
+	}
+
+	if rg == nil {
+		return
+	}
+
+	r, err := rg(0) // TODO review ???
+	if err != nil {
+		log.Debugf("getting reader err: %s", err)
 		e.error(ctx, reqId, err)
 		return
 	}

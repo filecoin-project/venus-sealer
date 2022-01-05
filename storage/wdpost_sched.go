@@ -18,7 +18,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/sector-storage/ffiwrapper"
 
 	"github.com/filecoin-project/venus/pkg/chain"
-	"github.com/filecoin-project/venus/pkg/types"
+	"github.com/filecoin-project/venus/venus-shared/types"
 )
 
 // WindowPoStScheduler is the coordinator for WindowPoSt submissions, fault

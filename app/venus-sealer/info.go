@@ -20,12 +20,12 @@ import (
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus-sealer/lib/blockstore"
-	"github.com/filecoin-project/venus-sealer/lib/bufbstore"
 	types2 "github.com/filecoin-project/venus-sealer/types"
-	"github.com/filecoin-project/venus/pkg/types"
-	"github.com/filecoin-project/venus/pkg/types/specactors/adt"
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin"
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
+
+	"github.com/filecoin-project/venus/venus-shared/actors/adt"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	"github.com/filecoin-project/venus/venus-shared/types"
 )
 
 var infoCmd = &cli.Command{
@@ -107,7 +107,7 @@ func infoCmdAct(cctx *cli.Context) error {
 		return err
 	}
 
-	tbs := bufbstore.NewTieredBstore(api.NewAPIBlockstore(nodeAPI), blockstore.NewTemporary())
+	tbs := blockstore.NewTieredBstore(api.NewAPIBlockstore(nodeAPI), blockstore.NewMemory())
 	mas, err := miner.Load(adt.WrapStore(ctx, cbor.NewCborStore(tbs)), mact)
 	if err != nil {
 		return err

@@ -19,8 +19,8 @@ import (
 	cid "github.com/ipfs/go-cid"
 
 	api "github.com/filecoin-project/venus/app/submodule/apitypes"
-	market "github.com/filecoin-project/venus/pkg/types/specactors/builtin/market"
-	miner "github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
+	market "github.com/filecoin-project/venus/venus-shared/actors/builtin/market"
+	miner "github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
 	types "github.com/filecoin-project/venus-messager/types"
 
 	sealing "github.com/filecoin-project/venus-sealer/storage-sealing"

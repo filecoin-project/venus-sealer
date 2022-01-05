@@ -17,8 +17,9 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/dline"
-	"github.com/filecoin-project/venus/pkg/types"
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
+
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	"github.com/filecoin-project/venus/venus-shared/types"
 )
 
 var dummyCid cid.Cid
@@ -1139,9 +1140,9 @@ func makeTs(t *testing.T, h abi.ChainEpoch) *types.TipSet {
 			Height: h,
 			Miner:  a,
 
-			Parents: types.NewTipSetKey(parents...),
+			Parents: types.NewTipSetKey(parents...).Cids(),
 
-			Ticket: types.Ticket{VRFProof: []byte{byte(h % 2)}},
+			Ticket: &types.Ticket{VRFProof: []byte{byte(h % 2)}},
 
 			ParentStateRoot:       dummyCid,
 			Messages:              msgcid,
@@ -1154,9 +1155,9 @@ func makeTs(t *testing.T, h abi.ChainEpoch) *types.TipSet {
 			Height: h,
 			Miner:  b,
 
-			Parents: types.NewTipSetKey(parents...),
+			Parents: types.NewTipSetKey(parents...).Cids(),
 
-			Ticket: types.Ticket{VRFProof: []byte{byte((h + 1) % 2)}},
+			Ticket: &types.Ticket{VRFProof: []byte{byte((h + 1) % 2)}},
 
 			ParentStateRoot:       dummyCid,
 			Messages:              msgcid,
@@ -1164,8 +1165,7 @@ func makeTs(t *testing.T, h abi.ChainEpoch) *types.TipSet {
 
 			BlockSig:     &crypto.Signature{Type: crypto.SigTypeBLS},
 			BLSAggregate: &crypto.Signature{Type: crypto.SigTypeBLS},
-		},
-	}...)
+		}})
 
 	require.NoError(t, err)
 

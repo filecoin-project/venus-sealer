@@ -10,16 +10,16 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-fil-markets/piecestore"
 	"github.com/filecoin-project/go-state-types/abi"
-	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
+
 	"github.com/filecoin-project/specs-storage/storage"
 
-	types3 "github.com/filecoin-project/venus-messager/types"
+	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 
 	types4 "github.com/filecoin-project/venus-market/types"
 
-	"github.com/filecoin-project/venus/app/submodule/apitypes"
-	"github.com/filecoin-project/venus/pkg/chain"
-	types2 "github.com/filecoin-project/venus/pkg/types"
+	types3 "github.com/filecoin-project/venus-messager/types"
+
+	types2 "github.com/filecoin-project/venus/venus-shared/types"
 
 	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/sector-storage/fsutil"
@@ -134,7 +134,7 @@ type StorageMiner interface {
 	stores.SectorIndex
 
 	DealsImportData(ctx context.Context, dealPropCid cid.Cid, file string) error
-	DealsList(ctx context.Context) ([]apitypes.MarketDeal, error)
+	DealsList(ctx context.Context) ([]types2.MarketDeal, error)
 	DealsConsiderOnlineStorageDeals(context.Context) (bool, error)
 	DealsSetConsiderOnlineStorageDeals(context.Context, bool) error
 	DealsConsiderOnlineRetrievalDeals(context.Context) (bool, error)
@@ -166,7 +166,7 @@ type StorageMiner interface {
 	CheckProvable(ctx context.Context, pp abi.RegisteredPoStProof, sectors []storage.SectorRef, expensive bool) (map[abi.SectorNumber]string, error)
 
 	//messager
-	MessagerWaitMessage(ctx context.Context, uuid string, confidence uint64) (*chain.MsgLookup, error)
+	MessagerWaitMessage(ctx context.Context, uuid string, confidence uint64) (*types2.MsgLookup, error)
 	MessagerPushMessage(ctx context.Context, msg *types2.Message, meta *types3.MsgMeta) (string, error)
 	MessagerGetMessage(ctx context.Context, uuid string) (*types3.Message, error)
 
@@ -260,7 +260,7 @@ type StorageMinerStruct struct {
 		StorageGetLocks      func(ctx context.Context) (storiface.SectorLocks, error)                                                                                     `perm:"admin"`
 
 		DealsImportData                        func(ctx context.Context, dealPropCid cid.Cid, file string) error `perm:"write"`
-		DealsList                              func(ctx context.Context) ([]apitypes.MarketDeal, error)          `perm:"read"`
+		DealsList                              func(ctx context.Context) ([]types2.MarketDeal, error)          `perm:"read"`
 		DealsConsiderOnlineStorageDeals        func(context.Context) (bool, error)                               `perm:"read"`
 		DealsSetConsiderOnlineStorageDeals     func(context.Context, bool) error                                 `perm:"admin"`
 		DealsConsiderOnlineRetrievalDeals      func(context.Context) (bool, error)                               `perm:"read"`
@@ -287,7 +287,7 @@ type StorageMinerStruct struct {
 
 		CheckProvable func(ctx context.Context, pp abi.RegisteredPoStProof, sectors []storage.SectorRef, expensive bool) (map[abi.SectorNumber]string, error) `perm:"admin"`
 
-		MessagerWaitMessage func(ctx context.Context, uuid string, confidence uint64) (*chain.MsgLookup, error)  `perm:"read"`
+		MessagerWaitMessage func(ctx context.Context, uuid string, confidence uint64) (*types2.MsgLookup, error)  `perm:"read"`
 		MessagerPushMessage func(ctx context.Context, msg *types2.Message, meta *types3.MsgMeta) (string, error) `perm:"sign"`
 		MessagerGetMessage  func(ctx context.Context, uuid string) (*types3.Message, error)                      `perm:"write"`
 
@@ -568,7 +568,7 @@ func (c *StorageMinerStruct) DealsImportData(ctx context.Context, dealPropCid ci
 	return c.Internal.DealsImportData(ctx, dealPropCid, file)
 }
 
-func (c *StorageMinerStruct) DealsList(ctx context.Context) ([]apitypes.MarketDeal, error) {
+func (c *StorageMinerStruct) DealsList(ctx context.Context) ([]types2.MarketDeal, error) {
 	return c.Internal.DealsList(ctx)
 }
 
@@ -660,7 +660,7 @@ func (c *StorageMinerStruct) ComputeProof(ctx context.Context, sectorInfos []pro
 	return c.Internal.ComputeProof(ctx, sectorInfos, randomness)
 }
 
-func (c *StorageMinerStruct) MessagerWaitMessage(ctx context.Context, uuid string, confidence uint64) (*chain.MsgLookup, error) {
+func (c *StorageMinerStruct) MessagerWaitMessage(ctx context.Context, uuid string, confidence uint64) (*types2.MsgLookup, error) {
 	return c.Internal.MessagerWaitMessage(ctx, uuid, confidence)
 }
 

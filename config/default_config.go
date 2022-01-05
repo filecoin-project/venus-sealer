@@ -12,8 +12,8 @@ import (
 
 	miner5 "github.com/filecoin-project/specs-actors/v5/actors/builtin/miner"
 
-	"github.com/filecoin-project/venus/pkg/types"
-	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
+	"github.com/filecoin-project/venus/venus-shared/actors/policy"
+	"github.com/filecoin-project/venus/venus-shared/types"
 
 	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
 )

@@ -21,17 +21,16 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 
-	"github.com/filecoin-project/venus/pkg/types"
-	actors "github.com/filecoin-project/venus/pkg/types/specactors"
-	"github.com/filecoin-project/venus/pkg/types/specactors/adt"
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
-	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
+	"github.com/filecoin-project/venus/venus-shared/actors"
+	"github.com/filecoin-project/venus/venus-shared/actors/adt"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	"github.com/filecoin-project/venus/venus-shared/actors/policy"
+	"github.com/filecoin-project/venus/venus-shared/types"
 
 	miner5 "github.com/filecoin-project/specs-actors/v5/actors/builtin/miner"
 
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/lib/blockstore"
-	"github.com/filecoin-project/venus-sealer/lib/bufbstore"
 	"github.com/filecoin-project/venus-sealer/lib/tablewriter"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
 	types2 "github.com/filecoin-project/venus-sealer/types"
@@ -274,7 +273,7 @@ var sectorsStatusCmd = &cli.Command{
 				return err
 			}
 
-			tbs := bufbstore.NewTieredBstore(api.NewAPIBlockstore(fullApi), blockstore.NewTemporary())
+			tbs := blockstore.NewTieredBstore(api.NewAPIBlockstore(fullApi), blockstore.NewMemory())
 			mas, err := miner.Load(adt.WrapStore(ctx, cbor.NewCborStore(tbs)), mact)
 			if err != nil {
 				return err
@@ -958,7 +957,7 @@ var sectorsRenewCmd = &cli.Command{
 			return err
 		}
 
-		tbs := bufbstore.NewTieredBstore(api.NewAPIBlockstore(fullApi), blockstore.NewTemporary())
+		tbs := blockstore.NewTieredBstore(api.NewAPIBlockstore(fullApi), blockstore.NewMemory())
 		mas, err := miner.Load(adt.WrapStore(ctx, cbor.NewCborStore(tbs)), mact)
 		if err != nil {
 			return err
@@ -1876,7 +1875,7 @@ var sectorsExpiredCmd = &cli.Command{
 			return err
 		}
 
-		tbs := bufbstore.NewTieredBstore(api.NewAPIBlockstore(fullApi), blockstore.NewTemporary())
+		tbs := blockstore.NewTieredBstore(api.NewAPIBlockstore(fullApi), blockstore.NewMemory())
 		mas, err := miner.Load(adt.WrapStore(ctx, cbor.NewCborStore(tbs)), mact)
 		if err != nil {
 			return err

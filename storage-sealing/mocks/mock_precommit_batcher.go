@@ -13,7 +13,7 @@ import (
 	big "github.com/filecoin-project/go-state-types/big"
 	network "github.com/filecoin-project/go-state-types/network"
 	types "github.com/filecoin-project/venus-sealer/types"
-	miner "github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
+	miner "github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
 	gomock "github.com/golang/mock/gomock"
 )
 

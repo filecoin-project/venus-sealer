@@ -2,23 +2,29 @@ package api
 
 import (
 	"context"
+	"time"
+
+	"golang.org/x/xerrors"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-jsonrpc"
-	"github.com/filecoin-project/venus-messager/api/client"
-	"github.com/filecoin-project/venus-messager/types"
+
 	"github.com/filecoin-project/venus-sealer/config"
-	types2 "github.com/filecoin-project/venus/pkg/types"
+
 	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
-	"golang.org/x/xerrors"
-	"time"
+
+	"github.com/filecoin-project/venus-messager/api/client"
+	types2 "github.com/filecoin-project/venus-messager/types"
+
+	"github.com/filecoin-project/venus/venus-shared/types"
 )
 
 type IMessager interface {
 	WalletHas(ctx context.Context, addr address.Address) (bool, error)
-	WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error)
-	PushMessage(ctx context.Context, msg *types2.UnsignedMessage, meta *types.MsgMeta) (string, error)
-	PushMessageWithId(ctx context.Context, id string, msg *types2.UnsignedMessage, meta *types.MsgMeta) (string, error)
-	GetMessageByUid(ctx context.Context, id string) (*types.Message, error)
+	WaitMessage(ctx context.Context, id string, confidence uint64) (*types2.Message, error)
+	PushMessage(ctx context.Context, msg *types.Message, meta *types2.MsgMeta) (string, error)
+	PushMessageWithId(ctx context.Context, id string, msg *types.Message, meta *types2.MsgMeta) (string, error)
+	GetMessageByUid(ctx context.Context, id string) (*types2.Message, error)
 }
 
 var _ IMessager = (*Messager)(nil)
@@ -31,7 +37,7 @@ func NewMessager(in client.IMessager) *Messager {
 	return &Messager{in: in}
 }
 
-func (message *Messager) WaitMessage(ctx context.Context, id string, confidence uint64) (*types.Message, error) {
+func (message *Messager) WaitMessage(ctx context.Context, id string, confidence uint64) (*types2.Message, error) {
 	tm := time.NewTicker(time.Second * 30)
 	defer tm.Stop()
 
@@ -44,31 +50,31 @@ func (message *Messager) WaitMessage(ctx context.Context, id string, confidence 
 			msg, err := message.in.GetMessageByUid(ctx, id)
 			if err != nil {
 				log.Warnw("get message fail while wait %w", err)
-				time.Sleep(time.Second*5)
+				time.Sleep(time.Second * 5)
 				continue
 			}
 
 			switch msg.State {
 			//OffChain
-			case types.FillMsg:
+			case types2.FillMsg:
 				fallthrough
-			case types.UnFillMsg:
+			case types2.UnFillMsg:
 				fallthrough
-			case types.UnKnown:
+			case types2.UnKnown:
 				continue
 			//OnChain
-			case types.ReplacedMsg:
+			case types2.ReplacedMsg:
 				fallthrough
-			case types.OnChainMsg:
+			case types2.OnChainMsg:
 				if msg.Confidence > int64(confidence) {
 					return msg, nil
 				}
 				continue
 			//Error
-			case types.FailedMsg:
+			case types2.FailedMsg:
 				var reason string
 				if msg.Receipt != nil {
-					reason = string(msg.Receipt.ReturnValue)
+					reason = string(msg.Receipt.Return)
 				}
 				return nil, xerrors.Errorf("msg failed due to %s", reason)
 			}
@@ -85,15 +91,15 @@ func (m *Messager) WalletHas(ctx context.Context, addr address.Address) (bool, e
 	return m.in.WalletHas(ctx, addr)
 }
 
-func (m *Messager) PushMessage(ctx context.Context, msg *types2.UnsignedMessage, meta *types.MsgMeta) (string, error) {
+func (m *Messager) PushMessage(ctx context.Context, msg *types.Message, meta *types2.MsgMeta) (string, error) {
 	return m.in.PushMessage(ctx, msg, meta)
 }
 
-func (m *Messager) PushMessageWithId(ctx context.Context, id string, msg *types2.UnsignedMessage, meta *types.MsgMeta) (string, error) {
+func (m *Messager) PushMessageWithId(ctx context.Context, id string, msg *types.Message, meta *types2.MsgMeta) (string, error) {
 	return m.in.PushMessageWithId(ctx, id, msg, meta)
 }
 
-func (m *Messager) GetMessageByUid(ctx context.Context, id string) (*types.Message, error) {
+func (m *Messager) GetMessageByUid(ctx context.Context, id string) (*types2.Message, error) {
 	return m.in.GetMessageByUid(ctx, id)
 }
 

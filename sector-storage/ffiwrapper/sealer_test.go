@@ -33,7 +33,7 @@ import (
 	ffi "github.com/filecoin-project/filecoin-ffi"
 	"github.com/filecoin-project/filecoin-ffi/generated"
 
-	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
+	"github.com/filecoin-project/venus/venus-shared/actors/policy"
 
 	"github.com/filecoin-project/venus-sealer/sector-storage/ffiwrapper/basicfs"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"

@@ -16,13 +16,12 @@ import (
 	"github.com/filecoin-project/go-state-types/crypto"
 	"github.com/filecoin-project/go-state-types/dline"
 	"github.com/filecoin-project/go-state-types/network"
-	statemachine "github.com/filecoin-project/go-statemachine"
+	"github.com/filecoin-project/go-statemachine"
 	"github.com/filecoin-project/specs-storage/storage"
 
-	"github.com/filecoin-project/venus/app/submodule/apitypes"
-	"github.com/filecoin-project/venus/pkg/types"
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/market"
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin/market"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	"github.com/filecoin-project/venus/venus-shared/types"
 
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/config"
@@ -32,8 +31,8 @@ import (
 	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 	types2 "github.com/filecoin-project/venus-sealer/types"
 
-	types3 "github.com/filecoin-project/venus-market/types"
 	"github.com/filecoin-project/venus-market/piecestorage"
+	types3 "github.com/filecoin-project/venus-market/types"
 )
 
 var log = logging.Logger("sectors")
@@ -62,11 +61,11 @@ type SealingAPI interface {
 	StateMinerInfo(context.Context, address.Address, types2.TipSetToken) (miner.MinerInfo, error)
 	StateMinerAvailableBalance(context.Context, address.Address, types2.TipSetToken) (big.Int, error)
 	StateMinerSectorAllocated(context.Context, address.Address, abi.SectorNumber, types2.TipSetToken) (bool, error)
-	StateMarketStorageDeal(context.Context, abi.DealID, types2.TipSetToken) (*apitypes.MarketDeal, error)
+	StateMarketStorageDeal(context.Context, abi.DealID, types2.TipSetToken) (*types.MarketDeal, error)
 	StateMarketStorageDealProposal(context.Context, abi.DealID, types2.TipSetToken) (market.DealProposal, error)
 	StateNetworkVersion(ctx context.Context, tok types2.TipSetToken) (network.Version, error)
 	StateMinerProvingDeadline(context.Context, address.Address, types2.TipSetToken) (*dline.Info, error)
-	StateMinerPartitions(ctx context.Context, m address.Address, dlIdx uint64, tok types2.TipSetToken) ([]apitypes.Partition, error)
+	StateMinerPartitions(ctx context.Context, m address.Address, dlIdx uint64, tok types2.TipSetToken) ([]types.Partition, error)
 	//	SendMsg(ctx context.Context, from, to address.Address, method abi.MethodNum, value, maxFee abi.TokenAmount, params []byte) (cid.Cid, error)
 	ChainHead(ctx context.Context) (types2.TipSetToken, abi.ChainEpoch, error)
 	ChainBaseFee(context.Context, types2.TipSetToken) (abi.TokenAmount, error)
@@ -187,7 +186,7 @@ func New(mctx context.Context, api SealingAPI, fc config.MinerFeeConfig, events 
 	}
 	s.startupWait.Add(1)
 
-	s.sectors = statemachine.New(sectorInfoService, s, types2.SectorInfo{})
+	s.sectors = statemachine.NewFromStateStore(sectorInfoService, s, types2.SectorInfo{})
 
 	return s
 }
