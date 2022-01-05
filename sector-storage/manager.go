@@ -566,7 +566,8 @@ func (m *Manager) FinalizeSector(ctx context.Context, sector storage.SectorRef, 
 		return err
 	}
 
-	fetchSel := newAllocSelector(m.index, storiface.FTCache|storiface.FTSealed, storiface.PathStorage)
+	// fetchSel := newAllocSelector(m.index, storiface.FTCache|storiface.FTSealed, storiface.PathStorage)
+	fetchSel := newMoveSelector(m.index, sector.ID, sector.ProofType, storiface.FTCache|storiface.FTSealed, storiface.PathStorage, false)
 	moveUnsealed := unsealed
 	{
 		if len(keepUnsealed) == 0 {
