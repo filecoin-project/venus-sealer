@@ -14,7 +14,7 @@ import (
 	network "github.com/filecoin-project/go-state-types/network"
 	miner "github.com/filecoin-project/specs-actors/actors/builtin/miner"
 	types "github.com/filecoin-project/venus-sealer/types"
-	miner0 "github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
+	miner0 "github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
 	gomock "github.com/golang/mock/gomock"
 )
 

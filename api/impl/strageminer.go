@@ -25,9 +25,7 @@ import (
 	api4 "github.com/filecoin-project/venus-market/api"
 	types4 "github.com/filecoin-project/venus-market/types"
 
-	"github.com/filecoin-project/venus/app/submodule/apitypes"
-	"github.com/filecoin-project/venus/pkg/chain"
-	"github.com/filecoin-project/venus/pkg/types"
+	"github.com/filecoin-project/venus/venus-shared/types"
 
 	types3 "github.com/filecoin-project/venus-messager/types"
 
@@ -580,7 +578,7 @@ func (sm *StorageMinerAPI) MarketImportDealData(ctx context.Context, propCid cid
 	panic("not impl")
 }
 
-func (sm *StorageMinerAPI) listDeals(ctx context.Context) ([]apitypes.MarketDeal, error) {
+func (sm *StorageMinerAPI) listDeals(ctx context.Context) ([]types.MarketDeal, error) {
 	ts, err := sm.Full.ChainHead(ctx)
 	if err != nil {
 		return nil, err
@@ -591,7 +589,7 @@ func (sm *StorageMinerAPI) listDeals(ctx context.Context) ([]apitypes.MarketDeal
 		return nil, err
 	}
 
-	var out []apitypes.MarketDeal
+	var out []types.MarketDeal
 
 	for _, deal := range allDeals {
 		if deal.Proposal.Provider == sm.Miner.Address() {
@@ -602,7 +600,7 @@ func (sm *StorageMinerAPI) listDeals(ctx context.Context) ([]apitypes.MarketDeal
 	return out, nil
 }
 
-func (sm *StorageMinerAPI) DealsList(ctx context.Context) ([]apitypes.MarketDeal, error) {
+func (sm *StorageMinerAPI) DealsList(ctx context.Context) ([]types.MarketDeal, error) {
 	return sm.listDeals(ctx)
 }
 
@@ -790,13 +788,13 @@ func (sm *StorageMinerAPI) ComputeProof(ctx context.Context, sectorInfo []proof2
 	return sm.Prover.ComputeProof(ctx, sectorInfo, randoness)
 }
 
-func (sm *StorageMinerAPI) MessagerWaitMessage(ctx context.Context, uuid string, confidence uint64) (*chain.MsgLookup, error) {
+func (sm *StorageMinerAPI) MessagerWaitMessage(ctx context.Context, uuid string, confidence uint64) (*types.MsgLookup, error) {
 	msg, err := sm.Messager.WaitMessage(ctx, uuid, confidence)
 	if err != nil {
 		return nil, err
 	}
 
-	return &chain.MsgLookup{
+	return &types.MsgLookup{
 		Message: *msg.SignedCid,
 		Receipt: *msg.Receipt,
 		//	ReturnDec interface{}

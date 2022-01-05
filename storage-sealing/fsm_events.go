@@ -12,7 +12,7 @@ import (
 
 	"github.com/filecoin-project/venus-sealer/types"
 
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
 )
 
 type mutator interface {
