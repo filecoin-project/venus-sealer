@@ -7,7 +7,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
-	"github.com/filecoin-project/venus/pkg/types"
+	"github.com/filecoin-project/venus/venus-shared/types"
 
 	"github.com/filecoin-project/venus-sealer/api"
 	types2 "github.com/filecoin-project/venus-sealer/types"

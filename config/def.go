@@ -2,20 +2,21 @@ package config
 
 import (
 	"encoding"
-	"github.com/filecoin-project/venus-market/config"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/ipfs/go-cid"
+	"github.com/multiformats/go-multiaddr"
 
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
-	"github.com/multiformats/go-multiaddr"
-
-	"github.com/filecoin-project/venus/pkg/types"
 
 	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
+
+	"github.com/filecoin-project/venus-market/config"
+
+	"github.com/filecoin-project/venus/venus-shared/types"
 )
 
 const (

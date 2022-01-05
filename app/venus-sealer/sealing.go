@@ -19,7 +19,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
 
-	"github.com/filecoin-project/venus/pkg/types"
+	"github.com/filecoin-project/venus/venus-shared/types"
 )
 
 var sealingCmd = &cli.Command{

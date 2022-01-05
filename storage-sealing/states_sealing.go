@@ -19,9 +19,9 @@ import (
 	"github.com/filecoin-project/specs-storage/storage"
 
 	builtin2 "github.com/filecoin-project/specs-actors/v2/actors/builtin"
-	actors "github.com/filecoin-project/venus/pkg/types/specactors"
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
-	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
+	actors "github.com/filecoin-project/venus/venus-shared/actors"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	"github.com/filecoin-project/venus/venus-shared/actors/policy"
 
 	"github.com/filecoin-project/specs-actors/v5/actors/runtime/proof"
 

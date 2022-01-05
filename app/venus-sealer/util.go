@@ -17,7 +17,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus-sealer/types"
 
-	venustypes "github.com/filecoin-project/venus/pkg/types"
+	types2 "github.com/filecoin-project/venus/venus-shared/types"
 )
 
 type PrintHelpErr struct {
@@ -67,7 +67,7 @@ func EpochGap(curr, e abi.ChainEpoch) string {
 	panic("math broke")
 }
 
-func HeightToTime(ts *venustypes.TipSet, openHeight abi.ChainEpoch, blockDelay uint64) string {
+func HeightToTime(ts *types2.TipSet, openHeight abi.ChainEpoch, blockDelay uint64) string {
 	if ts.Len() == 0 {
 		return ""
 	}

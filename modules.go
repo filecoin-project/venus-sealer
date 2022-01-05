@@ -5,8 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
-	config2 "github.com/filecoin-project/venus-market/config"
-	"github.com/filecoin-project/venus-market/piecestorage"
 	"math"
 	"net/http"
 	"time"
@@ -21,7 +19,7 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-bitfield"
 	"github.com/filecoin-project/go-jsonrpc/auth"
-	paramfetch "github.com/filecoin-project/go-paramfetch"
+	"github.com/filecoin-project/go-paramfetch"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-storedcounter"
 
@@ -40,11 +38,13 @@ import (
 	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 
 	api2 "github.com/filecoin-project/venus-market/api"
+	config2 "github.com/filecoin-project/venus-market/config"
+	"github.com/filecoin-project/venus-market/piecestorage"
 
 	"github.com/filecoin-project/venus/fixtures/asset"
-	"github.com/filecoin-project/venus/pkg/types"
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
-	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	"github.com/filecoin-project/venus/venus-shared/actors/policy"
+	"github.com/filecoin-project/venus/venus-shared/types"
 )
 
 func OpenFilesystemJournal(homeDir config.HomeDir, lc fx.Lifecycle, disabled journal.DisabledEvents) (journal.Journal, error) {

@@ -25,12 +25,11 @@ import (
 
 	types3 "github.com/filecoin-project/venus-messager/types"
 
-	"github.com/filecoin-project/venus/app/submodule/apitypes"
 	"github.com/filecoin-project/venus/pkg/messagepool"
-	"github.com/filecoin-project/venus/pkg/types"
-	actors "github.com/filecoin-project/venus/pkg/types/specactors"
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
-	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
+	"github.com/filecoin-project/venus/venus-shared/actors"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	"github.com/filecoin-project/venus/venus-shared/actors/policy"
+	"github.com/filecoin-project/venus/venus-shared/types"
 )
 
 // recordPoStFailure records a failure in the journal.
@@ -254,7 +253,7 @@ func (s *WindowPoStScheduler) checkSectors(ctx context.Context, check bitfield.B
 // TODO: the waiting should happen in the background. Right now this
 //  is blocking/delaying the actual generation and submission of WindowPoSts in
 //  this deadline!
-func (s *WindowPoStScheduler) declareRecoveries(ctx context.Context, dlIdx uint64, partitions []apitypes.Partition, tsk types.TipSetKey) ([]miner.RecoveryDeclaration, *types3.MessageWithUID, error) {
+func (s *WindowPoStScheduler) declareRecoveries(ctx context.Context, dlIdx uint64, partitions []types.Partition, tsk types.TipSetKey) ([]miner.RecoveryDeclaration, *types3.MessageWithUID, error) {
 	ctx, span := trace.StartSpan(ctx, "storage.declareRecoveries")
 	defer span.End()
 
@@ -316,7 +315,7 @@ func (s *WindowPoStScheduler) declareRecoveries(ctx context.Context, dlIdx uint6
 		return recoveries, nil, xerrors.Errorf("could not serialize declare recoveries parameters: %w", aerr)
 	}
 
-	msg := &types.UnsignedMessage{
+	msg := &types.Message{
 		To:     s.actor,
 		Method: miner.Methods.DeclareFaultsRecovered,
 		Params: enc,
@@ -363,7 +362,7 @@ func (s *WindowPoStScheduler) declareRecoveries(ctx context.Context, dlIdx uint6
 // TODO: the waiting should happen in the background. Right now this
 //  is blocking/delaying the actual generation and submission of WindowPoSts in
 //  this deadline!
-func (s *WindowPoStScheduler) declareFaults(ctx context.Context, dlIdx uint64, partitions []apitypes.Partition, tsk types.TipSetKey) ([]miner.FaultDeclaration, *types3.MessageWithUID, error) {
+func (s *WindowPoStScheduler) declareFaults(ctx context.Context, dlIdx uint64, partitions []types.Partition, tsk types.TipSetKey) ([]miner.FaultDeclaration, *types3.MessageWithUID, error) {
 	ctx, span := trace.StartSpan(ctx, "storage.declareFaults")
 	defer span.End()
 
@@ -731,7 +730,7 @@ func (s *WindowPoStScheduler) runPoStCycle(ctx context.Context, di dline.Info, t
 	return posts, nil
 }
 
-func (s *WindowPoStScheduler) batchPartitions(partitions []apitypes.Partition, nv network.Version) ([][]apitypes.Partition, error) {
+func (s *WindowPoStScheduler) batchPartitions(partitions []types.Partition, nv network.Version) ([][]types.Partition, error) {
 	// We don't want to exceed the number of sectors allowed in a message.
 	// So given the number of sectors in a partition, work out the number of
 	// partitions that can be in a message without exceeding sectors per
@@ -764,7 +763,7 @@ func (s *WindowPoStScheduler) batchPartitions(partitions []apitypes.Partition, n
 	}
 
 	// Split the partitions into batches
-	batches := make([][]apitypes.Partition, 0, batchCount)
+	batches := make([][]types.Partition, 0, batchCount)
 	for i := 0; i < len(partitions); i += partitionsPerMsg {
 		end := i + partitionsPerMsg
 		if end > len(partitions) {

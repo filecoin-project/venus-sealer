@@ -21,7 +21,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/constants"
 	types2 "github.com/filecoin-project/venus-sealer/types"
 
-	"github.com/filecoin-project/venus/pkg/types"
+	"github.com/filecoin-project/venus/venus-shared/types"
 )
 
 type ActorState struct {

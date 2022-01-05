@@ -6,8 +6,9 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 
 	sealing "github.com/filecoin-project/venus-sealer/storage-sealing"
+
 	"github.com/filecoin-project/venus/pkg/events"
-	"github.com/filecoin-project/venus/pkg/types"
+	"github.com/filecoin-project/venus/venus-shared/types"
 )
 
 var _ sealing.Events = new(EventsAdapter)
