@@ -14,6 +14,7 @@ import (
 	"github.com/filecoin-project/specs-storage/storage"
 
 	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
+	proof7 "github.com/filecoin-project/specs-actors/v7/actors/runtime/proof"
 
 	types4 "github.com/filecoin-project/venus-market/types"
 
@@ -44,7 +45,7 @@ import (
 type StorageMiner interface {
 	Common
 
-	ComputeProof(context.Context, []proof2.SectorInfo, abi.PoStRandomness) ([]proof2.PoStProof, error)
+	ComputeProof(context.Context, []proof7.Ex, abi.PoStRandomness) ([]proof2.PoStProof, error)
 
 	NetParamsConfig(ctx context.Context) (*config.NetParamsConfig, error)
 
@@ -106,7 +107,7 @@ type StorageMiner interface {
 	SectorTerminateFlush(ctx context.Context) (string, error)
 	// SectorTerminatePending returns a list of pending sector terminations to be sent in the next batch message
 	SectorTerminatePending(ctx context.Context) ([]abi.SectorID, error)
-	SectorMarkForUpgrade(ctx context.Context, id abi.SectorNumber) error
+	SectorMarkForUpgrade(ctx context.Context, id abi.SectorNumber, snap bool) error
 	// SectorPreCommitFlush immediately sends a PreCommit message with sectors batched for PreCommit.
 	// Returns null if message wasn't sent
 	SectorPreCommitFlush(ctx context.Context) ([]sealiface.PreCommitBatchRes, error) //perm:admin
@@ -117,6 +118,7 @@ type StorageMiner interface {
 	SectorCommitFlush(ctx context.Context) ([]sealiface.CommitBatchRes, error) //perm:admin
 	// SectorCommitPending returns a list of pending Commit sectors to be sent in the next aggregate message
 	SectorCommitPending(ctx context.Context) ([]abi.SectorID, error) //perm:admin
+	SectorMatchPendingPiecesToOpenSectors(ctx context.Context) error //perm:admin
 
 	StorageLocal(ctx context.Context) (map[stores.ID]string, error)
 	StorageStat(ctx context.Context, id stores.ID) (fsutil.FsStat, error)
