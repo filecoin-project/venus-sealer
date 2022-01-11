@@ -43,7 +43,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/icza/backscanner v0.0.0-20210726202459-ac2ffc679f94
 	github.com/ipfs-force-community/venus-common-utils v0.0.0-20210924063144-1d3a5b30de87
-	github.com/ipfs-force-community/venus-gateway v1.1.2-0.20210924083450-c55d3300dfc9
+	github.com/ipfs-force-community/venus-gateway v1.1.2-0.20220106064158-4c3c21fa1811
 	github.com/ipfs/go-block-format v0.0.3
 	github.com/ipfs/go-cid v0.1.0
 	github.com/ipfs/go-datastore v0.4.6
