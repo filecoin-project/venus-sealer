@@ -2,10 +2,8 @@ package venus_sealer
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/hex"
 	"errors"
-	"math"
 	"net/http"
 	"time"
 
@@ -17,7 +15,6 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/go-address"
-	"github.com/filecoin-project/go-bitfield"
 	"github.com/filecoin-project/go-jsonrpc/auth"
 	"github.com/filecoin-project/go-paramfetch"
 	"github.com/filecoin-project/go-state-types/abi"
@@ -34,8 +31,6 @@ import (
 	"github.com/filecoin-project/venus-sealer/storage"
 	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 	types2 "github.com/filecoin-project/venus-sealer/types"
-
-	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 
 	api2 "github.com/filecoin-project/venus-market/api"
 	config2 "github.com/filecoin-project/venus-market/config"
@@ -319,71 +314,6 @@ func StorageMiner(fc config.MinerFeeConfig) func(params StorageMinerParams) (*st
 
 		return sm, nil
 	}
-}
-
-func DoPoStWarmup(ctx MetricsCtx, api api.FullNode, metadataService *service.MetadataService, prover storage.WinningPoStProver) error {
-	maddr, err := metadataService.GetMinerAddress()
-	if err != nil {
-		return err
-	}
-	deadlines, err := api.StateMinerDeadlines(ctx, maddr, types.EmptyTSK)
-	if err != nil {
-		return xerrors.Errorf("getting deadlines: %w", err)
-	}
-
-	var sector abi.SectorNumber = math.MaxUint64
-
-out:
-	for dlIdx := range deadlines {
-		partitions, err := api.StateMinerPartitions(ctx, maddr, uint64(dlIdx), types.EmptyTSK)
-		if err != nil {
-			return xerrors.Errorf("getting partitions for deadline %d: %w", dlIdx, err)
-		}
-
-		for _, partition := range partitions {
-			b, err := partition.ActiveSectors.First()
-			if err == bitfield.ErrNoBitsSet {
-				continue
-			}
-			if err != nil {
-				return err
-			}
-
-			sector = abi.SectorNumber(b)
-			break out
-		}
-	}
-
-	if sector == math.MaxUint64 {
-		log.Info("skipping winning PoSt warmup, no sectors")
-		return nil
-	}
-
-	log.Infow("starting winning PoSt warmup", "sector", sector)
-	start := time.Now()
-
-	var r abi.PoStRandomness = make([]byte, abi.RandomnessLength)
-	_, _ = rand.Read(r)
-
-	si, err := api.StateSectorGetInfo(ctx, maddr, sector, types.EmptyTSK)
-	if err != nil {
-		return xerrors.Errorf("getting sector info: %w", err)
-	}
-
-	_, err = prover.ComputeProof(ctx, []proof2.SectorInfo{
-		{
-			SealProof:    si.SealProof,
-			SectorNumber: sector,
-			SealedCID:    si.SealedCID,
-		},
-	}, r)
-	if err != nil {
-		log.Errorw("failed to compute proof: %w, please check your storage and restart sealer after fixed", err)
-		return nil
-	}
-
-	log.Infow("winning PoSt warmup successful", "took", time.Since(start))
-	return nil
 }
 
 func NewSetSealConfigFunc(r *config.StorageMiner) (types2.SetSealingConfigFunc, error) {

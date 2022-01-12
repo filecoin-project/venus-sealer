@@ -17,8 +17,6 @@ import (
 	"github.com/filecoin-project/go-state-types/network"
 	"github.com/filecoin-project/specs-storage/storage"
 
-	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
-
 	api2 "github.com/filecoin-project/venus-market/api"
 	"github.com/filecoin-project/venus-market/piecestorage"
 
@@ -307,7 +305,7 @@ func NewWinningPoStProver(api api.FullNode, prover storage.Prover, verifier ffiw
 
 type WinningPoStProver interface {
 	GenerateCandidates(context.Context, abi.PoStRandomness, uint64) ([]uint64, error)
-	ComputeProof(context.Context, []proof2.SectorInfo, abi.PoStRandomness) ([]proof2.PoStProof, error)
+	ComputeProof(context.Context, []builtin.ExtendedSectorInfo, abi.PoStRandomness, abi.ChainEpoch, network.Version) ([]builtin.PoStProof, error)
 }
 
 var _ WinningPoStProver = (*StorageWpp)(nil)
@@ -323,7 +321,7 @@ func (wpp *StorageWpp) GenerateCandidates(ctx context.Context, randomness abi.Po
 	return cds, nil
 }
 
-func (wpp *StorageWpp) ComputeProof(ctx context.Context, ssi []builtin.SectorInfo, rand abi.PoStRandomness) ([]builtin.PoStProof, error) {
+func (wpp *StorageWpp) ComputeProof(ctx context.Context, ssi []builtin.ExtendedSectorInfo, rand abi.PoStRandomness, currEpoch abi.ChainEpoch, nv network.Version) ([]builtin.PoStProof, error) {
 	if constants.InsecurePoStValidation {
 		return []builtin.PoStProof{{ProofBytes: []byte("valid proof")}}, nil
 	}
