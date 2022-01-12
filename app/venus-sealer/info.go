@@ -287,8 +287,17 @@ func infoCmdAct(cctx *cli.Context) error {
 	return nil
 }
 
-func sectorsInfo(ctx context.Context, napi api.StorageMiner) error {
-	summary, err := napi.SectorsSummary(ctx)
+func init() {
+	for i, state := range stateList {
+		stateOrder[state.state] = stateMeta{
+			i:   i,
+			col: state.col,
+		}
+	}
+}
+
+func sectorsInfo(ctx context.Context, mapi api.StorageMiner) error {
+	summary, err := mapi.SectorsSummary(ctx)
 	if err != nil {
 		return err
 	}

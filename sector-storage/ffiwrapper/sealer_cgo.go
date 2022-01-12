@@ -896,6 +896,14 @@ func (sb *Sealer) ReleaseUnsealed(ctx context.Context, sector storage.SectorRef,
 	return xerrors.Errorf("not supported at this layer")
 }
 
+func (sb *Sealer) ReleaseReplicaUpgrade(ctx context.Context, sector storage.SectorRef) error {
+	return xerrors.Errorf("not supported at this layer")
+}
+
+func (sb *Sealer) ReleaseSectorKey(ctx context.Context, sector storage.SectorRef) error {
+	return xerrors.Errorf("not supported at this layer")
+}
+
 func (sb *Sealer) Remove(ctx context.Context, sector storage.SectorRef) error {
 	return xerrors.Errorf("not supported at this layer") // happens in localworker
 }

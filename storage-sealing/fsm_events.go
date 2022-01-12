@@ -297,6 +297,46 @@ type SectorFinalizeFailed struct{ error }
 func (evt SectorFinalizeFailed) FormatError(xerrors.Printer) (next error) { return evt.error }
 func (evt SectorFinalizeFailed) apply(*types.SectorInfo)                  {}
 
+// Snap deals // CC update path
+
+type SectorStartCCUpdate struct{}
+
+func (evt SectorStartCCUpdate) apply(state *types.SectorInfo) {
+	state.CCUpdate = true
+	// Clear filler piece but remember in case of abort
+	state.CCPieces = state.Pieces
+	state.Pieces = nil
+}
+
+type SectorReplicaUpdate struct {
+	Out storage.ReplicaUpdateOut
+}
+
+func (evt SectorReplicaUpdate) apply(state *types.SectorInfo) {
+	state.UpdateSealed = &evt.Out.NewSealed
+	state.UpdateUnsealed = &evt.Out.NewUnsealed
+}
+
+type SectorProveReplicaUpdate struct {
+	Proof storage.ReplicaUpdateProof
+}
+
+func (evt SectorProveReplicaUpdate) apply(state *types.SectorInfo) {
+	state.ReplicaUpdateProof = evt.Proof
+}
+
+type SectorReplicaUpdateSubmitted struct {
+	Message string
+}
+
+func (evt SectorReplicaUpdateSubmitted) apply(state *types.SectorInfo) {
+	state.ReplicaUpdateMessage = evt.Message
+}
+
+type SectorReplicaUpdateLanded struct{}
+
+func (evt SectorReplicaUpdateLanded) apply(state *types.SectorInfo) {}
+
 // Failed state recovery
 
 type SectorRetrySealPreCommit1 struct{}
@@ -352,6 +392,60 @@ func (evt SectorUpdateDealIDs) apply(state *types.SectorInfo) {
 		state.Pieces[i].DealInfo.DealID = id
 	}
 }
+
+// Snap Deals failure and recovery
+
+type SectorRetryReplicaUpdate struct{}
+
+func (evt SectorRetryReplicaUpdate) apply(state *types.SectorInfo) {}
+
+type SectorRetryProveReplicaUpdate struct{}
+
+func (evt SectorRetryProveReplicaUpdate) apply(state *types.SectorInfo) {}
+
+type SectorUpdateReplicaFailed struct{ error }
+
+func (evt SectorUpdateReplicaFailed) FormatError(xerrors.Printer) (next error) { return evt.error }
+func (evt SectorUpdateReplicaFailed) apply(state *types.SectorInfo)            {}
+
+type SectorProveReplicaUpdateFailed struct{ error }
+
+func (evt SectorProveReplicaUpdateFailed) FormatError(xerrors.Printer) (next error) {
+	return evt.error
+}
+func (evt SectorProveReplicaUpdateFailed) apply(state *types.SectorInfo) {}
+
+type SectorAbortUpgrade struct{ error }
+
+func (evt SectorAbortUpgrade) apply(state *types.SectorInfo) {}
+func (evt SectorAbortUpgrade) FormatError(xerrors.Printer) (next error) {
+	return evt.error
+}
+
+type SectorRevertUpgradeToProving struct{}
+
+func (evt SectorRevertUpgradeToProving) apply(state *types.SectorInfo) {
+	// cleanup sector state so that it is back in proving
+	state.CCUpdate = false
+	state.UpdateSealed = nil
+	state.UpdateUnsealed = nil
+	state.ReplicaUpdateProof = nil
+	state.ReplicaUpdateMessage = ""
+	state.Pieces = state.CCPieces
+	state.CCPieces = nil
+}
+
+type SectorRetrySubmitReplicaUpdateWait struct{}
+
+func (evt SectorRetrySubmitReplicaUpdateWait) apply(state *types.SectorInfo) {}
+
+type SectorRetrySubmitReplicaUpdate struct{}
+
+func (evt SectorRetrySubmitReplicaUpdate) apply(state *types.SectorInfo) {}
+
+type SectorSubmitReplicaUpdateFailed struct{}
+
+func (evt SectorSubmitReplicaUpdateFailed) apply(state *types.SectorInfo) {}
 
 // Faults
 

@@ -15,9 +15,9 @@ import (
 
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/constants"
-	"github.com/filecoin-project/venus-sealer/types"
+	types2 "github.com/filecoin-project/venus-sealer/types"
 
-	types2 "github.com/filecoin-project/venus/venus-shared/types"
+	"github.com/filecoin-project/venus/venus-shared/types"
 )
 
 type PrintHelpErr struct {
@@ -67,7 +67,7 @@ func EpochGap(curr, e abi.ChainEpoch) string {
 	panic("math broke")
 }
 
-func HeightToTime(ts *types2.TipSet, openHeight abi.ChainEpoch, blockDelay uint64) string {
+func HeightToTime(ts *types.TipSet, openHeight abi.ChainEpoch, blockDelay uint64) string {
 	if ts.Len() == 0 {
 		return ""
 	}
@@ -78,68 +78,71 @@ func HeightToTime(ts *types2.TipSet, openHeight abi.ChainEpoch, blockDelay uint6
 type stateMeta struct {
 	i     int
 	col   color.Attribute
-	state types.SectorState
+	state types2.SectorState
 }
 
-var stateOrder = map[types.SectorState]stateMeta{}
+var stateOrder = map[types2.SectorState]stateMeta{}
 var stateList = []stateMeta{
 	{col: 39, state: "Total"},
-	{col: color.FgGreen, state: types.Proving},
+	{col: color.FgGreen, state: types2.Proving},
 
-	{col: color.FgBlue, state: types.Empty},
-	{col: color.FgBlue, state: types.WaitDeals},
-	{col: color.FgBlue, state: types.AddPiece},
+	{col: color.FgBlue, state: types2.Empty},
+	{col: color.FgBlue, state: types2.WaitDeals},
+	{col: color.FgBlue, state: types2.AddPiece},
+	{col: color.FgBlue, state: types2.SnapDealsWaitDeals},
+	{col: color.FgBlue, state: types2.SnapDealsAddPiece},
 
-	{col: color.FgRed, state: types.UndefinedSectorState},
-	{col: color.FgYellow, state: types.Packing},
-	{col: color.FgYellow, state: types.GetTicket},
-	{col: color.FgYellow, state: types.PreCommit1},
-	{col: color.FgYellow, state: types.PreCommit2},
-	{col: color.FgYellow, state: types.PreCommitting},
-	{col: color.FgYellow, state: types.PreCommitWait},
-	{col: color.FgYellow, state: types.SubmitPreCommitBatch},
-	{col: color.FgYellow, state: types.PreCommitBatchWait},
-	{col: color.FgYellow, state: types.WaitSeed},
-	{col: color.FgYellow, state: types.Committing},
-	{col: color.FgYellow, state: types.CommitFinalize},
-	{col: color.FgYellow, state: types.SubmitCommit},
-	{col: color.FgYellow, state: types.CommitWait},
-	{col: color.FgYellow, state: types.SubmitCommitAggregate},
-	{col: color.FgYellow, state: types.CommitAggregateWait},
-	{col: color.FgYellow, state: types.FinalizeSector},
+	{col: color.FgRed, state: types2.UndefinedSectorState},
+	{col: color.FgYellow, state: types2.Packing},
+	{col: color.FgYellow, state: types2.GetTicket},
+	{col: color.FgYellow, state: types2.PreCommit1},
+	{col: color.FgYellow, state: types2.PreCommit2},
+	{col: color.FgYellow, state: types2.PreCommitting},
+	{col: color.FgYellow, state: types2.PreCommitWait},
+	{col: color.FgYellow, state: types2.SubmitPreCommitBatch},
+	{col: color.FgYellow, state: types2.PreCommitBatchWait},
+	{col: color.FgYellow, state: types2.WaitSeed},
+	{col: color.FgYellow, state: types2.Committing},
+	{col: color.FgYellow, state: types2.CommitFinalize},
+	{col: color.FgYellow, state: types2.SubmitCommit},
+	{col: color.FgYellow, state: types2.CommitWait},
+	{col: color.FgYellow, state: types2.SubmitCommitAggregate},
+	{col: color.FgYellow, state: types2.CommitAggregateWait},
+	{col: color.FgYellow, state: types2.FinalizeSector},
+	{col: color.FgYellow, state: types2.SnapDealsPacking},
+	{col: color.FgYellow, state: types2.UpdateReplica},
+	{col: color.FgYellow, state: types2.ProveReplicaUpdate},
+	{col: color.FgYellow, state: types2.SubmitReplicaUpdate},
+	{col: color.FgYellow, state: types2.ReplicaUpdateWait},
+	{col: color.FgYellow, state: types2.FinalizeReplicaUpdate},
 
-	{col: color.FgCyan, state: types.Terminating},
-	{col: color.FgCyan, state: types.TerminateWait},
-	{col: color.FgCyan, state: types.TerminateFinality},
-	{col: color.FgCyan, state: types.TerminateFailed},
-	{col: color.FgCyan, state: types.Removing},
-	{col: color.FgCyan, state: types.Removed},
+	{col: color.FgCyan, state: types2.Terminating},
+	{col: color.FgCyan, state: types2.TerminateWait},
+	{col: color.FgCyan, state: types2.TerminateFinality},
+	{col: color.FgCyan, state: types2.TerminateFailed},
+	{col: color.FgCyan, state: types2.Removing},
+	{col: color.FgCyan, state: types2.Removed},
+	{col: color.FgCyan, state: types2.AbortUpgrade},
 
-	{col: color.FgRed, state: types.FailedUnrecoverable},
-	{col: color.FgRed, state: types.AddPieceFailed},
-	{col: color.FgRed, state: types.SealPreCommit1Failed},
-	{col: color.FgRed, state: types.SealPreCommit2Failed},
-	{col: color.FgRed, state: types.PreCommitFailed},
-	{col: color.FgRed, state: types.ComputeProofFailed},
-	{col: color.FgRed, state: types.CommitFailed},
-	{col: color.FgRed, state: types.CommitFinalizeFailed},
-	{col: color.FgRed, state: types.PackingFailed},
-	{col: color.FgRed, state: types.FinalizeFailed},
-	{col: color.FgRed, state: types.Faulty},
-	{col: color.FgRed, state: types.FaultReported},
-	{col: color.FgRed, state: types.FaultedFinal},
-	{col: color.FgRed, state: types.RemoveFailed},
-	{col: color.FgRed, state: types.DealsExpired},
-	{col: color.FgRed, state: types.RecoverDealIDs},
-}
-
-func init() {
-	for i, state := range stateList {
-		stateOrder[state.state] = stateMeta{
-			i:   i,
-			col: state.col,
-		}
-	}
+	{col: color.FgRed, state: types2.FailedUnrecoverable},
+	{col: color.FgRed, state: types2.AddPieceFailed},
+	{col: color.FgRed, state: types2.SealPreCommit1Failed},
+	{col: color.FgRed, state: types2.SealPreCommit2Failed},
+	{col: color.FgRed, state: types2.PreCommitFailed},
+	{col: color.FgRed, state: types2.ComputeProofFailed},
+	{col: color.FgRed, state: types2.CommitFailed},
+	{col: color.FgRed, state: types2.CommitFinalizeFailed},
+	{col: color.FgRed, state: types2.PackingFailed},
+	{col: color.FgRed, state: types2.FinalizeFailed},
+	{col: color.FgRed, state: types2.Faulty},
+	{col: color.FgRed, state: types2.FaultReported},
+	{col: color.FgRed, state: types2.FaultedFinal},
+	{col: color.FgRed, state: types2.RemoveFailed},
+	{col: color.FgRed, state: types2.DealsExpired},
+	{col: color.FgRed, state: types2.RecoverDealIDs},
+	{col: color.FgRed, state: types2.SnapDealsAddPieceFailed},
+	{col: color.FgRed, state: types2.SnapDealsDealsExpired},
+	{col: color.FgRed, state: types2.ReplicaUpdateFailed},
 }
 
 func getActorAddress(ctx context.Context, nodeAPI api.StorageMiner, overrideMaddr string) (maddr address.Address, err error) {
