@@ -37,6 +37,9 @@ type ErrInvalidProof struct{ error }
 type ErrNoPrecommit struct{ error }
 type ErrCommitWaitFailed struct{ error }
 
+type ErrBadRU struct{ error }
+type ErrBadPR struct{ error }
+
 func checkPieces(ctx context.Context, maddr address.Address, si types.SectorInfo, api SealingAPI) error {
 	tok, height, err := api.ChainHead(ctx)
 	if err != nil {
@@ -188,4 +191,33 @@ func (m *Sealing) checkCommit(ctx context.Context, si types.SectorInfo, proof []
 	}
 
 	return nil
+}
+
+// check that sector info is good after running a replica update
+func checkReplicaUpdate(ctx context.Context, maddr address.Address, si types.SectorInfo, tok types.TipSetToken, api SealingAPI) error {
+
+	if err := checkPieces(ctx, maddr, si, api); err != nil {
+		return err
+	}
+	if !si.CCUpdate {
+		return xerrors.Errorf("replica update on sector not marked for update")
+	}
+
+	commD, err := api.StateComputeDataCommitment(ctx, maddr, si.SectorType, si.DealIDs(), tok)
+	if err != nil {
+		return &ErrApi{xerrors.Errorf("calling StateComputeDataCommitment: %w", err)}
+	}
+	if si.UpdateUnsealed == nil || !commD.Equals(*si.UpdateUnsealed) {
+		return &ErrBadRU{xerrors.Errorf("on chain CommD differs from sector: %s != %s", commD, si.CommD)}
+	}
+
+	if si.UpdateSealed == nil {
+		return &ErrBadRU{xerrors.Errorf("nil sealed cid")}
+	}
+	if si.ReplicaUpdateProof == nil {
+		return ErrBadPR{xerrors.Errorf("nil PR2 proof")}
+	}
+
+	return nil
+
 }

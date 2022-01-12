@@ -14,12 +14,10 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-bitfield"
 	"github.com/filecoin-project/go-state-types/abi"
-	"github.com/filecoin-project/specs-actors/actors/builtin"
 	"github.com/filecoin-project/specs-storage/storage"
 
-	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
-
 	"github.com/filecoin-project/venus/pkg/chain"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin"
 	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
 	"github.com/filecoin-project/venus/venus-shared/types"
 
@@ -628,22 +626,22 @@ var provingMockWdPoStTaskCmd = &cli.Command{
 			return fmt.Errorf("no lived sector in that partition")
 		}
 
-		substitute := proof2.SectorInfo{
+		substitute := builtin.ExtendedSectorInfo{
 			SectorNumber: sset[0].SectorNumber,
 			SealedCID:    sset[0].SealedCID,
 			SealProof:    sset[0].SealProof,
 		}
 
-		sectorByID := make(map[uint64]proof2.SectorInfo, len(sset))
+		sectorByID := make(map[uint64]builtin.ExtendedSectorInfo, len(sset))
 		for _, sector := range sset {
-			sectorByID[uint64(sector.SectorNumber)] = proof2.SectorInfo{
+			sectorByID[uint64(sector.SectorNumber)] = builtin.ExtendedSectorInfo{
 				SectorNumber: sector.SectorNumber,
 				SealedCID:    sector.SealedCID,
 				SealProof:    sector.SealProof,
 			}
 		}
 
-		proofSectors := make([]proof2.SectorInfo, 0, len(sset))
+		proofSectors := make([]builtin.ExtendedSectorInfo, 0, len(sset))
 		if err := partitions[pidx].AllSectors.ForEach(func(sectorNo uint64) error {
 			if info, found := sectorByID[sectorNo]; found {
 				proofSectors = append(proofSectors, info)

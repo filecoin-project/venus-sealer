@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/raulk/clock"
 
 	builtin2 "github.com/filecoin-project/specs-actors/v2/actors/builtin"
@@ -27,9 +28,10 @@ const AddressMainnetEnvVar = "_mainnet_"
 var BlocksPerEpoch = uint64(builtin2.ExpectedLeadersPerEpoch)
 
 var (
-	FullAPIVersion0   = newVer(1, 4, 0)
-	FullAPIVersion1   = newVer(2, 1, 0)
-	MinerAPIVersion0  = newVer(1, 2, 0)
+	FullAPIVersion0   = newVer(1, 5, 0)
+	FullAPIVersion1   = newVer(2, 2, 0)
+
+	MinerAPIVersion0  = newVer(1, 3, 0)
 	WorkerAPIVersion0 = newVer(1, 5, 0)
 
 	MinerVersion = newVer(1, 3, 0)
@@ -47,3 +49,5 @@ func init() {
 }
 
 const BlockDelaySecs = uint64(builtin2.EpochDurationSeconds)
+
+var UpgradeSnapDealsHeight = abi.ChainEpoch(999999999999)

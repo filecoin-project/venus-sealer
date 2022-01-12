@@ -142,6 +142,16 @@ var runCmd = &cli.Command{
 			Usage: "enable commit (32G sectors: all cores or GPUs, 128GiB Memory + 64GiB swap)",
 			Value: true,
 		},
+		&cli.BoolFlag{
+			Name:  "replica-update",
+			Usage: "enable replica update",
+			Value: true,
+		},
+		&cli.BoolFlag{
+			Name:  "prove-replica-update2",
+			Usage: "enable prove replica update 2",
+			Value: true,
+		},
 		&cli.IntFlag{
 			Name:  "parallel-fetch-limit",
 			Usage: "maximum fetch operations to run in parallel",
@@ -313,6 +323,12 @@ var runCmd = &cli.Command{
 		if cctx.Bool("commit") {
 			taskTypes = append(taskTypes, types.TTCommit2)
 		}
+		if cctx.Bool("replicaupdate") {
+			taskTypes = append(taskTypes, types.TTReplicaUpdate)
+		}
+		if cctx.Bool("prove-replica-update2") {
+			taskTypes = append(taskTypes, types.TTProveReplicaUpdate2)
+		}
 
 		if len(taskTypes) == 0 {
 			return xerrors.Errorf("no task types specified")
@@ -411,9 +427,9 @@ var runCmd = &cli.Command{
 
 		workerApi := &worker{
 			LocalWorker: sectorstorage.NewLocalWorker(sectorstorage.WorkerConfig{
-				TaskTypes:  taskTypes,
-				NoSwap:     cctx.Bool("no-swap"),
-				TaskTotal:  cctx.Int64("task-total"),
+				TaskTypes: taskTypes,
+				NoSwap:    cctx.Bool("no-swap"),
+				TaskTotal: cctx.Int64("task-total"),
 			}, remote, localStore, nodeApi, nodeApi, wsts),
 			localStore: localStore,
 			ls:         localStorage,

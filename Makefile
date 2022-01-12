@@ -47,7 +47,7 @@ lotus-convert:
 BINS+=lotus-convert
 
 lint:
-	go run github.com/golangci/golangci-lint/cmd/golangci-lint run
+	go run github.com/golangci/golangci-lgit int/cmd/golangci-lint run
 
 clean:
 	rm -rf $(CLEAN) $(BINS)
