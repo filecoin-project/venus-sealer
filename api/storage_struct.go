@@ -10,15 +10,15 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-fil-markets/piecestore"
 	"github.com/filecoin-project/go-state-types/abi"
+	abinetwork "github.com/filecoin-project/go-state-types/network"
 
 	"github.com/filecoin-project/specs-storage/storage"
-
-	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 
 	types4 "github.com/filecoin-project/venus-market/types"
 
 	types3 "github.com/filecoin-project/venus-messager/types"
 
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin"
 	types2 "github.com/filecoin-project/venus/venus-shared/types"
 
 	"github.com/filecoin-project/venus-sealer/config"
@@ -44,7 +44,7 @@ import (
 type StorageMiner interface {
 	Common
 
-	ComputeProof(context.Context, []proof2.SectorInfo, abi.PoStRandomness) ([]proof2.PoStProof, error)
+	ComputeProof(context.Context, []builtin.ExtendedSectorInfo, abi.PoStRandomness, abi.ChainEpoch, abinetwork.Version) ([]builtin.PoStProof, error)
 
 	NetParamsConfig(ctx context.Context) (*config.NetParamsConfig, error)
 
@@ -62,7 +62,7 @@ type StorageMiner interface {
 	RedoSector(ctx context.Context, rsi storiface.SectorRedoParams) error
 
 	// Test WdPoSt
-	MockWindowPoSt(ctx context.Context, sis []proof2.SectorInfo, rand abi.PoStRandomness) error
+	MockWindowPoSt(ctx context.Context, sis []builtin.ExtendedSectorInfo, rand abi.PoStRandomness) error
 
 	// Get the status of a given sector by ID
 	SectorsStatus(ctx context.Context, sid abi.SectorNumber, showOnChainInfo bool) (SectorInfo, error)
@@ -106,7 +106,7 @@ type StorageMiner interface {
 	SectorTerminateFlush(ctx context.Context) (string, error)
 	// SectorTerminatePending returns a list of pending sector terminations to be sent in the next batch message
 	SectorTerminatePending(ctx context.Context) ([]abi.SectorID, error)
-	SectorMarkForUpgrade(ctx context.Context, id abi.SectorNumber) error
+	SectorMarkForUpgrade(ctx context.Context, id abi.SectorNumber, snap bool) error
 	// SectorPreCommitFlush immediately sends a PreCommit message with sectors batched for PreCommit.
 	// Returns null if message wasn't sent
 	SectorPreCommitFlush(ctx context.Context) ([]sealiface.PreCommitBatchRes, error) //perm:admin
@@ -117,6 +117,7 @@ type StorageMiner interface {
 	SectorCommitFlush(ctx context.Context) ([]sealiface.CommitBatchRes, error) //perm:admin
 	// SectorCommitPending returns a list of pending Commit sectors to be sent in the next aggregate message
 	SectorCommitPending(ctx context.Context) ([]abi.SectorID, error) //perm:admin
+	SectorMatchPendingPiecesToOpenSectors(ctx context.Context) error //perm:admin
 
 	StorageLocal(ctx context.Context) (map[stores.ID]string, error)
 	StorageStat(ctx context.Context, id stores.ID) (fsutil.FsStat, error)
@@ -186,7 +187,7 @@ type StorageMiner interface {
 type StorageMinerStruct struct {
 	CommonStruct
 	Internal struct {
-		ComputeProof func(context.Context, []proof2.SectorInfo, abi.PoStRandomness) ([]proof2.PoStProof, error) `perm:"read"`
+		ComputeProof func(context.Context, []builtin.ExtendedSectorInfo, abi.PoStRandomness, abi.ChainEpoch, abinetwork.Version) ([]builtin.PoStProof, error) `perm:"read"`
 
 		ActorAddress       func(context.Context) (address.Address, error)                 `perm:"read"`
 		ActorSectorSize    func(context.Context, address.Address) (abi.SectorSize, error) `perm:"read"`
@@ -199,48 +200,49 @@ type StorageMinerStruct struct {
 
 		RedoSector func(ctx context.Context, rsi storiface.SectorRedoParams) error `perm:"write"`
 
-		MockWindowPoSt func(ctx context.Context, sis []proof2.SectorInfo, rand abi.PoStRandomness) error `perm:"write"`
+		MockWindowPoSt func(ctx context.Context, sis []builtin.ExtendedSectorInfo, rand abi.PoStRandomness) error `perm:"write"`
 
-		SectorsList                   func(context.Context) ([]abi.SectorNumber, error)                                                `perm:"read"`
-		SectorsListInStates           func(context.Context, []SectorState) ([]abi.SectorNumber, error)                                 `perm:"read"`
-		SectorsInfoListInStates       func(ctx context.Context, ss []SectorState, showOnChainInfo, skipLog bool) ([]SectorInfo, error) `perm:"read"`
-		SectorsSummary                func(ctx context.Context) (map[SectorState]int, error)                                           `perm:"read"`
-		SectorsRefs                   func(context.Context) (map[string][]types.SealedRef, error)                                      `perm:"read"`
-		SectorStartSealing            func(context.Context, abi.SectorNumber) error                                                    `perm:"write"`
-		SectorSetSealDelay            func(context.Context, time.Duration) error                                                       `perm:"write"`
-		SectorGetSealDelay            func(context.Context) (time.Duration, error)                                                     `perm:"read"`
-		SectorSetExpectedSealDuration func(context.Context, time.Duration) error                                                       `perm:"write"`
-		SectorGetExpectedSealDuration func(context.Context) (time.Duration, error)                                                     `perm:"read"`
-		SectorsUpdate                 func(context.Context, abi.SectorNumber, SectorState) error                                       `perm:"admin"`
-		SectorRemove                  func(context.Context, abi.SectorNumber) error                                                    `perm:"admin"`
-		SectorTerminate               func(context.Context, abi.SectorNumber) error                                                    `perm:"admin"`
-		SectorTerminateFlush          func(ctx context.Context) (string, error)                                                        `perm:"admin"`
-		SectorTerminatePending        func(ctx context.Context) ([]abi.SectorID, error)                                                `perm:"admin"`
-		SectorMarkForUpgrade          func(ctx context.Context, id abi.SectorNumber) error                                             `perm:"admin"`
-		SectorPreCommitFlush          func(ctx context.Context) ([]sealiface.PreCommitBatchRes, error)                                 `perm:"admin"`
-		SectorPreCommitPending        func(ctx context.Context) ([]abi.SectorID, error)                                                `perm:"admin"`
-		SectorCommitFlush             func(ctx context.Context) ([]sealiface.CommitBatchRes, error)                                    `perm:"admin"`
-		SectorCommitPending           func(ctx context.Context) ([]abi.SectorID, error)                                                `perm:"admin"`
+		SectorsList                           func(context.Context) ([]abi.SectorNumber, error)                                                `perm:"read"`
+		SectorsListInStates                   func(context.Context, []SectorState) ([]abi.SectorNumber, error)                                 `perm:"read"`
+		SectorsInfoListInStates               func(ctx context.Context, ss []SectorState, showOnChainInfo, skipLog bool) ([]SectorInfo, error) `perm:"read"`
+		SectorsSummary                        func(ctx context.Context) (map[SectorState]int, error)                                           `perm:"read"`
+		SectorsRefs                           func(context.Context) (map[string][]types.SealedRef, error)                                      `perm:"read"`
+		SectorStartSealing                    func(context.Context, abi.SectorNumber) error                                                    `perm:"write"`
+		SectorSetSealDelay                    func(context.Context, time.Duration) error                                                       `perm:"write"`
+		SectorGetSealDelay                    func(context.Context) (time.Duration, error)                                                     `perm:"read"`
+		SectorSetExpectedSealDuration         func(context.Context, time.Duration) error                                                       `perm:"write"`
+		SectorGetExpectedSealDuration         func(context.Context) (time.Duration, error)                                                     `perm:"read"`
+		SectorsUpdate                         func(context.Context, abi.SectorNumber, SectorState) error                                       `perm:"admin"`
+		SectorRemove                          func(context.Context, abi.SectorNumber) error                                                    `perm:"admin"`
+		SectorTerminate                       func(context.Context, abi.SectorNumber) error                                                    `perm:"admin"`
+		SectorTerminateFlush                  func(ctx context.Context) (string, error)                                                        `perm:"admin"`
+		SectorTerminatePending                func(ctx context.Context) ([]abi.SectorID, error)                                                `perm:"admin"`
+		SectorMarkForUpgrade                  func(ctx context.Context, id abi.SectorNumber, snap bool) error                                  `perm:"admin"`
+		SectorPreCommitFlush                  func(ctx context.Context) ([]sealiface.PreCommitBatchRes, error)                                 `perm:"admin"`
+		SectorPreCommitPending                func(ctx context.Context) ([]abi.SectorID, error)                                                `perm:"admin"`
+		SectorCommitFlush                     func(ctx context.Context) ([]sealiface.CommitBatchRes, error)                                    `perm:"admin"`
+		SectorCommitPending                   func(ctx context.Context) ([]abi.SectorID, error)                                                `perm:"admin"`
+		SectorMatchPendingPiecesToOpenSectors func(ctx context.Context) error                                                                  `perm:"admin"`
 
 		WorkerConnect func(context.Context, string) error                                `perm:"admin" retry:"true"` // TODO: worker perm
 		WorkerStats   func(context.Context) (map[uuid.UUID]storiface.WorkerStats, error) `perm:"admin"`
 		WorkerJobs    func(context.Context) (map[uuid.UUID][]storiface.WorkerJob, error) `perm:"admin"`
 
-		ReturnAddPiece                  func(ctx context.Context, callID types.CallID, pi abi.PieceInfo, err *storiface.CallError) error                               `perm:"admin" retry:"true"`
-		ReturnSealPreCommit1            func(ctx context.Context, callID types.CallID, p1o storage.PreCommit1Out, err *storiface.CallError) error                      `perm:"admin" retry:"true"`
-		ReturnSealPreCommit2            func(ctx context.Context, callID types.CallID, sealed storage.SectorCids, err *storiface.CallError) error                      `perm:"admin" retry:"true"`
-		ReturnSealCommit1               func(ctx context.Context, callID types.CallID, out storage.Commit1Out, err *storiface.CallError) error                         `perm:"admin" retry:"true"`
-		ReturnSealCommit2               func(ctx context.Context, callID types.CallID, proof storage.Proof, err *storiface.CallError) error                            `perm:"admin" retry:"true"`
-		ReturnFinalizeSector            func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                                                 `perm:"admin" retry:"true"`
+		ReturnAddPiece                  func(ctx context.Context, callID types.CallID, pi abi.PieceInfo, err *storiface.CallError) error                           `perm:"admin" retry:"true"`
+		ReturnSealPreCommit1            func(ctx context.Context, callID types.CallID, p1o storage.PreCommit1Out, err *storiface.CallError) error                  `perm:"admin" retry:"true"`
+		ReturnSealPreCommit2            func(ctx context.Context, callID types.CallID, sealed storage.SectorCids, err *storiface.CallError) error                  `perm:"admin" retry:"true"`
+		ReturnSealCommit1               func(ctx context.Context, callID types.CallID, out storage.Commit1Out, err *storiface.CallError) error                     `perm:"admin" retry:"true"`
+		ReturnSealCommit2               func(ctx context.Context, callID types.CallID, proof storage.Proof, err *storiface.CallError) error                        `perm:"admin" retry:"true"`
+		ReturnFinalizeSector            func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                                             `perm:"admin" retry:"true"`
 		ReturnReplicaUpdate             func(ctx context.Context, callID types.CallID, out storage.ReplicaUpdateOut, err *storiface.CallError) error               `perm:"admin" retry:"true"`
 		ReturnProveReplicaUpdate1       func(ctx context.Context, callID types.CallID, vanillaProofs storage.ReplicaVanillaProofs, err *storiface.CallError) error `perm:"admin" retry:"true"`
 		ReturnProveReplicaUpdate2       func(ctx context.Context, callID types.CallID, proof storage.ReplicaUpdateProof, err *storiface.CallError) error           `perm:"admin" retry:"true"`
 		ReturnGenerateSectorKeyFromData func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                                             `perm:"admin" retry:"true"`
-		ReturnReleaseUnsealed           func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                                                 `perm:"admin" retry:"true"`
-		ReturnMoveStorage               func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                                                 `perm:"admin" retry:"true"`
-		ReturnUnsealPiece               func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                                                 `perm:"admin" retry:"true"`
-		ReturnReadPiece                 func(ctx context.Context, callID types.CallID, ok bool, err *storiface.CallError) error                                        `perm:"admin" retry:"true"`
-		ReturnFetch                     func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                                                 `perm:"admin" retry:"true"`
+		ReturnReleaseUnsealed           func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                                             `perm:"admin" retry:"true"`
+		ReturnMoveStorage               func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                                             `perm:"admin" retry:"true"`
+		ReturnUnsealPiece               func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                                             `perm:"admin" retry:"true"`
+		ReturnReadPiece                 func(ctx context.Context, callID types.CallID, ok bool, err *storiface.CallError) error                                    `perm:"admin" retry:"true"`
+		ReturnFetch                     func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                                             `perm:"admin" retry:"true"`
 
 		SealingSchedDiag func(context.Context, bool) (interface{}, error)   `perm:"admin"`
 		SealingAbort     func(ctx context.Context, call types.CallID) error `perm:"admin"`
@@ -260,7 +262,7 @@ type StorageMinerStruct struct {
 		StorageGetLocks      func(ctx context.Context) (storiface.SectorLocks, error)                                                                                     `perm:"admin"`
 
 		DealsImportData                        func(ctx context.Context, dealPropCid cid.Cid, file string) error `perm:"write"`
-		DealsList                              func(ctx context.Context) ([]types2.MarketDeal, error)          `perm:"read"`
+		DealsList                              func(ctx context.Context) ([]types2.MarketDeal, error)            `perm:"read"`
 		DealsConsiderOnlineStorageDeals        func(context.Context) (bool, error)                               `perm:"read"`
 		DealsSetConsiderOnlineStorageDeals     func(context.Context, bool) error                                 `perm:"admin"`
 		DealsConsiderOnlineRetrievalDeals      func(context.Context) (bool, error)                               `perm:"read"`
@@ -287,7 +289,7 @@ type StorageMinerStruct struct {
 
 		CheckProvable func(ctx context.Context, pp abi.RegisteredPoStProof, sectors []storage.SectorRef, expensive bool) (map[abi.SectorNumber]string, error) `perm:"admin"`
 
-		MessagerWaitMessage func(ctx context.Context, uuid string, confidence uint64) (*types2.MsgLookup, error)  `perm:"read"`
+		MessagerWaitMessage func(ctx context.Context, uuid string, confidence uint64) (*types2.MsgLookup, error) `perm:"read"`
 		MessagerPushMessage func(ctx context.Context, msg *types2.Message, meta *types3.MsgMeta) (string, error) `perm:"sign"`
 		MessagerGetMessage  func(ctx context.Context, uuid string) (*types3.Message, error)                      `perm:"write"`
 
@@ -341,7 +343,7 @@ func (c *StorageMinerStruct) RedoSector(ctx context.Context, rsi storiface.Secto
 	return c.Internal.RedoSector(ctx, rsi)
 }
 
-func (c *StorageMinerStruct) MockWindowPoSt(ctx context.Context, sis []proof2.SectorInfo, rand abi.PoStRandomness) error {
+func (c *StorageMinerStruct) MockWindowPoSt(ctx context.Context, sis []builtin.ExtendedSectorInfo, rand abi.PoStRandomness) error {
 	return c.Internal.MockWindowPoSt(ctx, sis, rand)
 }
 
@@ -412,8 +414,8 @@ func (c *StorageMinerStruct) SectorTerminatePending(ctx context.Context) ([]abi.
 	return c.Internal.SectorTerminatePending(ctx)
 }
 
-func (c *StorageMinerStruct) SectorMarkForUpgrade(ctx context.Context, number abi.SectorNumber) error {
-	return c.Internal.SectorMarkForUpgrade(ctx, number)
+func (c *StorageMinerStruct) SectorMarkForUpgrade(ctx context.Context, number abi.SectorNumber, snap bool) error {
+	return c.Internal.SectorMarkForUpgrade(ctx, number, snap)
 }
 
 func (c *StorageMinerStruct) SectorPreCommitFlush(ctx context.Context) ([]sealiface.PreCommitBatchRes, error) {
@@ -430,6 +432,10 @@ func (c *StorageMinerStruct) SectorCommitFlush(ctx context.Context) ([]sealiface
 
 func (c *StorageMinerStruct) SectorCommitPending(ctx context.Context) ([]abi.SectorID, error) {
 	return c.Internal.SectorCommitPending(ctx)
+}
+
+func (c *StorageMinerStruct) SectorMatchPendingPiecesToOpenSectors(ctx context.Context) error {
+	return c.Internal.SectorMatchPendingPiecesToOpenSectors(ctx)
 }
 
 func (c *StorageMinerStruct) WorkerConnect(ctx context.Context, url string) error {
@@ -656,8 +662,8 @@ func (c *StorageMinerStruct) CheckProvable(ctx context.Context, pp abi.Registere
 	return c.Internal.CheckProvable(ctx, pp, sectors, expensive)
 }
 
-func (c *StorageMinerStruct) ComputeProof(ctx context.Context, sectorInfos []proof2.SectorInfo, randomness abi.PoStRandomness) ([]proof2.PoStProof, error) {
-	return c.Internal.ComputeProof(ctx, sectorInfos, randomness)
+func (c *StorageMinerStruct) ComputeProof(ctx context.Context, ssi []builtin.ExtendedSectorInfo, rand abi.PoStRandomness, poStEpoch abi.ChainEpoch, nv abinetwork.Version) ([]builtin.PoStProof, error) {
+	return c.Internal.ComputeProof(ctx, ssi, rand, poStEpoch, nv)
 }
 
 func (c *StorageMinerStruct) MessagerWaitMessage(ctx context.Context, uuid string, confidence uint64) (*types2.MsgLookup, error) {

@@ -41,6 +41,7 @@ var ExampleValues = map[reflect.Type]interface{}{
 	reflect.TypeOf(auth.Permission("")): auth.Permission("write"),
 	reflect.TypeOf(""):                  "string value",
 	reflect.TypeOf(uint64(42)):          uint64(42),
+	reflect.TypeOf(uint(3)):             uint(3),
 	reflect.TypeOf(byte(7)):             byte(7),
 	reflect.TypeOf([]byte{}):            []byte("byte array"),
 }
@@ -163,6 +164,10 @@ func init() {
 	addExample(constants.MinerAPIVersion0)
 	addExample(map[uuid.UUID][]storiface.WorkerJob{
 		ExampleValue("init", reflect.TypeOf(uuid.UUID{}), nil).(uuid.UUID): {ExampleValue("init", reflect.TypeOf(storiface.WorkerJob{}), nil).(storiface.WorkerJob)}})
+	addExample(map[stype.TaskType]map[abi.RegisteredSealProof]storiface.Resources{
+		ExampleValue("init", reflect.TypeOf(stype.TTAddPiece), nil).(stype.TaskType): {
+			ExampleValue("init", reflect.TypeOf(abi.RegisteredSealProof_StackedDrg2KiBV1), nil).(abi.RegisteredSealProof): ExampleValue("init", reflect.TypeOf(storiface.Resources{}), nil).(storiface.Resources),
+		}})
 	addExample(map[uuid.UUID]storiface.WorkerStats{
 		ExampleValue("init", reflect.TypeOf(uuid.UUID{}), nil).(uuid.UUID): ExampleValue("init", reflect.TypeOf(storiface.WorkerStats{}), nil).(storiface.WorkerStats)})
 }
@@ -213,7 +218,7 @@ func ExampleValue(method string, t, parent reflect.Type) interface{} {
 	}
 
 	_, _ = fmt.Fprintf(os.Stderr, "Warnning: No example value for type: %s (method '%s')\n", t, method)
-	return nil
+	return reflect.New(t).Interface()
 }
 
 func exampleStruct(method string, t, parent reflect.Type) interface{} {

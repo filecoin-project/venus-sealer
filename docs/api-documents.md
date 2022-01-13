@@ -52,6 +52,8 @@
   * [MessagerGetMessage](#MessagerGetMessage)
   * [MessagerPushMessage](#MessagerPushMessage)
   * [MessagerWaitMessage](#MessagerWaitMessage)
+* [Mock](#Mock)
+  * [MockWindowPoSt](#MockWindowPoSt)
 * [Net](#Net)
   * [NetParamsConfig](#NetParamsConfig)
 * [Pieces](#Pieces)
@@ -67,9 +69,13 @@
   * [ReturnAddPiece](#ReturnAddPiece)
   * [ReturnFetch](#ReturnFetch)
   * [ReturnFinalizeSector](#ReturnFinalizeSector)
+  * [ReturnGenerateSectorKeyFromData](#ReturnGenerateSectorKeyFromData)
   * [ReturnMoveStorage](#ReturnMoveStorage)
+  * [ReturnProveReplicaUpdate1](#ReturnProveReplicaUpdate1)
+  * [ReturnProveReplicaUpdate2](#ReturnProveReplicaUpdate2)
   * [ReturnReadPiece](#ReturnReadPiece)
   * [ReturnReleaseUnsealed](#ReturnReleaseUnsealed)
+  * [ReturnReplicaUpdate](#ReturnReplicaUpdate)
   * [ReturnSealCommit1](#ReturnSealCommit1)
   * [ReturnSealCommit2](#ReturnSealCommit2)
   * [ReturnSealPreCommit1](#ReturnSealPreCommit1)
@@ -84,6 +90,7 @@
   * [SectorGetExpectedSealDuration](#SectorGetExpectedSealDuration)
   * [SectorGetSealDelay](#SectorGetSealDelay)
   * [SectorMarkForUpgrade](#SectorMarkForUpgrade)
+  * [SectorMatchPendingPiecesToOpenSectors](#SectorMatchPendingPiecesToOpenSectors)
   * [SectorPreCommitFlush](#SectorPreCommitFlush)
   * [SectorPreCommitPending](#SectorPreCommitPending)
   * [SectorRemove](#SectorRemove)
@@ -109,6 +116,7 @@
   * [StorageDeclareSector](#StorageDeclareSector)
   * [StorageDropSector](#StorageDropSector)
   * [StorageFindSector](#StorageFindSector)
+  * [StorageGetLocks](#StorageGetLocks)
   * [StorageInfo](#StorageInfo)
   * [StorageList](#StorageList)
   * [StorageLocal](#StorageLocal)
@@ -172,7 +180,7 @@ Response:
 ```json
 {
   "Version": "string value",
-  "APIVersion": 66048,
+  "APIVersion": 66304,
   "BlockDelay": 42
 }
 ```
@@ -315,12 +323,15 @@ Inputs:
     {
       "SealProof": 8,
       "SectorNumber": 9,
+      "SectorKey": null,
       "SealedCID": {
         "/": "bafy2bzacea3wsdh6y3a36tb3skempjoxqpuyompjbmfeyf34fi3uy6uue42v4"
       }
     }
   ],
-  "Bw=="
+  "Bw==",
+  10101,
+  14
 ]
 ```
 
@@ -770,42 +781,19 @@ Inputs:
 Response:
 ```json
 {
-  "ID": "string value",
-  "UnsignedCid": null,
-  "SignedCid": null,
-  "version": 42,
-  "to": "t01234",
-  "from": "t01234",
-  "nonce": 42,
-  "value": "0",
-  "gasLimit": 9,
-  "gasFeeCap": "0",
-  "gasPremium": "0",
-  "method": 1,
-  "params": "Ynl0ZSBhcnJheQ==",
-  "Signature": {
-    "Type": 2,
-    "Data": "Ynl0ZSBhcnJheQ=="
+  "CID": {
+    "/": "bafy2bzacebbpdegvr3i4cosewthysg5xkxpqfn2wfcz6mv2hmoktwbdxkax4s"
   },
-  "Height": 9,
-  "Confidence": 9,
-  "Receipt": {
-    "exitCode": 0,
-    "return": "Ynl0ZSBhcnJheQ==",
-    "gasUsed": 9
-  },
-  "TipSetKey": [],
-  "Meta": {
-    "expireEpoch": 10101,
-    "gasOverEstimation": 12.3,
-    "maxFee": "0",
-    "maxFeeCap": "0"
-  },
-  "WalletName": "string value",
-  "FromUser": "string value",
-  "State": 0,
-  "CreatedAt": "0001-01-01T00:00:00Z",
-  "UpdatedAt": "0001-01-01T00:00:00Z"
+  "Version": 42,
+  "To": "t01234",
+  "From": "t01234",
+  "Nonce": 42,
+  "Value": "0",
+  "GasLimit": 9,
+  "GasFeeCap": "0",
+  "GasPremium": "0",
+  "Method": 1,
+  "Params": "Ynl0ZSBhcnJheQ=="
 }
 ```
 
@@ -818,16 +806,19 @@ Inputs:
 ```json
 [
   {
-    "version": 42,
-    "to": "t01234",
-    "from": "t01234",
-    "nonce": 42,
-    "value": "0",
-    "gasLimit": 9,
-    "gasFeeCap": "0",
-    "gasPremium": "0",
-    "method": 1,
-    "params": "Ynl0ZSBhcnJheQ=="
+    "CID": {
+      "/": "bafy2bzacebbpdegvr3i4cosewthysg5xkxpqfn2wfcz6mv2hmoktwbdxkax4s"
+    },
+    "Version": 42,
+    "To": "t01234",
+    "From": "t01234",
+    "Nonce": 42,
+    "Value": "0",
+    "GasLimit": 9,
+    "GasFeeCap": "0",
+    "GasPremium": "0",
+    "Method": 1,
+    "Params": "Ynl0ZSBhcnJheQ=="
   },
   {
     "expireEpoch": 10101,
@@ -861,15 +852,43 @@ Response:
     "/": "bafy2bzacea3wsdh6y3a36tb3skempjoxqpuyompjbmfeyf34fi3uy6uue42v4"
   },
   "Receipt": {
-    "exitCode": 0,
-    "return": "Ynl0ZSBhcnJheQ==",
-    "gasUsed": 9
+    "ExitCode": 0,
+    "Return": "Ynl0ZSBhcnJheQ==",
+    "GasUsed": 9
   },
   "ReturnDec": {},
   "TipSet": [],
   "Height": 10101
 }
 ```
+
+## Mock
+
+
+### MockWindowPoSt
+Test WdPoSt
+
+
+Perms: write
+
+Inputs:
+```json
+[
+  [
+    {
+      "SealProof": 8,
+      "SectorNumber": 9,
+      "SectorKey": null,
+      "SealedCID": {
+        "/": "bafy2bzacea3wsdh6y3a36tb3skempjoxqpuyompjbmfeyf34fi3uy6uue42v4"
+      }
+    }
+  ],
+  "Bw=="
+]
+```
+
+Response: `{}`
 
 ## Net
 
@@ -1111,6 +1130,30 @@ Inputs:
 
 Response: `{}`
 
+### ReturnGenerateSectorKeyFromData
+
+
+Perms: admin
+
+Inputs:
+```json
+[
+  {
+    "Sector": {
+      "Miner": 1000,
+      "Number": 9
+    },
+    "ID": "d5c7e3cb-f35a-4f98-b509-ca8ce5922fab"
+  },
+  {
+    "Code": 0,
+    "Message": "string value"
+  }
+]
+```
+
+Response: `{}`
+
 ### ReturnMoveStorage
 
 
@@ -1126,6 +1169,58 @@ Inputs:
     },
     "ID": "d5c7e3cb-f35a-4f98-b509-ca8ce5922fab"
   },
+  {
+    "Code": 0,
+    "Message": "string value"
+  }
+]
+```
+
+Response: `{}`
+
+### ReturnProveReplicaUpdate1
+
+
+Perms: admin
+
+Inputs:
+```json
+[
+  {
+    "Sector": {
+      "Miner": 1000,
+      "Number": 9
+    },
+    "ID": "d5c7e3cb-f35a-4f98-b509-ca8ce5922fab"
+  },
+  [
+    "Ynl0ZSBhcnJheQ=="
+  ],
+  {
+    "Code": 0,
+    "Message": "string value"
+  }
+]
+```
+
+Response: `{}`
+
+### ReturnProveReplicaUpdate2
+
+
+Perms: admin
+
+Inputs:
+```json
+[
+  {
+    "Sector": {
+      "Miner": 1000,
+      "Number": 9
+    },
+    "ID": "d5c7e3cb-f35a-4f98-b509-ca8ce5922fab"
+  },
+  "Bw==",
   {
     "Code": 0,
     "Message": "string value"
@@ -1174,6 +1269,38 @@ Inputs:
       "Number": 9
     },
     "ID": "d5c7e3cb-f35a-4f98-b509-ca8ce5922fab"
+  },
+  {
+    "Code": 0,
+    "Message": "string value"
+  }
+]
+```
+
+Response: `{}`
+
+### ReturnReplicaUpdate
+
+
+Perms: admin
+
+Inputs:
+```json
+[
+  {
+    "Sector": {
+      "Miner": 1000,
+      "Number": 9
+    },
+    "ID": "d5c7e3cb-f35a-4f98-b509-ca8ce5922fab"
+  },
+  {
+    "NewSealed": {
+      "/": "bafy2bzacea3wsdh6y3a36tb3skempjoxqpuyompjbmfeyf34fi3uy6uue42v4"
+    },
+    "NewUnsealed": {
+      "/": "bafy2bzacea3wsdh6y3a36tb3skempjoxqpuyompjbmfeyf34fi3uy6uue42v4"
+    }
   },
   {
     "Code": 0,
@@ -1429,9 +1556,19 @@ Perms: admin
 Inputs:
 ```json
 [
-  9
+  9,
+  true
 ]
 ```
+
+Response: `{}`
+
+### SectorMatchPendingPiecesToOpenSectors
+
+
+Perms: admin
+
+Inputs: `null`
 
 Response: `{}`
 
@@ -1921,7 +2058,13 @@ Inputs:
     "Weight": 42,
     "MaxStorage": 42,
     "CanSeal": true,
-    "CanStore": true
+    "CanStore": true,
+    "Groups": [
+      "string value"
+    ],
+    "AllowTo": [
+      "string value"
+    ]
   },
   {
     "Capacity": 9,
@@ -1961,7 +2104,13 @@ Response:
     "Weight": 42,
     "MaxStorage": 42,
     "CanSeal": true,
-    "CanStore": true
+    "CanStore": true,
+    "Groups": [
+      "string value"
+    ],
+    "AllowTo": [
+      "string value"
+    ]
   }
 ]
 ```
@@ -2039,6 +2188,41 @@ Response:
 ]
 ```
 
+### StorageGetLocks
+
+
+Perms: admin
+
+Inputs: `null`
+
+Response:
+```json
+{
+  "Locks": [
+    {
+      "Sector": {
+        "Miner": 1000,
+        "Number": 9
+      },
+      "Write": [
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "Read": [
+        3,
+        3,
+        3,
+        3,
+        3
+      ]
+    }
+  ]
+}
+```
+
 ### StorageInfo
 
 
@@ -2061,7 +2245,13 @@ Response:
   "Weight": 42,
   "MaxStorage": 42,
   "CanSeal": true,
-  "CanStore": true
+  "CanStore": true,
+  "Groups": [
+    "string value"
+  ],
+  "AllowTo": [
+    "string value"
+  ]
 }
 ```
 
@@ -2270,18 +2460,31 @@ Response:
       "IgnoreResources": true,
       "Resources": {
         "MemPhysical": 42,
+        "MemUsed": 42,
         "MemSwap": 42,
-        "MemReserved": 42,
+        "MemSwapUsed": 42,
         "CPUs": 42,
         "GPUs": [
           "string value"
-        ]
+        ],
+        "Resources": {
+          "seal/v0/addpiece": {
+            "8": {
+              "MinMemory": 42,
+              "MaxMemory": 42,
+              "GPUUtilization": 12.3,
+              "MaxParallelism": 123,
+              "MaxParallelismGPU": 123,
+              "BaseMinMemory": 42
+            }
+          }
+        }
       }
     },
     "Enabled": true,
     "MemUsedMin": 42,
     "MemUsedMax": 42,
-    "GpuUsed": true,
+    "GpuUsed": 12.3,
     "CpuUse": 42
   }
 }
