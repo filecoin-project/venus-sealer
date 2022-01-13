@@ -6,7 +6,8 @@ venus-worker
 app/sealer
 app/sealer/sealer
 sealing.db*
-
+venus-sealer
+venus-worker
 
 .task
 .idea
