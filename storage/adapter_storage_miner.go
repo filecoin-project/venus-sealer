@@ -121,6 +121,15 @@ func (s SealingAPIAdapter) StateMinerSectorAllocated(ctx context.Context, maddr 
 	return s.delegate.StateMinerSectorAllocated(ctx, maddr, sid, tsk)
 }
 
+func (s SealingAPIAdapter) StateMinerActiveSectors(ctx context.Context, maddr address.Address, tok types2.TipSetToken) ([]*miner.SectorOnChainInfo, error) {
+	tsk, err := types.TipSetKeyFromBytes(tok)
+	if err != nil {
+		return nil, xerrors.Errorf("failed to unmarshal TipSetToken to TipSetKey: %w", err)
+	}
+
+	return s.delegate.StateMinerActiveSectors(ctx, maddr, tsk)
+}
+
 func (s SealingAPIAdapter) StateWaitMsg(ctx context.Context, mcid cid.Cid) (types2.MsgLookup, error) {
 	wmsg, err := s.delegate.StateWaitMsg(ctx, mcid, constants.MessageConfidence, constants2.LookbackNoLimit, true)
 	if err != nil {

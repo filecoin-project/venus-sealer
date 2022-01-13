@@ -9,7 +9,7 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/specs-storage/storage"
 
-	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin"
 
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/constants"
@@ -92,15 +92,21 @@ func (m *Miner) CommitPending(ctx context.Context) ([]abi.SectorID, error) {
 	return m.sealing.CommitPending(ctx)
 }
 
-func (m *Miner) MarkForUpgrade(id abi.SectorNumber) error {
-	return m.sealing.MarkForUpgrade(id)
+func (m *Miner) SectorMatchPendingPiecesToOpenSectors(ctx context.Context) error {
+	return m.sealing.MatchPendingPiecesToOpenSectors(ctx)
+}
+func (m *Miner) MarkForUpgrade(ctx context.Context, id abi.SectorNumber, snap bool) error {
+	if snap {
+		return m.sealing.MarkForSnapUpgrade(ctx, id)
+	}
+	return m.sealing.MarkForUpgrade(ctx, id)
 }
 
 func (m *Miner) IsMarkedForUpgrade(id abi.SectorNumber) bool {
 	return m.sealing.IsMarkedForUpgrade(id)
 }
 
-func (s *Miner) MockWindowPoSt(ctx context.Context, sis []proof2.SectorInfo, rand abi.PoStRandomness) error {
+func (s *Miner) MockWindowPoSt(ctx context.Context, sis []builtin.ExtendedSectorInfo, rand abi.PoStRandomness) error {
 	mid, err := address.IDFromAddress(s.maddr)
 	if err != nil {
 		return err

@@ -61,6 +61,7 @@ type SealingAPI interface {
 	StateMinerInfo(context.Context, address.Address, types2.TipSetToken) (miner.MinerInfo, error)
 	StateMinerAvailableBalance(context.Context, address.Address, types2.TipSetToken) (big.Int, error)
 	StateMinerSectorAllocated(context.Context, address.Address, abi.SectorNumber, types2.TipSetToken) (bool, error)
+	StateMinerActiveSectors(context.Context, address.Address, types2.TipSetToken) ([]*miner.SectorOnChainInfo, error)
 	StateMarketStorageDeal(context.Context, abi.DealID, types2.TipSetToken) (*types.MarketDeal, error)
 	StateMarketStorageDealProposal(context.Context, abi.DealID, types2.TipSetToken) (market.DealProposal, error)
 	StateNetworkVersion(ctx context.Context, tok types2.TipSetToken) (network.Version, error)
@@ -133,9 +134,22 @@ type Sealing struct {
 }
 
 type openSector struct {
-	used abi.UnpaddedPieceSize // change to bitfield/rle when AddPiece gains offset support to better fill sectors
+	used     abi.UnpaddedPieceSize // change to bitfield/rle when AddPiece gains offset support to better fill sectors
+	number   abi.SectorNumber
+	ccUpdate bool
 
 	maybeAccept func(cid.Cid) error // called with inputLk
+}
+
+func (o *openSector) dealFitsInLifetime(dealEnd abi.ChainEpoch, expF func(sn abi.SectorNumber) (abi.ChainEpoch, error)) (bool, error) {
+	if !o.ccUpdate {
+		return true, nil
+	}
+	expiration, err := expF(o.number)
+	if err != nil {
+		return false, err
+	}
+	return expiration >= dealEnd, nil
 }
 
 type pendingPiece struct {

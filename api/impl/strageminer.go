@@ -18,13 +18,16 @@ import (
 	"github.com/filecoin-project/go-jsonrpc/auth"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
-	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
+	"github.com/filecoin-project/go-state-types/network"
 	sto "github.com/filecoin-project/specs-storage/storage"
 	multi "github.com/hashicorp/go-multierror"
+
+	proof7 "github.com/filecoin-project/specs-actors/v7/actors/runtime/proof"
 
 	api4 "github.com/filecoin-project/venus-market/api"
 	types4 "github.com/filecoin-project/venus-market/types"
 
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin"
 	"github.com/filecoin-project/venus/venus-shared/types"
 
 	types3 "github.com/filecoin-project/venus-messager/types"
@@ -536,8 +539,8 @@ func (sm *StorageMinerAPI) SectorPreCommitPending(ctx context.Context) ([]abi.Se
 	return sm.Miner.SectorPreCommitPending(ctx)
 }
 
-func (sm *StorageMinerAPI) SectorMarkForUpgrade(ctx context.Context, id abi.SectorNumber) error {
-	return sm.Miner.MarkForUpgrade(id)
+func (sm *StorageMinerAPI) SectorMarkForUpgrade(ctx context.Context, id abi.SectorNumber, snap bool) error {
+	return sm.Miner.MarkForUpgrade(ctx, id, snap)
 }
 
 func (sm *StorageMinerAPI) SectorCommitFlush(ctx context.Context) ([]sealiface.CommitBatchRes, error) {
@@ -546,6 +549,10 @@ func (sm *StorageMinerAPI) SectorCommitFlush(ctx context.Context) ([]sealiface.C
 
 func (sm *StorageMinerAPI) SectorCommitPending(ctx context.Context) ([]abi.SectorID, error) {
 	return sm.Miner.CommitPending(ctx)
+}
+
+func (sm *StorageMinerAPI) SectorMatchPendingPiecesToOpenSectors(ctx context.Context) error {
+	return sm.Miner.SectorMatchPendingPiecesToOpenSectors(ctx)
 }
 
 func (sm *StorageMinerAPI) WorkerConnect(ctx context.Context, url string) error {
@@ -784,8 +791,8 @@ func (sm *StorageMinerAPI) NetParamsConfig(ctx context.Context) (*config.NetPara
 	return sm.NetParams, nil
 }
 
-func (sm *StorageMinerAPI) ComputeProof(ctx context.Context, sectorInfo []proof2.SectorInfo, randoness abi.PoStRandomness) ([]proof2.PoStProof, error) {
-	return sm.Prover.ComputeProof(ctx, sectorInfo, randoness)
+func (sm *StorageMinerAPI) ComputeProof(ctx context.Context, ssi []builtin.ExtendedSectorInfo, rand abi.PoStRandomness, poStEpoch abi.ChainEpoch, nv network.Version) ([]builtin.PoStProof, error) {
+	return sm.Prover.ComputeProof(ctx, ssi, rand, poStEpoch, nv)
 }
 
 func (sm *StorageMinerAPI) MessagerWaitMessage(ctx context.Context, uuid string, confidence uint64) (*types.MsgLookup, error) {
@@ -816,7 +823,7 @@ func (sm *StorageMinerAPI) MessagerGetMessage(ctx context.Context, uuid string) 
 	return msg, nil
 }
 
-func (sm *StorageMinerAPI) MockWindowPoSt(ctx context.Context, sis []proof2.SectorInfo, rand abi.PoStRandomness) error {
+func (sm *StorageMinerAPI) MockWindowPoSt(ctx context.Context, sis []proof7.ExtendedSectorInfo, rand abi.PoStRandomness) error {
 	return sm.Miner.MockWindowPoSt(ctx, sis, rand)
 }
 

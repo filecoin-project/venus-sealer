@@ -119,6 +119,7 @@ func (m *mockAPI) startGeneratePoST(
 ) context.CancelFunc {
 	ctx, cancel := context.WithCancel(ctx)
 
+	log.Errorf("mock posting\n")
 	m.statesLk.Lock()
 	defer m.statesLk.Unlock()
 	m.postStates[deadline.Open] = postStatusProving
