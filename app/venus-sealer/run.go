@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	_ "net/http/pprof"
 	"os"
@@ -18,7 +17,6 @@ import (
 	sealer "github.com/filecoin-project/venus-sealer"
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/config"
-	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus-sealer/lib/ulimit"
 	"github.com/filecoin-project/venus-sealer/types"
 )
@@ -96,10 +94,6 @@ var runCmd = &cli.Command{
 			log.Fatalf("Cannot register the view: %v", err)
 		}
 
-		if err := checkV1ApiSupport(nodeApi); err != nil {
-			return err
-		}
-
 		log.Info("Checking full node sync status")
 		if !cctx.Bool("nosync") {
 			if err := api.SyncWait(ctx, nodeApi, cfg.NetParams.BlockDelaySecs, false); err != nil {
@@ -156,17 +150,3 @@ var runCmd = &cli.Command{
 	},
 }
 
-func checkV1ApiSupport(nodeApi api.FullNode) error {
-	v, err := nodeApi.Version(context.Background())
-
-	if err != nil {
-		return err
-	}
-
-	if !v.APIVersion.EqMajorMinor(constants.FullAPIVersion1) {
-		return xerrors.Errorf("Remote API version didn't match (expected %s, remote %s)", constants.FullAPIVersion0, v.APIVersion)
-	}
-
-	log.Infof("Remote version %s", v)
-	return nil
-}
