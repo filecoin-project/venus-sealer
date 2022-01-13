@@ -60,6 +60,8 @@ type StorageMiner struct {
 	RegisterProof  RegisterProofConfig
 	RegisterMarket RegisterMarketConfig
 
+	UpgradeOhSnapHeight int64
+
 	ConfigPath string `toml:"-"`
 }
 
