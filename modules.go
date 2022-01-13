@@ -192,7 +192,6 @@ func GetParams(mctx MetricsCtx, spt abi.RegisteredSealProof) error {
 	if err != nil {
 		return err
 	}
-
 	if err := paramfetch.GetParams(mctx, ps, srs, uint64(ssize)); err != nil {
 		return xerrors.Errorf("get params: %w", err)
 	}
@@ -240,6 +239,9 @@ func AddressSelector(addrConf *config.MinerAddressConfig) func() (*storage.Addre
 }
 
 func NewPieceStorage(cfg *config2.PieceStorage) (piecestorage.IPieceStorage, error) {
+	if !cfg.S3.Enable && !cfg.Fs.Enable {
+		return nil, nil
+	}
 	return piecestorage.NewPieceStorage(cfg)
 }
 
@@ -262,7 +264,7 @@ type StorageMinerParams struct {
 	Journal            journal.Journal
 	AddrSel            *storage.AddressSelector
 	NetworkParams      *config.NetParamsConfig
-	PieceStorage       piecestorage.IPieceStorage
+	PieceStorage       piecestorage.IPieceStorage `optional:"true"`
 }
 
 func StorageMiner(fc config.MinerFeeConfig) func(params StorageMinerParams) (*storage.Miner, error) {

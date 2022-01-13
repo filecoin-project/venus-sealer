@@ -2,6 +2,7 @@ package sealing
 
 import (
 	"context"
+	"fmt"
 	"github.com/filecoin-project/go-padreader"
 
 	types2 "github.com/filecoin-project/venus-market/types"
@@ -9,6 +10,9 @@ import (
 )
 
 func (m *Sealing) DealSector(ctx context.Context) ([]types.DealAssign, error) {
+	if m.pieceStorage == nil {
+		return nil, fmt.Errorf("Havn't configured piece storage")
+	}
 	m.startupWait.Wait()
 
 	deals, err := m.api.GetUnPackedDeals(ctx, m.maddr, &types2.GetDealSpec{MaxPiece: 50})
