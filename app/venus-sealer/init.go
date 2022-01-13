@@ -337,10 +337,6 @@ func parseServiceFlag(cfg *config.StorageMiner, cctx *cli.Context) error {
 		cfg.Messager.Token = authToken
 
 		cfg.RegisterProof.Token = authToken
-
-		cfg.MarketNode.Token = authToken
-
-		cfg.RegisterMarket.Token = authToken
 	}
 
 	if cctx.IsSet("node-url") {
@@ -364,17 +360,30 @@ func parseServiceFlag(cfg *config.StorageMiner, cctx *cli.Context) error {
 		cfg.RegisterProof.Token = cctx.String("gateway-token")
 	}
 
-	cfg.MarketNode.Mode = cctx.String("market-mode")
-	cfg.MarketNode.Url = cctx.String("market-url")
-	if cctx.IsSet("market-token") {
-		cfg.MarketNode.Token = cctx.String("market-token")
-	}
-	if cfg.MarketNode.Mode == "solo" { // when venus-market is deployed independently, it not only provides services but also handles events
-		cfg.RegisterMarket.Urls = []string{cfg.MarketNode.Url}
-		cfg.RegisterMarket.Token = cfg.MarketNode.Token
-	} else {
-		cfg.RegisterMarket.Urls = cfg.RegisterProof.Urls
-		cfg.RegisterMarket.Token = cfg.RegisterProof.Token
+	if cctx.IsSet("market-mode") {
+		mode := cctx.String("market-mode")
+		if cctx.IsSet("market-url") {
+			cfg.MarketNode.Url = cctx.String("market-url")
+		} else {
+			return xerrors.Errorf("must set market url when set market mode")
+		}
+
+		if cctx.IsSet("auth-token") {
+			authToken := cctx.String("auth-token")
+			cfg.MarketNode.Token = authToken
+		}
+
+		if cctx.IsSet("market-token") {
+			cfg.MarketNode.Token = cctx.String("market-token")
+		}
+
+		if mode == "solo" { // when venus-market is deployed independently, it not only provides services but also handles events
+			cfg.RegisterMarket.Urls = []string{cfg.MarketNode.Url}
+			cfg.RegisterMarket.Token = cfg.MarketNode.Token
+		} else {
+			cfg.RegisterMarket.Urls = cfg.RegisterProof.Urls
+			cfg.RegisterMarket.Token = cfg.RegisterProof.Token
+		}
 	}
 
 	if cctx.IsSet("piecestorage") {

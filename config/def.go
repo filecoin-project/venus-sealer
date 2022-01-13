@@ -60,8 +60,6 @@ type StorageMiner struct {
 	RegisterProof  RegisterProofConfig
 	RegisterMarket RegisterMarketConfig
 
-	UpgradeOhSnapHeight int64
-
 	ConfigPath string `toml:"-"`
 }
 
@@ -84,7 +82,6 @@ type MessagerConfig struct {
 }
 
 type MarketNodeConfig struct {
-	Mode  string
 	Url   string
 	Token string
 }
@@ -349,6 +346,7 @@ type FeeConfig struct {
 
 type NetParamsConfig struct {
 	UpgradeIgnitionHeight   abi.ChainEpoch
+	UpgradeOhSnapHeight     int64
 	ForkLengthThreshold     abi.ChainEpoch
 	BlockDelaySecs          uint64
 	PreCommitChallengeDelay abi.ChainEpoch
