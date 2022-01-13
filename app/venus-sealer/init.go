@@ -30,11 +30,11 @@ import (
 
 	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
 
-	"github.com/filecoin-project/venus/venus-shared/types"
 	actors "github.com/filecoin-project/venus/venus-shared/actors"
 	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
 	"github.com/filecoin-project/venus/venus-shared/actors/builtin/power"
 	"github.com/filecoin-project/venus/venus-shared/actors/policy"
+	"github.com/filecoin-project/venus/venus-shared/types"
 
 	types3 "github.com/filecoin-project/venus-messager/types"
 
