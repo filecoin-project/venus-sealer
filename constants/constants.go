@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"github.com/filecoin-project/go-address"
-	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/raulk/clock"
 
 	builtin2 "github.com/filecoin-project/specs-actors/v2/actors/builtin"
@@ -49,5 +48,3 @@ func init() {
 }
 
 const BlockDelaySecs = uint64(builtin2.EpochDurationSeconds)
-
-var UpgradeSnapDealsHeight = abi.ChainEpoch(999999999999)

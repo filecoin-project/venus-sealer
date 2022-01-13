@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/filecoin-project/venus-sealer/constants"
 	"os"
 	"sort"
 	"strconv"
@@ -33,6 +32,7 @@ import (
 	miner5 "github.com/filecoin-project/specs-actors/v5/actors/builtin/miner"
 
 	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/lib/blockstore"
 	"github.com/filecoin-project/venus-sealer/lib/tablewriter"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
@@ -1672,7 +1672,13 @@ var sectorsMarkForUpgradeCmd = &cli.Command{
 			return xerrors.Errorf("failed to get chain head: %w", err)
 		}
 		twoDays := abi.ChainEpoch(2 * builtin.EpochsInDay)
-		if head.Height() > (constants.UpgradeSnapDealsHeight - twoDays) {
+		repoPath := cctx.String("repo")
+		cfgPath := config.FsConfig(repoPath)
+		cfg, err := config.MinerFromFile(cfgPath)
+		if err != nil {
+			return err
+		}
+		if head.Height() > (abi.ChainEpoch(cfg.UpgradeOhSnapHeight) - twoDays) {
 			return xerrors.Errorf("OhSnap is coming soon, " +
 				"please use `snap-up` to upgrade your cc sectors after the network v15 upgrade!")
 		}
