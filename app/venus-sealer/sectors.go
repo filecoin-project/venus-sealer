@@ -1678,7 +1678,7 @@ var sectorsMarkForUpgradeCmd = &cli.Command{
 		if err != nil {
 			return err
 		}
-		if head.Height() > (abi.ChainEpoch(cfg.UpgradeOhSnapHeight) - twoDays) {
+		if head.Height() > (abi.ChainEpoch(cfg.NetParams.UpgradeOhSnapHeight) - twoDays) {
 			return xerrors.Errorf("OhSnap is coming soon, " +
 				"please use `snap-up` to upgrade your cc sectors after the network v15 upgrade!")
 		}

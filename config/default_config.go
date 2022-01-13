@@ -96,6 +96,7 @@ func DefaultMainnetStorageMiner() *StorageMiner {
 		},
 		NetParams: NetParamsConfig{
 			UpgradeIgnitionHeight: 94000,
+			UpgradeOhSnapHeight:   999999999999,
 			ForkLengthThreshold:   policy.ChainFinality,
 			BlockDelaySecs:        30,
 		},
@@ -122,8 +123,6 @@ func DefaultMainnetStorageMiner() *StorageMiner {
 			Secret: "",
 		},
 		RegisterMarket: defMarket,
-
-		UpgradeOhSnapHeight: 999999999999,
 	}
 	var secret [32]byte
 	_, _ = rand.Read(secret[:])
@@ -178,6 +177,7 @@ func DefaultForceNetStorageMiner() *StorageMiner {
 		},
 		NetParams: NetParamsConfig{
 			UpgradeIgnitionHeight:   94000,
+			UpgradeOhSnapHeight:     999999999999,
 			ForkLengthThreshold:     policy.ChainFinality,
 			PreCommitChallengeDelay: 10,
 			BlockDelaySecs:          30,
@@ -205,8 +205,6 @@ func DefaultForceNetStorageMiner() *StorageMiner {
 			Secret: "",
 		},
 		RegisterMarket: defMarket,
-
-		UpgradeOhSnapHeight: 999999999999,
 	}
 	var secret [32]byte
 	_, _ = rand.Read(secret[:])
@@ -261,6 +259,7 @@ func DefaultCalibrationStorageMiner() *StorageMiner {
 		},
 		NetParams: NetParamsConfig{
 			UpgradeIgnitionHeight: 94000,
+			UpgradeOhSnapHeight:   999999999999,
 			ForkLengthThreshold:   policy.ChainFinality,
 			BlockDelaySecs:        30,
 		},
@@ -287,8 +286,6 @@ func DefaultCalibrationStorageMiner() *StorageMiner {
 			Secret: "",
 		},
 		RegisterMarket: defMarket,
-
-		UpgradeOhSnapHeight: 99999999,
 
 		Dealmaking: DealmakingConfig{
 			ConsiderOnlineStorageDeals:     true,
@@ -377,6 +374,7 @@ func Default2kStorageMiner() *StorageMiner {
 		},
 		NetParams: NetParamsConfig{
 			UpgradeIgnitionHeight:   -2,
+			UpgradeOhSnapHeight:     -18,
 			ForkLengthThreshold:     policy.ChainFinality,
 			BlockDelaySecs:          4,
 			PreCommitChallengeDelay: 10,
@@ -404,8 +402,6 @@ func Default2kStorageMiner() *StorageMiner {
 			Secret: "",
 		},
 		RegisterMarket: defMarket,
-
-		UpgradeOhSnapHeight: -18,
 	}
 	var secret [32]byte
 	_, _ = rand.Read(secret[:])
@@ -463,6 +459,7 @@ func DefaultButterflyStorageMiner() *StorageMiner {
 		},
 		NetParams: NetParamsConfig{
 			UpgradeIgnitionHeight:   -2,
+			UpgradeOhSnapHeight:     30262,
 			ForkLengthThreshold:     policy.ChainFinality,
 			BlockDelaySecs:          4,
 			PreCommitChallengeDelay: 10,
@@ -490,8 +487,6 @@ func DefaultButterflyStorageMiner() *StorageMiner {
 			Secret: "",
 		},
 		RegisterMarket: defMarket,
-
-		UpgradeOhSnapHeight: 30262,
 	}
 	var secret [32]byte
 	_, _ = rand.Read(secret[:])
