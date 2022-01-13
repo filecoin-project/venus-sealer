@@ -14,7 +14,7 @@ import (
 var InsecurePoStValidation = false
 
 const (
-	NewestNetworkVersion = network.Version13
+	NewestNetworkVersion = network.Version15
 	MessageConfidence    = uint64(2)
 )
 
