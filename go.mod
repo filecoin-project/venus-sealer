@@ -93,3 +93,5 @@ replace github.com/filecoin-project/go-jsonrpc => github.com/ipfs-force-communit
 replace github.com/filecoin-project/go-statemachine => github.com/hunjixin/go-statemachine v0.0.0-20210309063909-a65119041e93
 
 replace github.com/filecoin-project/go-statestore => github.com/hunjixin/go-statestore v0.1.1-0.20210309025204-01c69afffbd7
+
+replace github.com/ipfs-force-community/venus-gateway => github.com/ipfs-force-community/venus-gateway v1.1.2-0.20220106064158-4c3c21fa1811
