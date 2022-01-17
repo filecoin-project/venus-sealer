@@ -547,6 +547,11 @@ var provingMockWdPoStTaskCmd = &cli.Command{
 			Required: true,
 			Usage:    "specify the partition which need mock",
 		},
+		&cli.BoolFlag{
+			Name:  "include-faulty",
+			Value: false,
+			Usage: "whether include faulty sectors or not",
+		},
 	},
 	Action: func(cctx *cli.Context) error {
 
@@ -581,13 +586,14 @@ var provingMockWdPoStTaskCmd = &cli.Command{
 			return fmt.Errorf("partition-idx is range out of partitions array: %d <= %d", len(partitions), pidx)
 		}
 
-		toProve, err := bitfield.SubtractBitField(partitions[pidx].LiveSectors, partitions[pidx].FaultySectors)
-		if err != nil {
-			return err
+		toProve := partitions[pidx].LiveSectors
+		if !cctx.Bool("include-faulty") {
+			if toProve, err = bitfield.SubtractBitField(partitions[pidx].LiveSectors, partitions[pidx].FaultySectors); err != nil {
+				return err
+			}
 		}
 
-		toProve, err = bitfield.MergeBitFields(toProve, partitions[pidx].RecoveringSectors)
-		if err != nil {
+		if toProve, err = bitfield.MergeBitFields(toProve, partitions[pidx].RecoveringSectors); err != nil {
 			return err
 		}
 
