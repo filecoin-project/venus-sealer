@@ -1,7 +1,8 @@
 # Venus Sealer
 
-This project is a mining system supporting venus, is currently under active development,
-***please do not use in the production environment***, we do not guarantee compatibility.
+This project is a mining system supporting venus.
+
+Use [Venus Issues](https://github.com/filecoin-project/venus/issues) for reporting issues about this repository.
 
 ## How to Build
 
