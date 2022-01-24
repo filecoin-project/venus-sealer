@@ -67,7 +67,7 @@ func (m *Sealing) RedoSector(ctx context.Context, rsi storiface.SectorRedoParams
 
 	go func() {
 		// P1
-		if err := checkPieces(context.TODO(), m.maddr, si, m.api); err != nil { // Sanity check state
+		if err := checkPieces(context.TODO(), m.maddr, si, m.api, false); err != nil { // Sanity check state
 			switch err.(type) {
 			case *ErrApi:
 				log.Errorf("handlePreCommit1: api error in sector %d, not proceeding: %+v", si.SectorNumber, err)

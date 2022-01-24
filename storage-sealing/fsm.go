@@ -140,6 +140,7 @@ var fsmPlanners = map[types.SectorState]func(events []statemachine.Event, state 
 	types.SnapDealsWaitDeals: planOne(
 		on(SectorAddPiece{}, types.SnapDealsAddPiece),
 		on(SectorStartPacking{}, types.SnapDealsPacking),
+		on(SectorAbortUpgrade{}, types.AbortUpgrade),
 	),
 	types.SnapDealsAddPiece: planOne(
 		on(SectorPieceAdded{}, types.SnapDealsWaitDeals),
@@ -149,18 +150,21 @@ var fsmPlanners = map[types.SectorState]func(events []statemachine.Event, state 
 	),
 	types.SnapDealsPacking: planOne(
 		on(SectorPacked{}, types.UpdateReplica),
+		on(SectorAbortUpgrade{}, types.AbortUpgrade),
 	),
 	types.UpdateReplica: planOne(
 		on(SectorReplicaUpdate{}, types.ProveReplicaUpdate),
 		on(SectorUpdateReplicaFailed{}, types.ReplicaUpdateFailed),
 		on(SectorDealsExpired{}, types.SnapDealsDealsExpired),
 		on(SectorInvalidDealIDs{}, types.SnapDealsRecoverDealIDs),
+		on(SectorAbortUpgrade{}, types.AbortUpgrade),
 	),
 	types.ProveReplicaUpdate: planOne(
 		on(SectorProveReplicaUpdate{}, types.SubmitReplicaUpdate),
 		on(SectorProveReplicaUpdateFailed{}, types.ReplicaUpdateFailed),
 		on(SectorDealsExpired{}, types.SnapDealsDealsExpired),
 		on(SectorInvalidDealIDs{}, types.SnapDealsRecoverDealIDs),
+		on(SectorAbortUpgrade{}, types.AbortUpgrade),
 	),
 	types.SubmitReplicaUpdate: planOne(
 		on(SectorReplicaUpdateSubmitted{}, types.ReplicaUpdateWait),
@@ -234,6 +238,7 @@ var fsmPlanners = map[types.SectorState]func(events []statemachine.Event, state 
 		on(SectorRetryWaitDeals{}, types.SnapDealsWaitDeals),
 		apply(SectorStartPacking{}),
 		apply(SectorAddPiece{}),
+		on(SectorAbortUpgrade{}, types.AbortUpgrade),
 	),
 	types.SnapDealsDealsExpired: planOne(
 		on(SectorAbortUpgrade{}, types.AbortUpgrade),
@@ -252,6 +257,7 @@ var fsmPlanners = map[types.SectorState]func(events []statemachine.Event, state 
 		on(SectorRetryProveReplicaUpdate{}, types.ProveReplicaUpdate),
 		on(SectorInvalidDealIDs{}, types.SnapDealsRecoverDealIDs),
 		on(SectorDealsExpired{}, types.SnapDealsDealsExpired),
+		on(SectorAbortUpgrade{}, types.AbortUpgrade),
 	),
 
 	// Post-seal

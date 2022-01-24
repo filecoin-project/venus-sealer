@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"golang.org/x/xerrors"
 	"time"
 
 	"github.com/google/uuid"
@@ -39,6 +40,9 @@ import (
 //  * Generate mocks
 //  * Generate markdown docs
 //  * Generate openrpc blobs
+
+
+var ErrNotSupported = xerrors.New("method not supported")
 
 // StorageMiner is a low-level interface to the Filecoin network storage miner node
 type StorageMiner interface {
@@ -118,6 +122,8 @@ type StorageMiner interface {
 	// SectorCommitPending returns a list of pending Commit sectors to be sent in the next aggregate message
 	SectorCommitPending(ctx context.Context) ([]abi.SectorID, error) //perm:admin
 	SectorMatchPendingPiecesToOpenSectors(ctx context.Context) error //perm:admin
+	// SectorAbortUpgrade can be called on sectors that are in the process of being upgraded to abort it
+	SectorAbortUpgrade(context.Context, abi.SectorNumber) error //perm:admin
 
 	StorageLocal(ctx context.Context) (map[stores.ID]string, error)
 	StorageStat(ctx context.Context, id stores.ID) (fsutil.FsStat, error)
@@ -244,8 +250,9 @@ type StorageMinerStruct struct {
 		ReturnReadPiece                 func(ctx context.Context, callID types.CallID, ok bool, err *storiface.CallError) error                                    `perm:"admin" retry:"true"`
 		ReturnFetch                     func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                                             `perm:"admin" retry:"true"`
 
-		SealingSchedDiag func(context.Context, bool) (interface{}, error)   `perm:"admin"`
-		SealingAbort     func(ctx context.Context, call types.CallID) error `perm:"admin"`
+		SealingSchedDiag   func(context.Context, bool) (interface{}, error)   `perm:"admin"`
+		SealingAbort       func(ctx context.Context, call types.CallID) error `perm:"admin"`
+		SectorAbortUpgrade func(context.Context, abi.SectorNumber) error      `perm:"admin"`
 
 		StorageList          func(context.Context) (map[stores.ID][]stores.Decl, error)                                                                                   `perm:"admin"`
 		StorageLocal         func(context.Context) (map[stores.ID]string, error)                                                                                          `perm:"admin"`
@@ -512,6 +519,14 @@ func (c *StorageMinerStruct) ReturnFetch(ctx context.Context, callID types.CallI
 
 func (c *StorageMinerStruct) SealingSchedDiag(ctx context.Context, doSched bool) (interface{}, error) {
 	return c.Internal.SealingSchedDiag(ctx, doSched)
+}
+
+
+func (s *StorageMinerStruct) SectorAbortUpgrade(p0 context.Context, p1 abi.SectorNumber) error {
+	if s.Internal.SectorAbortUpgrade == nil {
+		return ErrNotSupported
+	}
+	return s.Internal.SectorAbortUpgrade(p0, p1)
 }
 
 func (c *StorageMinerStruct) SealingAbort(ctx context.Context, call types.CallID) error {
