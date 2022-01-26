@@ -484,7 +484,7 @@ func (m *Sealing) HandleRecoverDealIDs(ctx statemachine.Context, sector types.Se
 }
 
 func (m *Sealing) handleSnapDealsRecoverDealIDs(ctx statemachine.Context, sector types.SectorInfo) error {
-	return m.handleRecoverDealIDsOrFailWith(ctx, sector, SectorAbortUpgrade{})
+	return m.handleRecoverDealIDsOrFailWith(ctx, sector, SectorAbortUpgrade{xerrors.New("failed recovering deal ids")})
 }
 
 func recoveryPiecesToFix(ctx context.Context, api SealingAPI, sector types.SectorInfo, maddr address.Address) ([]int, int, error) {

@@ -16,6 +16,7 @@ func main() {
 		types.WorkState{},
 		types.WorkID{},
 		types.SectorInfo{},
+		types.PieceDealInfo{},
 		types.Piece{},
 		types.DealSchedule{},
 		types.Log{},

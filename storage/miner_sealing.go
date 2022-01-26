@@ -106,6 +106,10 @@ func (m *Miner) IsMarkedForUpgrade(id abi.SectorNumber) bool {
 	return m.sealing.IsMarkedForUpgrade(id)
 }
 
+func (m *Miner) SectorAbortUpgrade(sectorNum abi.SectorNumber) error {
+	return m.sealing.AbortUpgrade(sectorNum)
+}
+
 func (s *Miner) MockWindowPoSt(ctx context.Context, sis []builtin.ExtendedSectorInfo, rand abi.PoStRandomness) error {
 	mid, err := address.IDFromAddress(s.maddr)
 	if err != nil {

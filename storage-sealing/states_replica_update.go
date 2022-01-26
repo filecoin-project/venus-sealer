@@ -17,7 +17,7 @@ import (
 )
 
 func (m *Sealing) handleReplicaUpdate(ctx statemachine.Context, sector types.SectorInfo) error {
-	if err := checkPieces(ctx.Context(), m.maddr, sector, m.api); err != nil { // Sanity check state
+	if err := checkPieces(ctx.Context(), m.maddr, sector, m.api, true); err != nil { // Sanity check state
 		return handleErrors(ctx, err, sector)
 	}
 	out, err := m.sealer.ReplicaUpdate(sector.SealingCtx(ctx.Context()), m.minerSector(sector.SectorType, sector.SectorNumber), sector.PieceInfos())
@@ -36,12 +36,13 @@ func (m *Sealing) handleProveReplicaUpdate(ctx statemachine.Context, sector type
 	if sector.CommR == nil {
 		return xerrors.Errorf("invalid sector %d with nil CommR", sector.SectorNumber)
 	}
+
 	vanillaProofs, err := m.sealer.ProveReplicaUpdate1(sector.SealingCtx(ctx.Context()), m.minerSector(sector.SectorType, sector.SectorNumber), *sector.CommR, *sector.UpdateSealed, *sector.UpdateUnsealed)
 	if err != nil {
 		return ctx.Send(SectorProveReplicaUpdateFailed{xerrors.Errorf("prove replica update (1) failed: %w", err)})
 	}
 
-	if err := checkPieces(ctx.Context(), m.maddr, sector, m.api); err != nil { // Sanity check state
+	if err := checkPieces(ctx.Context(), m.maddr, sector, m.api, true); err != nil { // Sanity check state
 		return handleErrors(ctx, err, sector)
 	}
 
@@ -61,10 +62,6 @@ func (m *Sealing) handleSubmitReplicaUpdate(ctx statemachine.Context, sector typ
 	if err != nil {
 		log.Errorf("handleSubmitReplicaUpdate: api error, not proceeding: %+v", err)
 		return nil
-	}
-
-	if err := checkPieces(ctx.Context(), m.maddr, sector, m.api); err != nil { // Sanity check state
-		return handleErrors(ctx, err, sector)
 	}
 
 	if err := checkReplicaUpdate(ctx.Context(), m.maddr, sector, tok, m.api); err != nil {
@@ -201,8 +198,7 @@ func (m *Sealing) handleReplicaUpdateWait(ctx statemachine.Context, sector types
 	}
 
 	if !si.SealedCID.Equals(*sector.UpdateSealed) {
-		log.Errorf("mismatch of expected onchain sealed cid after replica update, expected %s got %s", sector.UpdateSealed, si.SealedCID)
-		return ctx.Send(SectorAbortUpgrade{})
+		return ctx.Send(SectorAbortUpgrade{xerrors.Errorf("mismatch of expected onchain sealed cid after replica update, expected %s got %s", sector.UpdateSealed, si.SealedCID)})
 	}
 	return ctx.Send(SectorReplicaUpdateLanded{})
 }

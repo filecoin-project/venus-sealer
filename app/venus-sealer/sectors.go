@@ -57,6 +57,7 @@ var sectorsCmd = &cli.Command{
 		sectorsTerminateCmd,
 		sectorsRemoveCmd,
 		sectorsSnapUpCmd,
+		sectorsSnapAbortCmd,
 		sectorsMarkForUpgradeCmd,
 		sectorsStartSealCmd,
 		sectorsSealDelayCmd,
@@ -246,6 +247,14 @@ var sectorsStatusCmd = &cli.Command{
 		fmt.Printf("Retries:\t%d\n", status.Retries)
 		if status.LastErr != "" {
 			fmt.Printf("Last Error:\t\t%s\n", status.LastErr)
+		}
+
+		fmt.Printf("CCUpdate:\t\t\n", status.CCUpdate)
+
+		if status.CCUpdate {
+			fmt.Printf("UpdateSealed:\t\t\n", status.UpdateSealed.String())
+			fmt.Printf("UpdateIUnsealed:\t\t\n", status.UpdateUnsealed.String())
+			fmt.Printf("ReplicaUpdateMessage:\t\t\n", status.ReplicaUpdateMessage)
 		}
 
 		if onChainInfo {
@@ -1633,6 +1642,31 @@ var sectorsSnapUpCmd = &cli.Command{
 		}
 
 		return nodeApi.SectorMarkForUpgrade(ctx, abi.SectorNumber(id), true)
+	},
+}
+
+var sectorsSnapAbortCmd = &cli.Command{
+	Name:      "abort-upgrade",
+	Usage:     "Abort the attempted (SnapDeals) upgrade of a CC sector, reverting it to as before",
+	ArgsUsage: "<sectorNum>",
+	Action: func(cctx *cli.Context) error {
+		if cctx.Args().Len() != 1 {
+			return ShowHelp(cctx, xerrors.Errorf("must pass sector number"))
+		}
+
+		nodeApi, closer, err := api.GetStorageMinerAPI(cctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+		ctx := api.ReqContext(cctx)
+
+		id, err := strconv.ParseUint(cctx.Args().Get(0), 10, 64)
+		if err != nil {
+			return xerrors.Errorf("could not parse sector number: %w", err)
+		}
+
+		return nodeApi.SectorAbortUpgrade(ctx, abi.SectorNumber(id))
 	},
 }
 
