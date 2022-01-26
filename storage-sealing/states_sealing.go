@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/filecoin-project/go-commp-utils/zerocomm"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/go-state-types/crypto"
@@ -131,9 +132,14 @@ func (m *Sealing) padSector(ctx context.Context, sectorID storage.SectorRef, bDe
 
 	out := make([]abi.PieceInfo, len(sizes))
 	for i, size := range sizes {
+		expectCid := zerocomm.ZeroPieceCommitment(size)
+
 		ppi, err := m.sealer.AddPiece(ctx, sectorID, existingPieceSizes, size, NewNullReader(size))
 		if err != nil {
 			return nil, xerrors.Errorf("add piece: %w", err)
+		}
+		if !expectCid.Equals(ppi.PieceCID) {
+			return nil, xerrors.Errorf("got unexpected padding piece CID: expected:%s, got:%s", expectCid, ppi.PieceCID)
 		}
 
 		existingPieceSizes = append(existingPieceSizes, size)
@@ -252,7 +258,7 @@ func (m *Sealing) handleGetTicket(ctx statemachine.Context, sector types.SectorI
 }
 
 func (m *Sealing) handlePreCommit1(ctx statemachine.Context, sector types.SectorInfo) error {
-	if err := checkPieces(ctx.Context(), m.maddr, sector, m.api); err != nil { // Sanity check state
+	if err := checkPieces(ctx.Context(), m.maddr, sector, m.api, false); err != nil { // Sanity check state
 		switch err.(type) {
 		case *ErrApi:
 			log.Errorf("handlePreCommit1: api error, not proceeding: %+v", err)

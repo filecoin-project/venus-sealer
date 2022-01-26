@@ -49,6 +49,14 @@ type sectorInfo struct {
 	CommitMessage string `gorm:"column:commit_message;type:text;" json:"commit_message"`
 	InvalidProofs uint64 `gorm:"column:invalid_proofs;type:unsigned bigint;" json:"invalid_proofs"`
 
+	// snap-deal related members
+	CCUpdate             bool   `gorm:"column:cc_update;type:bool;" json:"cc_update"`
+	CCPieces             []byte `grom:"column:cc_pieces;type:blob;" json:"cc_pieces"`
+	UpdateSealed         string `gorm:"column:update_sealed;type:varchar(256);" json:"update_sealed"`
+	UpdateUnsealed       string `gorm:"column:update_unsealed;type:varchar(256);" json:"update_unsealed"`
+	ReplicaUpdateProof   []byte `gorm:"column:replica_update_proof;type:blob;" json:"replica_update_proof"`
+	ReplicaUpdateMessage string `gorm:"column:replica_update_message;type:varchar(256);" json:"replica_update_message"`
+
 	// Faults
 	FaultReportMsg string `gorm:"column:fault_report_msg;type:text;" json:"fault_report_msg"`
 
@@ -89,6 +97,10 @@ func (sectorInfo *sectorInfo) SectorInfo() (*types.SectorInfo, error) {
 		SeedEpoch:        abi.ChainEpoch(sectorInfo.SeedEpoch),
 		CommitMessage:    sectorInfo.CommitMessage,
 		InvalidProofs:    sectorInfo.InvalidProofs,
+
+		CCUpdate:             sectorInfo.CCUpdate,
+		ReplicaUpdateMessage: sectorInfo.ReplicaUpdateMessage,
+
 		FaultReportMsg:   sectorInfo.FaultReportMsg,
 		Return:           types.ReturnState(sectorInfo.Return),
 		TerminateMessage: sectorInfo.TerminateMessage,
@@ -109,6 +121,7 @@ func (sectorInfo *sectorInfo) SectorInfo() (*types.SectorInfo, error) {
 		}
 		sinfo.CommD = &commD
 	}
+
 	if len(sectorInfo.CommR) > 0 {
 		commR, err := cid.Decode(sectorInfo.CommR)
 		if err != nil {
@@ -123,6 +136,34 @@ func (sectorInfo *sectorInfo) SectorInfo() (*types.SectorInfo, error) {
 			return nil, err
 		}
 		sinfo.PreCommitDeposit = deposit
+	}
+
+	if len(sectorInfo.CCPieces) > 0 {
+		if err := json.Unmarshal(sectorInfo.CCPieces, &sinfo.CCPieces); err != nil {
+			return nil, err
+		}
+	}
+
+	if len(sectorInfo.UpdateSealed) > 0 {
+		updateSealed, err := cid.Decode(sectorInfo.UpdateSealed)
+		if err != nil {
+			return nil, err
+		}
+		sinfo.UpdateSealed = &updateSealed
+	}
+
+	if len(sectorInfo.UpdateUnsealed) > 0 {
+		updateUnSealed, err := cid.Decode(sectorInfo.UpdateUnsealed)
+		if err != nil {
+			return nil, err
+		}
+		sinfo.UpdateUnsealed = &updateUnSealed
+	}
+
+	if len(sectorInfo.ReplicaUpdateProof) > 0 {
+		if err := json.Unmarshal(sectorInfo.ReplicaUpdateProof, &sinfo.ReplicaUpdateProof); err != nil {
+			return nil, err
+		}
 	}
 
 	if len(sectorInfo.PreCommitInfo.SealedCID) > 0 {
@@ -192,6 +233,33 @@ func FromSectorInfo(sector *types.SectorInfo) (*sectorInfo, error) {
 		TerminateMessage: sector.TerminateMessage,
 		TerminatedAt:     int64(sector.TerminatedAt),
 		LastErr:          sector.LastErr,
+
+		CCUpdate:             sector.CCUpdate,
+		ReplicaUpdateMessage: sector.ReplicaUpdateMessage,
+	}
+
+	if len(sector.CCPieces) != 0 {
+		ccPieces, err := json.Marshal(sector.CCPieces)
+		if err != nil {
+			return nil, err
+		}
+		sectorInfo.CCPieces = ccPieces
+	}
+
+	if sector.UpdateSealed != nil {
+		sectorInfo.UpdateSealed = sector.UpdateSealed.String()
+	}
+
+	if sector.UpdateUnsealed != nil {
+		sectorInfo.UpdateUnsealed = sector.UpdateUnsealed.String()
+	}
+
+	if sector.ReplicaUpdateProof != nil {
+		replicaUpdateProof, err := json.Marshal(sector.ReplicaUpdateProof)
+		if err != nil {
+			return nil, err
+		}
+		sectorInfo.ReplicaUpdateProof = replicaUpdateProof
 	}
 
 	if sector.PreCommitDeposit.Int == nil {

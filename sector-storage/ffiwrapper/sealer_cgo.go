@@ -27,7 +27,7 @@ import (
 	"github.com/filecoin-project/specs-storage/storage"
 
 	"github.com/detailyang/go-fallocate"
-	
+
 	"github.com/filecoin-project/venus-sealer/sector-storage/fr32"
 	"github.com/filecoin-project/venus-sealer/sector-storage/partialfile"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
@@ -738,10 +738,10 @@ func (sb *Sealer) ReplicaUpdate(ctx context.Context, sector storage.SectorRef, p
 
 	if err := os.Mkdir(paths.UpdateCache, 0755); err != nil { // nolint
 		if os.IsExist(err) {
-			log.Warnf("existing cache in %s; removing", paths.Cache)
+			log.Warnf("existing cache in %s; removing", paths.UpdateCache)
 
 			if err := os.RemoveAll(paths.UpdateCache); err != nil {
-				return empty, xerrors.Errorf("remove existing sector cache from %s (sector %d): %w", paths.Cache, sector, err)
+				return empty, xerrors.Errorf("remove existing sector cache from %s (sector %d): %w", paths.UpdateCache, sector, err)
 			}
 
 			if err := os.Mkdir(paths.UpdateCache, 0755); err != nil { // nolint:gosec
@@ -760,7 +760,7 @@ func (sb *Sealer) ReplicaUpdate(ctx context.Context, sector storage.SectorRef, p
 }
 
 func (sb *Sealer) ProveReplicaUpdate1(ctx context.Context, sector storage.SectorRef, sectorKey, newSealed, newUnsealed cid.Cid) (storage.ReplicaVanillaProofs, error) {
-	paths, done, err := sb.sectors.AcquireSector(ctx, sector, storiface.FTSealed|storiface.FTCache|storiface.FTUpdateCache|storiface.FTUpdate, storiface.FTNone, storiface.PathSealing)
+	paths, done, err := sb.sectors.AcquireSector(ctx, sector, storiface.FTSealed|storiface.FTCache|storiface.FTUpdate|storiface.FTUpdateCache, storiface.FTNone, storiface.PathSealing)
 	if err != nil {
 		return nil, xerrors.Errorf("failed to acquire sector paths: %w", err)
 	}

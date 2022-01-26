@@ -214,6 +214,11 @@ func (sm *StorageMinerAPI) SectorsStatus(ctx context.Context, sid abi.SectorNumb
 		Retries:      info.InvalidProofs,
 		ToUpgrade:    sm.Miner.IsMarkedForUpgrade(sid),
 
+		CCUpdate:             info.CCUpdate,
+		UpdateSealed:         info.UpdateSealed,
+		UpdateUnsealed:       info.UpdateUnsealed,
+		ReplicaUpdateMessage: info.ReplicaUpdateMessage,
+
 		LastErr: info.LastErr,
 		Log:     log,
 		// on chain info
@@ -541,6 +546,10 @@ func (sm *StorageMinerAPI) SectorPreCommitPending(ctx context.Context) ([]abi.Se
 
 func (sm *StorageMinerAPI) SectorMarkForUpgrade(ctx context.Context, id abi.SectorNumber, snap bool) error {
 	return sm.Miner.MarkForUpgrade(ctx, id, snap)
+}
+
+func (sm *StorageMinerAPI) SectorAbortUpgrade(ctx context.Context, number abi.SectorNumber) error {
+	return sm.Miner.SectorAbortUpgrade(number)
 }
 
 func (sm *StorageMinerAPI) SectorCommitFlush(ctx context.Context) ([]sealiface.CommitBatchRes, error) {

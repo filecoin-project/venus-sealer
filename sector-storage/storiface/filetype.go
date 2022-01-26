@@ -35,7 +35,7 @@ const (
 	FileTypes = iota
 )
 
-var PathTypes = []SectorFileType{FTUnsealed, FTSealed, FTCache}
+var PathTypes = []SectorFileType{FTUnsealed, FTSealed, FTCache, FTUpdate, FTUpdateCache}
 
 const (
 	FTNone SectorFileType = 0
@@ -44,15 +44,21 @@ const (
 const FSOverheadDen = 10
 
 var FSOverheadSeal = map[SectorFileType]int{ // 10x overheads
-	FTUnsealed: FSOverheadDen,
-	FTSealed:   FSOverheadDen,
-	FTCache:    141, // 11 layers + D(2x ssize) + C + R
+	FTUnsealed:    FSOverheadDen,
+	FTSealed:      FSOverheadDen,
+	FTUpdate:      FSOverheadDen,
+	FTUpdateCache: FSOverheadDen * 2,
+	FTCache:       141, // 11 layers + D(2x ssize) + C + R'
 }
 
+// sector size * disk / fs overhead.  FSOverheadDen is like the unit of sector size
+
 var FsOverheadFinalized = map[SectorFileType]int{
-	FTUnsealed: FSOverheadDen,
-	FTSealed:   FSOverheadDen,
-	FTCache:    2,
+	FTUnsealed:    FSOverheadDen,
+	FTSealed:      FSOverheadDen,
+	FTUpdate:      FSOverheadDen * 2, // XXX: we should clear the update cache on Finalize???
+	FTUpdateCache: FSOverheadDen,
+	FTCache:       2,
 }
 
 type SectorFileType int
@@ -65,6 +71,10 @@ func (t SectorFileType) String() string {
 		return "sealed"
 	case FTCache:
 		return "cache"
+	case FTUpdate:
+		return "update"
+	case FTUpdateCache:
+		return "update-cache"
 	default:
 		return fmt.Sprintf("<unknown %d>", t)
 	}
