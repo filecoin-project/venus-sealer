@@ -249,12 +249,21 @@ var sectorsStatusCmd = &cli.Command{
 			fmt.Printf("Last Error:\t\t%s\n", status.LastErr)
 		}
 
-		fmt.Printf("CCUpdate:\t\t\n", status.CCUpdate)
+		fmt.Printf("CCUpdate:\t%v\n", status.CCUpdate)
 
 		if status.CCUpdate {
-			fmt.Printf("UpdateSealed:\t\t\n", status.UpdateSealed.String())
-			fmt.Printf("UpdateIUnsealed:\t\t\n", status.UpdateUnsealed.String())
-			fmt.Printf("ReplicaUpdateMessage:\t\t\n", status.ReplicaUpdateMessage)
+			var updateSealed, updateUnsealed string
+
+			if status.UpdateSealed != nil {
+				updateSealed = status.UpdateSealed.String()
+			}
+			if status.UpdateUnsealed != nil {
+				updateUnsealed = status.UpdateUnsealed.String()
+			}
+
+			fmt.Printf("UpdateSealed:\t%s\n", updateSealed)
+			fmt.Printf("UpdateUnsealed:\t%s\n", updateUnsealed)
+			fmt.Printf("ReplicaUpdateMessage:%s\n", status.ReplicaUpdateMessage)
 		}
 
 		if onChainInfo {
