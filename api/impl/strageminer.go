@@ -214,6 +214,11 @@ func (sm *StorageMinerAPI) SectorsStatus(ctx context.Context, sid abi.SectorNumb
 		Retries:      info.InvalidProofs,
 		ToUpgrade:    sm.Miner.IsMarkedForUpgrade(sid),
 
+		CCUpdate:             info.CCUpdate,
+		UpdateSealed:         info.UpdateSealed,
+		UpdateUnsealed:       info.UpdateUnsealed,
+		ReplicaUpdateMessage: info.ReplicaUpdateMessage,
+
 		LastErr: info.LastErr,
 		Log:     log,
 		// on chain info

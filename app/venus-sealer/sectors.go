@@ -249,6 +249,14 @@ var sectorsStatusCmd = &cli.Command{
 			fmt.Printf("Last Error:\t\t%s\n", status.LastErr)
 		}
 
+		fmt.Printf("CCUpdate:\t\t\n", status.CCUpdate)
+
+		if status.CCUpdate {
+			fmt.Printf("UpdateSealed:\t\t\n", status.UpdateSealed.String())
+			fmt.Printf("UpdateIUnsealed:\t\t\n", status.UpdateUnsealed.String())
+			fmt.Printf("ReplicaUpdateMessage:\t\t\n", status.ReplicaUpdateMessage)
+		}
+
 		if onChainInfo {
 			fmt.Printf("\nSector On Chain Info\n")
 			fmt.Printf("SealProof:\t\t%x\n", status.SealProof)

@@ -260,6 +260,11 @@ type SectorInfo struct {
 	Retries      uint64
 	ToUpgrade    bool
 
+	CCUpdate             bool
+	UpdateSealed         *cid.Cid
+	UpdateUnsealed       *cid.Cid
+	ReplicaUpdateMessage string
+
 	LastErr string
 
 	Log []SectorLog
