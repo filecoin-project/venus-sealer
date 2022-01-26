@@ -147,6 +147,7 @@ var fsmPlanners = map[types.SectorState]func(events []statemachine.Event, state 
 		apply(SectorStartPacking{}),
 		apply(SectorAddPiece{}),
 		on(SectorAddPieceFailed{}, types.SnapDealsAddPieceFailed),
+		on(SectorAbortUpgrade{}, types.AbortUpgrade),
 	),
 	types.SnapDealsPacking: planOne(
 		on(SectorPacked{}, types.UpdateReplica),
