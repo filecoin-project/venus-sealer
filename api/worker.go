@@ -8,9 +8,11 @@ import (
 	"github.com/ipfs/go-cid"
 
 	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/specs-actors/actors/runtime/proof"
 	"github.com/filecoin-project/specs-storage/storage"
 
 	"github.com/filecoin-project/venus-sealer/constants"
+	"github.com/filecoin-project/venus-sealer/sector-storage/ffiwrapper"
 	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
 	"github.com/filecoin-project/venus-sealer/types"
@@ -26,21 +28,24 @@ type WorkerStruct struct {
 		Paths     func(context.Context) ([]stores.StoragePath, error)        `perm:"admin"`
 		Info      func(context.Context) (storiface.WorkerInfo, error)        `perm:"admin"`
 
-		AddPiece                  func(ctx context.Context, sector storage.SectorRef, pieceSizes []abi.UnpaddedPieceSize, newPieceSize abi.UnpaddedPieceSize, pieceData storage.Data) (types.CallID, error)                 `perm:"admin"`
-		SealPreCommit1            func(ctx context.Context, sector storage.SectorRef, ticket abi.SealRandomness, pieces []abi.PieceInfo) (types.CallID, error)                                                              `perm:"admin"`
-		SealPreCommit2            func(ctx context.Context, sector storage.SectorRef, pc1o storage.PreCommit1Out) (types.CallID, error)                                                                                     `perm:"admin"`
-		SealCommit1               func(ctx context.Context, sector storage.SectorRef, ticket abi.SealRandomness, seed abi.InteractiveSealRandomness, pieces []abi.PieceInfo, cids storage.SectorCids) (types.CallID, error) `perm:"admin"`
-		SealCommit2               func(ctx context.Context, sector storage.SectorRef, c1o storage.Commit1Out) (types.CallID, error)                                                                                         `perm:"admin"`
-		FinalizeSector            func(ctx context.Context, sector storage.SectorRef, keepUnsealed []storage.Range) (types.CallID, error)                                                                                   `perm:"admin"`
-		ReplicaUpdate             func(ctx context.Context, sector storage.SectorRef, pieces []abi.PieceInfo) (types.CallID, error)                                                                                         `perm:"admin"`
-		ProveReplicaUpdate1       func(ctx context.Context, sector storage.SectorRef, sectorKey, newSealed, newUnsealed cid.Cid) (types.CallID, error)                                                                      `perm:"admin"`
-		ProveReplicaUpdate2       func(ctx context.Context, sector storage.SectorRef, sectorKey, newSealed, newUnsealed cid.Cid, vanillaProofs storage.ReplicaVanillaProofs) (types.CallID, error)                          `perm:"admin"`
-		GenerateSectorKeyFromData func(ctx context.Context, sector storage.SectorRef, commD cid.Cid) (types.CallID, error)                                                                                                  `perm:"admin"`
-		ReleaseUnsealed           func(ctx context.Context, sector storage.SectorRef, safeToFree []storage.Range) (types.CallID, error)                                                                                     `perm:"admin"`
-		MoveStorage               func(ctx context.Context, sector storage.SectorRef, types storiface.SectorFileType) (types.CallID, error)                                                                                 `perm:"admin"`
-		UnsealPiece               func(context.Context, storage.SectorRef, storiface.UnpaddedByteIndex, abi.UnpaddedPieceSize, abi.SealRandomness, cid.Cid) (types.CallID, error)                                           `perm:"admin"`
-		ReadPiece                 func(context.Context, io.Writer, storage.SectorRef, storiface.UnpaddedByteIndex, abi.UnpaddedPieceSize) (types.CallID, error)                                                             `perm:"admin"`
-		Fetch                     func(context.Context, storage.SectorRef, storiface.SectorFileType, storiface.PathType, storiface.AcquireMode) (types.CallID, error)                                                       `perm:"admin"`
+		AddPiece                  func(ctx context.Context, sector storage.SectorRef, pieceSizes []abi.UnpaddedPieceSize, newPieceSize abi.UnpaddedPieceSize, pieceData storage.Data) (types.CallID, error)                                                                   `perm:"admin"`
+		SealPreCommit1            func(ctx context.Context, sector storage.SectorRef, ticket abi.SealRandomness, pieces []abi.PieceInfo) (types.CallID, error)                                                                                                                `perm:"admin"`
+		SealPreCommit2            func(ctx context.Context, sector storage.SectorRef, pc1o storage.PreCommit1Out) (types.CallID, error)                                                                                                                                       `perm:"admin"`
+		SealCommit1               func(ctx context.Context, sector storage.SectorRef, ticket abi.SealRandomness, seed abi.InteractiveSealRandomness, pieces []abi.PieceInfo, cids storage.SectorCids) (types.CallID, error)                                                   `perm:"admin"`
+		SealCommit2               func(ctx context.Context, sector storage.SectorRef, c1o storage.Commit1Out) (types.CallID, error)                                                                                                                                           `perm:"admin"`
+		FinalizeSector            func(ctx context.Context, sector storage.SectorRef, keepUnsealed []storage.Range) (types.CallID, error)                                                                                                                                     `perm:"admin"`
+		ReplicaUpdate             func(ctx context.Context, sector storage.SectorRef, pieces []abi.PieceInfo) (types.CallID, error)                                                                                                                                           `perm:"admin"`
+		ProveReplicaUpdate1       func(ctx context.Context, sector storage.SectorRef, sectorKey, newSealed, newUnsealed cid.Cid) (types.CallID, error)                                                                                                                        `perm:"admin"`
+		ProveReplicaUpdate2       func(ctx context.Context, sector storage.SectorRef, sectorKey, newSealed, newUnsealed cid.Cid, vanillaProofs storage.ReplicaVanillaProofs) (types.CallID, error)                                                                            `perm:"admin"`
+		GenerateSectorKeyFromData func(ctx context.Context, sector storage.SectorRef, commD cid.Cid) (types.CallID, error)                                                                                                                                                    `perm:"admin"`
+
+		ReleaseUnsealed           func(ctx context.Context, sector storage.SectorRef, safeToFree []storage.Range) (types.CallID, error)                                                                                                                                       `perm:"admin"`
+		MoveStorage               func(ctx context.Context, sector storage.SectorRef, types storiface.SectorFileType) (types.CallID, error)                                                                                                                                   `perm:"admin"`
+		UnsealPiece               func(context.Context, storage.SectorRef, storiface.UnpaddedByteIndex, abi.UnpaddedPieceSize, abi.SealRandomness, cid.Cid) (types.CallID, error)                                                                                             `perm:"admin"`
+		ReadPiece                 func(context.Context, io.Writer, storage.SectorRef, storiface.UnpaddedByteIndex, abi.UnpaddedPieceSize) (types.CallID, error)                                                                                                               `perm:"admin"`
+		Fetch                     func(context.Context, storage.SectorRef, storiface.SectorFileType, storiface.PathType, storiface.AcquireMode) (types.CallID, error)                                                                                                         `perm:"admin"`
+		GenerateWinningPoSt       func(ctx context.Context, mid abi.ActorID, privsectors ffiwrapper.SortedPrivateSectorInfo, randomness abi.PoStRandomness, sectorChallenges *ffiwrapper.FallbackChallenges) ([]proof.PoStProof, error)                                       `perm:"admin"`
+		GenerateWindowPoSt        func(ctx context.Context, mid abi.ActorID, privsectors ffiwrapper.SortedPrivateSectorInfo, partitionIdx int, offset int, randomness abi.PoStRandomness, postChallenges *ffiwrapper.FallbackChallenges) (ffiwrapper.WindowPoStResult, error) `perm:"admin"`
 
 		TaskDisable func(ctx context.Context, tt types.TaskType) error `perm:"admin"`
 		TaskEnable  func(ctx context.Context, tt types.TaskType) error `perm:"admin"`
@@ -116,6 +121,14 @@ func (w *WorkerStruct) ProveReplicaUpdate2(ctx context.Context, sector storage.S
 
 func (w *WorkerStruct) GenerateSectorKeyFromData(ctx context.Context, sector storage.SectorRef, commD cid.Cid) (types.CallID, error) {
 	return w.Internal.GenerateSectorKeyFromData(ctx, sector, commD)
+}
+
+func (w *WorkerStruct) GenerateWinningPoSt(ctx context.Context, mid abi.ActorID, privsectors ffiwrapper.SortedPrivateSectorInfo, randomness abi.PoStRandomness, sectorChallenges *ffiwrapper.FallbackChallenges) ([]proof.PoStProof, error) {
+	return w.Internal.GenerateWinningPoSt(ctx, mid, privsectors, randomness, sectorChallenges)
+}
+
+func (w *WorkerStruct) GenerateWindowPoSt(ctx context.Context, mid abi.ActorID, privsectors ffiwrapper.SortedPrivateSectorInfo, partitionIdx int, offset int, randomness abi.PoStRandomness, postChallenges *ffiwrapper.FallbackChallenges) (ffiwrapper.WindowPoStResult, error) {
+	return w.Internal.GenerateWindowPoSt(ctx, mid, privsectors, partitionIdx, offset, randomness, postChallenges)
 }
 
 func (w *WorkerStruct) ReleaseUnsealed(ctx context.Context, sector storage.SectorRef, safeToFree []storage.Range) (types.CallID, error) {

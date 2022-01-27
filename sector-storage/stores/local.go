@@ -3,6 +3,7 @@ package stores
 import (
 	"context"
 	"encoding/json"
+	"github.com/filecoin-project/venus-sealer/sector-storage/ffiwrapper"
 	"io/ioutil"
 	"math/bits"
 	"math/rand"
@@ -219,6 +220,7 @@ func (st *Local) OpenPath(ctx context.Context, p string) error {
 		CanStore:   meta.CanStore,
 		Groups:     meta.Groups,
 		AllowTo:    meta.AllowTo,
+		Path:       p,
 	}, fst)
 	if err != nil {
 		return xerrors.Errorf("declaring storage in index: %w", err)
@@ -719,6 +721,14 @@ func (st *Local) FsStat(ctx context.Context, id ID) (fsutil.FsStat, error) {
 	}
 
 	return p.stat(st.localStorage)
+}
+
+func (st *Local) GenerateSingleVanillaProof(ctx context.Context, minerID abi.ActorID, privsector *ffiwrapper.PrivateSectorInfo, challenge []uint64) ([]byte, error) {
+	return nil, nil
+}
+
+func (st *Local) AcquireSectorPaths(ctx context.Context, sid storage.SectorRef, existing storiface.SectorFileType, allocate storiface.SectorFileType, pathType storiface.PathType) (storiface.SectorPaths, storiface.SectorPaths, error) {
+	return st.AcquireSector(ctx, sid, existing, allocate, pathType, storiface.AcquireCopy)
 }
 
 var _ Store = &Local{}

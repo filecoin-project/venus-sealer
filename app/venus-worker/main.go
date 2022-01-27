@@ -172,6 +172,17 @@ var runCmd = &cli.Command{
 			Usage: "used when 'listen' is unspecified. must be a valid duration recognized by golang's time.ParseDuration function",
 			Value: "30m",
 		},
+		&cli.BoolFlag{
+			Name:  "windowpost",
+			Usage: "enable window post",
+			Value: false,
+		},
+
+		&cli.BoolFlag{
+			Name:  "winningpost",
+			Usage: "enable winning post",
+			Value: false,
+		},
 		&cli.IntFlag{
 			Name:  "task-total",
 			Usage: "total number of task",
@@ -322,6 +333,13 @@ var runCmd = &cli.Command{
 		}
 		if cctx.Bool("commit") {
 			taskTypes = append(taskTypes, types.TTCommit2)
+		}
+		if cctx.Bool("windowpost") {
+			taskTypes = append(taskTypes, types.TTGenerateWindowPoSt)
+		}
+
+		if cctx.Bool("winningpost") {
+			taskTypes = append(taskTypes, types.TTGenerateWinningPoSt)
 		}
 		if cctx.Bool("replicaupdate") {
 			taskTypes = append(taskTypes, types.TTReplicaUpdate)

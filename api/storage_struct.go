@@ -41,7 +41,6 @@ import (
 //  * Generate markdown docs
 //  * Generate openrpc blobs
 
-
 var ErrNotSupported = xerrors.New("method not supported")
 
 // StorageMiner is a low-level interface to the Filecoin network storage miner node
@@ -113,20 +112,22 @@ type StorageMiner interface {
 	SectorMarkForUpgrade(ctx context.Context, id abi.SectorNumber, snap bool) error
 	// SectorPreCommitFlush immediately sends a PreCommit message with sectors batched for PreCommit.
 	// Returns null if message wasn't sent
-	SectorPreCommitFlush(ctx context.Context) ([]sealiface.PreCommitBatchRes, error) //perm:admin
+	SectorPreCommitFlush(ctx context.Context) ([]sealiface.PreCommitBatchRes, error)
 	// SectorPreCommitPending returns a list of pending PreCommit sectors to be sent in the next batch message
-	SectorPreCommitPending(ctx context.Context) ([]abi.SectorID, error) //perm:admin
+	SectorPreCommitPending(ctx context.Context) ([]abi.SectorID, error)
 	// SectorCommitFlush immediately sends a Commit message with sectors aggregated for Commit.
 	// Returns null if message wasn't sent
-	SectorCommitFlush(ctx context.Context) ([]sealiface.CommitBatchRes, error) //perm:admin
+	SectorCommitFlush(ctx context.Context) ([]sealiface.CommitBatchRes, error)
 	// SectorCommitPending returns a list of pending Commit sectors to be sent in the next aggregate message
-	SectorCommitPending(ctx context.Context) ([]abi.SectorID, error) //perm:admin
-	SectorMatchPendingPiecesToOpenSectors(ctx context.Context) error //perm:admin
+	SectorCommitPending(ctx context.Context) ([]abi.SectorID, error)
+	SectorMatchPendingPiecesToOpenSectors(ctx context.Context) error
 	// SectorAbortUpgrade can be called on sectors that are in the process of being upgraded to abort it
-	SectorAbortUpgrade(context.Context, abi.SectorNumber) error //perm:admin
+	SectorAbortUpgrade(context.Context, abi.SectorNumber) error
 
 	StorageLocal(ctx context.Context) (map[stores.ID]string, error)
 	StorageStat(ctx context.Context, id stores.ID) (fsutil.FsStat, error)
+
+	StorageGetUrl(ctx context.Context, s abi.SectorID, ft storiface.SectorFileType) (string, error)
 
 	// WorkerConnect tells the node to connect to workers RPC
 	WorkerConnect(context.Context, string) error
@@ -267,6 +268,7 @@ type StorageMinerStruct struct {
 		StorageLock          func(ctx context.Context, sector abi.SectorID, read storiface.SectorFileType, write storiface.SectorFileType) error                          `perm:"admin"`
 		StorageTryLock       func(ctx context.Context, sector abi.SectorID, read storiface.SectorFileType, write storiface.SectorFileType) (bool, error)                  `perm:"admin"`
 		StorageGetLocks      func(ctx context.Context) (storiface.SectorLocks, error)                                                                                     `perm:"admin"`
+		StorageGetUrl        func(ctx context.Context, s abi.SectorID, ft storiface.SectorFileType) (string, error)                                                       `perm:"admin"`
 
 		DealsImportData                        func(ctx context.Context, dealPropCid cid.Cid, file string) error `perm:"write"`
 		DealsList                              func(ctx context.Context) ([]types2.MarketDeal, error)            `perm:"read"`
@@ -521,7 +523,6 @@ func (c *StorageMinerStruct) SealingSchedDiag(ctx context.Context, doSched bool)
 	return c.Internal.SealingSchedDiag(ctx, doSched)
 }
 
-
 func (s *StorageMinerStruct) SectorAbortUpgrade(p0 context.Context, p1 abi.SectorNumber) error {
 	if s.Internal.SectorAbortUpgrade == nil {
 		return ErrNotSupported
@@ -559,6 +560,10 @@ func (c *StorageMinerStruct) StorageLocal(ctx context.Context) (map[stores.ID]st
 
 func (c *StorageMinerStruct) StorageStat(ctx context.Context, id stores.ID) (fsutil.FsStat, error) {
 	return c.Internal.StorageStat(ctx, id)
+}
+
+func (c *StorageMinerStruct) StorageGetUrl(ctx context.Context, s abi.SectorID, ft storiface.SectorFileType) (string, error) {
+	return c.Internal.StorageGetUrl(ctx, s, ft)
 }
 
 func (c *StorageMinerStruct) StorageInfo(ctx context.Context, id stores.ID) (stores.StorageInfo, error) {

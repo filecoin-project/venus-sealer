@@ -2,6 +2,7 @@ package stores
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
@@ -10,12 +11,13 @@ import (
 	logging "github.com/ipfs/go-log/v2"
 	"golang.org/x/xerrors"
 
+	ffi "github.com/filecoin-project/filecoin-ffi"
 	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/specs-storage/storage"
+
 	"github.com/filecoin-project/venus-sealer/sector-storage/partialfile"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
 	"github.com/filecoin-project/venus-sealer/sector-storage/tarutil"
-
-	"github.com/filecoin-project/specs-storage/storage"
 )
 
 var log = logging.Logger("stores")
@@ -55,6 +57,9 @@ func (handler *FetchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	mux.HandleFunc("/remote/{type}/{id}/{spt}/allocated/{offset}/{size}", handler.remoteGetAllocated).Methods("GET")
 	mux.HandleFunc("/remote/{type}/{id}", handler.remoteGetSector).Methods("GET")
 	mux.HandleFunc("/remote/{type}/{id}", handler.remoteDeleteSector).Methods("DELETE")
+
+	//for post vanilla
+	mux.HandleFunc("/remote/vanilla/single", handler.generateSingleVanillaProof).Methods("POST")
 
 	mux.ServeHTTP(w, r)
 }
@@ -297,5 +302,37 @@ func ftFromString(t string) (storiface.SectorFileType, error) {
 		return storiface.FTCache, nil
 	default:
 		return 0, xerrors.Errorf("unknown sector file type: '%s'", t)
+	}
+}
+
+type SingleVanillaParams struct {
+	PrivSector ffi.PrivateSectorInfo
+	Challenge  []uint64
+}
+
+func (handler *FetchHandler) generateSingleVanillaProof(w http.ResponseWriter, r *http.Request) {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	params := SingleVanillaParams{}
+	err = json.Unmarshal(body, &params)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	vanilla, err := ffi.GenerateSingleVanillaProof(params.PrivSector, params.Challenge)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	w.WriteHeader(200)
+	_, err = w.Write(vanilla)
+	if err != nil {
+		log.Error("response writer: ", err)
 	}
 }

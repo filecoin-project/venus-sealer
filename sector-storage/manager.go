@@ -46,6 +46,8 @@ type Worker interface {
 	Session(context.Context) (uuid.UUID, error)
 
 	Close() error // TODO: do we need this?
+
+	ffiwrapper.WorkerCalls
 }
 
 type SectorManager interface {
@@ -53,6 +55,8 @@ type SectorManager interface {
 	storage.Prover
 	storiface.WorkerReturn
 	FaultTracker
+
+	ffiwrapper.MinerProver
 }
 
 var ClosedWorkerID = uuid.UUID{}
@@ -77,6 +81,8 @@ type Manager struct {
 
 	results map[types.WorkID]result
 	waitRes map[types.WorkID]chan struct{}
+
+	ffiwrapper.MinerProver
 }
 
 type result struct {
@@ -122,7 +128,7 @@ type WorkerStateStore statestore.StateStore
 type ManagerStateStore statestore.StateStore
 
 func New(ctx context.Context, lstor *stores.Local, stor *stores.Remote, ls stores.LocalStorage, si stores.SectorIndex, sc SealerConfig, wss WorkerStateStore, mss ManagerStateStore) (*Manager, error) {
-	prover, err := ffiwrapper.New(&readonlyProvider{stor: lstor, index: si})
+	prover, err := ffiwrapper.New(&readonlyProvider{stor: lstor, index: si, remote: stor})
 	if err != nil {
 		return nil, xerrors.Errorf("creating prover instance: %w", err)
 	}
@@ -143,6 +149,8 @@ func New(ctx context.Context, lstor *stores.Local, stor *stores.Remote, ls store
 		callRes:    map[types.CallID]chan result{},
 		results:    map[types.WorkID]result{},
 		waitRes:    map[types.WorkID]chan struct{}{},
+
+		MinerProver: prover,
 	}
 
 	m.setupWorkTracker()
