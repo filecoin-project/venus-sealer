@@ -165,7 +165,7 @@ func (m *Sealing) handleSubmitReplicaUpdate(ctx statemachine.Context, sector typ
 }
 
 func (m *Sealing) handleReplicaUpdateWait(ctx statemachine.Context, sector types.SectorInfo) error {
-	if len(sector.ReplicaUpdateMessage) > 0 {
+	if len(sector.ReplicaUpdateMessage) == 0 {
 		log.Errorf("handleReplicaUpdateWait: no replica update message cid recorded")
 		return ctx.Send(SectorSubmitReplicaUpdateFailed{})
 	}
