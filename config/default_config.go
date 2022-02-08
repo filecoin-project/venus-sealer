@@ -258,8 +258,9 @@ func DefaultCalibrationStorageMiner() *StorageMiner {
 			CommitControl:    []string{},
 		},
 		NetParams: NetParamsConfig{
-			UpgradeIgnitionHeight: 94000,
-			UpgradeOhSnapHeight:   999999999999,
+			UpgradeIgnitionHeight: -3,
+			// 2022-02-10T19:23:00Z
+			UpgradeOhSnapHeight:   682006,
 			ForkLengthThreshold:   policy.ChainFinality,
 			BlockDelaySecs:        30,
 		},
@@ -458,11 +459,10 @@ func DefaultButterflyStorageMiner() *StorageMiner {
 			CommitControl:    []string{},
 		},
 		NetParams: NetParamsConfig{
-			UpgradeIgnitionHeight:   -2,
-			UpgradeOhSnapHeight:     30262,
-			ForkLengthThreshold:     policy.ChainFinality,
-			BlockDelaySecs:          4,
-			PreCommitChallengeDelay: 10,
+			UpgradeIgnitionHeight: -2,
+			UpgradeOhSnapHeight:   240,
+			ForkLengthThreshold:   policy.ChainFinality,
+			BlockDelaySecs:        4,
 		},
 		DB: DbConfig{
 			Type: "sqlite",
