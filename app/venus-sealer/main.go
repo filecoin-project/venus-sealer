@@ -24,7 +24,7 @@ func main() {
 	sealer.SetupLogLevels()
 
 	local := []*cli.Command{
-		logCmd, initCmd, runCmd, pprofCmd, sectorsCmd, dealsCmd, actorCmd, infoCmd, sealingCmd, storageCmd, messagerCmds, provingCmd, stopCmd, versionCmd, tokenCmd,
+		logCmd, initCmd, runCmd, pprofCmd, sectorsCmd, dealsCmd, actorCmd, infoCmd, sealingCmd, storageCmd, messagerCmds, provingCmd, stopCmd, versionCmd, tokenCmd, fetchParamCmd,
 	}
 	jaeger := tracing.SetupJaegerTracing("venus-sealer")
 	defer func() {
