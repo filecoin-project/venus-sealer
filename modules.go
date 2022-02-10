@@ -178,7 +178,6 @@ func SectorStorage(mctx MetricsCtx, lc fx.Lifecycle, lstor *stores.Local, stor *
 }
 
 func GetParams(mctx MetricsCtx, spt abi.RegisteredSealProof) error {
-	return nil
 	ssize, err := spt.SectorSize()
 	if err != nil {
 		return err
