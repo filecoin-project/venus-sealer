@@ -178,9 +178,9 @@ func Repo(cfg *config.StorageMiner) Option {
 			Override(new(*config.RegisterMarketConfig), &cfg.RegisterMarket),
 			Override(new(*config.RegisterProofConfig), &cfg.RegisterProof),
 			ConfigAPI(cfg),
-
 			Override(new(api.IMessager), api.NewMessageRPC),
 			Override(new(api3.MarketFullNode), api.NewMarketNodeRPCAPIV0),
+			Override(new(piecestorage.IPreSignOp), NewPreSignS3Op),
 			Override(new(piecestorage.IPieceStorage), NewPieceStorage),
 			Override(new(repo.Repo), models.SetDataBase),
 			Providers(

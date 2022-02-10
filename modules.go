@@ -178,6 +178,7 @@ func SectorStorage(mctx MetricsCtx, lc fx.Lifecycle, lstor *stores.Local, stor *
 }
 
 func GetParams(mctx MetricsCtx, spt abi.RegisteredSealProof) error {
+	return nil
 	ssize, err := spt.SectorSize()
 	if err != nil {
 		return err
@@ -238,11 +239,21 @@ func AddressSelector(addrConf *config.MinerAddressConfig) func() (*storage.Addre
 	}
 }
 
-func NewPieceStorage(cfg *config2.PieceStorage) (piecestorage.IPieceStorage, error) {
-	if !cfg.S3.Enable && !cfg.Fs.Enable {
+func NewPieceStorage(cfg *config2.PieceStorage, preSignOp piecestorage.IPreSignOp) (piecestorage.IPieceStorage, error) {
+	if cfg.PreSignS3.Enable {
+		piecestorage.RegisterPieceStorageCtor(piecestorage.PreSignS3,
+			func(cfg interface{}) (piecestorage.IPieceStorage, error) {
+				return piecestorage.NewPresignS3Storage(preSignOp), nil
+			})
+	}
+	if !cfg.S3.Enable && !cfg.Fs.Enable && !cfg.PreSignS3.Enable {
 		return nil, nil
 	}
 	return piecestorage.NewPieceStorage(cfg)
+}
+
+func NewPreSignS3Op(cfg *config2.PieceStorage, marketAPI api2.MarketFullNode) piecestorage.IPreSignOp {
+	return marketAPI
 }
 
 type StorageMinerParams struct {
