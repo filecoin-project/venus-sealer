@@ -3,6 +3,7 @@ package storage
 import (
 	"bytes"
 	"context"
+	"github.com/google/uuid"
 	"testing"
 	"time"
 
@@ -30,7 +31,7 @@ import (
 	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 	tutils "github.com/filecoin-project/specs-actors/v2/support/testing"
 
-	type2 "github.com/filecoin-project/venus-messager/types"
+	type2 "github.com/filecoin-project/venus/venus-shared/types/messager"
 
 	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
 	"github.com/filecoin-project/venus/venus-shared/actors/policy"
@@ -458,12 +459,12 @@ func (m *mockMessagerAPI) WaitMessage(ctx context.Context, id string, confidence
 	}, nil
 }
 
-func (m *mockMessagerAPI) PushMessage(ctx context.Context, msg *types.Message, meta *type2.MsgMeta) (string, error) {
+func (m *mockMessagerAPI) PushMessage(ctx context.Context, msg *types.Message, spec *type2.SendSpec) (string, error) {
 	m.pushedMessages <- msg
-	return type2.NewUUID().String(), nil
+	return uuid.New().String(), nil
 }
 
-func (m *mockMessagerAPI) PushMessageWithId(ctx context.Context, id string, msg *types.Message, meta *type2.MsgMeta) (string, error) {
+func (m *mockMessagerAPI) PushMessageWithId(ctx context.Context, id string, msg *types.Message, spec *type2.SendSpec) (string, error) {
 	m.pushedMessages <- msg
 	return id, nil
 }

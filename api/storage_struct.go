@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"github.com/filecoin-project/venus/venus-shared/types/messager"
 	"golang.org/x/xerrors"
 	"time"
 
@@ -12,13 +13,8 @@ import (
 	"github.com/filecoin-project/go-fil-markets/piecestore"
 	"github.com/filecoin-project/go-state-types/abi"
 	abinetwork "github.com/filecoin-project/go-state-types/network"
-
 	"github.com/filecoin-project/specs-storage/storage"
-
 	types4 "github.com/filecoin-project/venus-market/types"
-
-	types3 "github.com/filecoin-project/venus-messager/types"
-
 	"github.com/filecoin-project/venus/venus-shared/actors/builtin"
 	types2 "github.com/filecoin-project/venus/venus-shared/types"
 
@@ -174,8 +170,8 @@ type StorageMiner interface {
 
 	//messager
 	MessagerWaitMessage(ctx context.Context, uuid string, confidence uint64) (*types2.MsgLookup, error)
-	MessagerPushMessage(ctx context.Context, msg *types2.Message, meta *types3.MsgMeta) (string, error)
-	MessagerGetMessage(ctx context.Context, uuid string) (*types3.Message, error)
+	MessagerPushMessage(ctx context.Context, msg *types2.Message, spec *messager.SendSpec) (string, error)
+	MessagerGetMessage(ctx context.Context, uuid string) (*messager.Message, error)
 
 	//for market
 	GetDeals(ctx context.Context, pageIndex, pageSize int) ([]*types4.DealInfo, error)
@@ -297,8 +293,8 @@ type StorageMinerStruct struct {
 		CheckProvable func(ctx context.Context, pp abi.RegisteredPoStProof, sectors []storage.SectorRef, expensive bool) (map[abi.SectorNumber]string, error) `perm:"admin"`
 
 		MessagerWaitMessage func(ctx context.Context, uuid string, confidence uint64) (*types2.MsgLookup, error) `perm:"read"`
-		MessagerPushMessage func(ctx context.Context, msg *types2.Message, meta *types3.MsgMeta) (string, error) `perm:"sign"`
-		MessagerGetMessage  func(ctx context.Context, uuid string) (*types3.Message, error)                      `perm:"write"`
+		MessagerPushMessage func(ctx context.Context, msg *types2.Message, spec *messager.SendSpec) (string, error) `perm:"sign"`
+		MessagerGetMessage  func(ctx context.Context, uuid string) (*messager.Message, error)                      `perm:"write"`
 
 		IsUnsealed    func(ctx context.Context, sector storage.SectorRef, offset storiface.UnpaddedByteIndex, size abi.UnpaddedPieceSize) (bool, error) `perm:"read"`
 		SectorsStatus func(ctx context.Context, sid abi.SectorNumber, showOnChainInfo bool) (SectorInfo, error)                                         `perm:"read"`
@@ -685,11 +681,11 @@ func (c *StorageMinerStruct) MessagerWaitMessage(ctx context.Context, uuid strin
 	return c.Internal.MessagerWaitMessage(ctx, uuid, confidence)
 }
 
-func (c *StorageMinerStruct) MessagerPushMessage(ctx context.Context, msg *types2.Message, meta *types3.MsgMeta) (string, error) {
-	return c.Internal.MessagerPushMessage(ctx, msg, meta)
+func (c *StorageMinerStruct) MessagerPushMessage(ctx context.Context, msg *types2.Message, spec *messager.SendSpec) (string, error) {
+	return c.Internal.MessagerPushMessage(ctx, msg, spec)
 }
 
-func (c *StorageMinerStruct) MessagerGetMessage(ctx context.Context, uuid string) (*types3.Message, error) {
+func (c *StorageMinerStruct) MessagerGetMessage(ctx context.Context, uuid string) (*messager.Message, error) {
 	return c.Internal.MessagerGetMessage(ctx, uuid)
 }
 

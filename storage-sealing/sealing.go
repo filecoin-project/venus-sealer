@@ -37,10 +37,7 @@ import (
 
 var log = logging.Logger("sectors")
 
-type SectorLocation struct {
-	Deadline  uint64
-	Partition uint64
-}
+type SectorLocation = miner.SectorLocation
 
 var ErrSectorAllocated = errors.New("sectorNumber is allocated, but PreCommit info wasn't found on chain")
 

@@ -14,8 +14,8 @@ import (
 	"github.com/filecoin-project/go-state-types/network"
 	"github.com/filecoin-project/specs-storage/storage"
 
-	proof7 "github.com/filecoin-project/specs-actors/v7/actors/runtime/proof"
 	"github.com/filecoin-project/specs-actors/v3/actors/runtime/proof"
+	proof7 "github.com/filecoin-project/specs-actors/v7/actors/runtime/proof"
 
 	"go.opencensus.io/trace"
 	"golang.org/x/xerrors"
@@ -23,7 +23,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/constants"
 
-	types3 "github.com/filecoin-project/venus-messager/types"
+	types3 "github.com/filecoin-project/venus/venus-shared/types/messager"
 
 	"github.com/filecoin-project/venus/pkg/messagepool"
 	"github.com/filecoin-project/venus/venus-shared/actors"
@@ -326,7 +326,7 @@ func (s *WindowPoStScheduler) declareRecoveries(ctx context.Context, dlIdx uint6
 		return recoveries, nil, err
 	}
 
-	uid, err := s.Messager.PushMessage(ctx, msg, &types3.MsgMeta{MaxFee: abi.TokenAmount(s.feeCfg.MaxWindowPoStGasFee)})
+	uid, err := s.Messager.PushMessage(ctx, msg, &types3.SendSpec{MaxFee: abi.TokenAmount(s.feeCfg.MaxWindowPoStGasFee)})
 	if err != nil {
 		return recoveries, nil, xerrors.Errorf("pushing message to mpool: %w", err)
 	}
@@ -428,7 +428,7 @@ func (s *WindowPoStScheduler) declareFaults(ctx context.Context, dlIdx uint64, p
 		return faults, nil, err
 	}
 
-	uid, err := s.Messager.PushMessage(ctx, msg, &types3.MsgMeta{MaxFee: spec.MaxFee})
+	uid, err := s.Messager.PushMessage(ctx, msg, &types3.SendSpec{MaxFee: spec.MaxFee})
 	if err != nil {
 		return faults, nil, xerrors.Errorf("pushing message to mpool: %w", err)
 	}
@@ -865,7 +865,7 @@ func (s *WindowPoStScheduler) submitPoStMessage(ctx context.Context, proof *mine
 		}
 
 		// TODO: consider maybe caring about the output
-		uid, err = s.Messager.PushMessage(ctx, msg, &types3.MsgMeta{MaxFee: spec.MaxFee})
+		uid, err = s.Messager.PushMessage(ctx, msg, &types3.SendSpec{MaxFee: spec.MaxFee})
 		if err != nil {
 			log.Errorf("[%d] pushing SubmitWindowedPoSt message failed: %v", idx+1, err)
 			time.Sleep(10 * time.Second)
