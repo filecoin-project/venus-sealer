@@ -387,12 +387,9 @@ func parseServiceFlag(cfg *config.StorageMiner, cctx *cli.Context) error {
 	}
 
 	if cctx.IsSet("piecestorage") {
-		pieceStorage, err := piecestorage.ParserProtocol(cctx.String("piecestorage"))
-		if err != nil {
+		if err := piecestorage.ParserProtocol(cctx.String("piecestorage"), &cfg.PieceStorage); err != nil {
 			return err
 		}
-
-		cfg.PieceStorage = pieceStorage
 	}
 	return nil
 }
