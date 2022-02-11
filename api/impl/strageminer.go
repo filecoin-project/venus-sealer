@@ -3,6 +3,7 @@ package impl
 import (
 	"context"
 	"encoding/json"
+	"github.com/filecoin-project/venus/venus-shared/types/messager"
 	"net/http"
 	"strconv"
 	"time"
@@ -27,11 +28,6 @@ import (
 	api4 "github.com/filecoin-project/venus-market/api"
 	types4 "github.com/filecoin-project/venus-market/types"
 
-	"github.com/filecoin-project/venus/venus-shared/actors/builtin"
-	"github.com/filecoin-project/venus/venus-shared/types"
-
-	types3 "github.com/filecoin-project/venus-messager/types"
-
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/config"
 	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
@@ -43,6 +39,8 @@ import (
 	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 	"github.com/filecoin-project/venus-sealer/storage/sectorblocks"
 	types2 "github.com/filecoin-project/venus-sealer/types"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin"
+	"github.com/filecoin-project/venus/venus-shared/types"
 )
 
 var log = logging.Logger("sealer")
@@ -819,11 +817,11 @@ func (sm *StorageMinerAPI) MessagerWaitMessage(ctx context.Context, uuid string,
 	}, nil
 }
 
-func (sm *StorageMinerAPI) MessagerPushMessage(ctx context.Context, msg *types.Message, meta *types3.MsgMeta) (string, error) {
-	return sm.Messager.PushMessage(ctx, msg, meta)
+func (sm *StorageMinerAPI) MessagerPushMessage(ctx context.Context, msg *types.Message, spec *messager.SendSpec) (string, error) {
+	return sm.Messager.PushMessage(ctx, msg, spec)
 }
 
-func (sm *StorageMinerAPI) MessagerGetMessage(ctx context.Context, uuid string) (*types3.Message, error) {
+func (sm *StorageMinerAPI) MessagerGetMessage(ctx context.Context, uuid string) (*messager.Message, error) {
 	msg, err := sm.Messager.GetMessageByUid(ctx, uuid)
 	if err != nil {
 		return nil, err

@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-bitfield"
 	"github.com/filecoin-project/go-jsonrpc/auth"
@@ -10,17 +9,14 @@ import (
 	"github.com/filecoin-project/go-state-types/crypto"
 	"github.com/filecoin-project/go-state-types/dline"
 	stnetwork "github.com/filecoin-project/go-state-types/network"
-
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	"github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/google/uuid"
 	"github.com/ipfs/go-cid"
 	metrics "github.com/libp2p/go-libp2p-core/metrics"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	protocol "github.com/libp2p/go-libp2p-core/protocol"
-
-	"github.com/filecoin-project/venus/app/submodule/apitypes"
-	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
-	"github.com/filecoin-project/venus/venus-shared/types"
 
 	types2 "github.com/filecoin-project/venus-sealer/types"
 )
@@ -354,9 +350,6 @@ type FullNode interface {
 	StateGetReceipt(context.Context, cid.Cid, types.TipSetKey) (*types.MessageReceipt, error)
 	// StateMinerSectorCount returns the number of sectors in a miner's sector set and proving set
 	StateMinerSectorCount(context.Context, address.Address, types.TipSetKey) (types.MinerSectors, error)
-	// StateCompute is a flexible command that applies the given messages on the given tipset.
-	// The messages are run as though the VM were at the provided height.
-	StateCompute(context.Context, abi.ChainEpoch, []*types.Message, types.TipSetKey) (*apitypes.ComputeStateOutput, error)
 	// StateVerifierStatus returns the data cap for the given address.
 	// Returns nil if there is no entry in the data cap table for the
 	// address.
@@ -619,7 +612,6 @@ type FullNodeStruct struct {
 		StateMinerSectorCount              func(context.Context, address.Address, types.TipSetKey) (types.MinerSectors, error)                                 `perm:"read"`
 		StateListMessages                  func(ctx context.Context, match *MessageMatch, tsk types.TipSetKey, toht abi.ChainEpoch) ([]cid.Cid, error)         `perm:"read"`
 		StateDecodeParams                  func(context.Context, address.Address, abi.MethodNum, []byte, types.TipSetKey) (interface{}, error)                 `perm:"read"`
-		StateCompute                       func(context.Context, abi.ChainEpoch, []*types.Message, types.TipSetKey) (*apitypes.ComputeStateOutput, error)      `perm:"read"`
 		StateVerifierStatus                func(context.Context, address.Address, types.TipSetKey) (*abi.StoragePower, error)                                  `perm:"read"`
 		StateVerifiedClientStatus          func(context.Context, address.Address, types.TipSetKey) (*abi.StoragePower, error)                                  `perm:"read"`
 		StateVerifiedRegistryRootKey       func(ctx context.Context, tsk types.TipSetKey) (address.Address, error)                                             `perm:"read"`
@@ -1165,10 +1157,6 @@ func (c *FullNodeStruct) StateListMessages(ctx context.Context, match *MessageMa
 
 func (c *FullNodeStruct) StateDecodeParams(ctx context.Context, toAddr address.Address, method abi.MethodNum, params []byte, tsk types.TipSetKey) (interface{}, error) {
 	return c.Internal.StateDecodeParams(ctx, toAddr, method, params, tsk)
-}
-
-func (c *FullNodeStruct) StateCompute(ctx context.Context, height abi.ChainEpoch, msgs []*types.Message, tsk types.TipSetKey) (*apitypes.ComputeStateOutput, error) {
-	return c.Internal.StateCompute(ctx, height, msgs, tsk)
 }
 
 func (c *FullNodeStruct) StateVerifierStatus(ctx context.Context, addr address.Address, tsk types.TipSetKey) (*abi.StoragePower, error) {
