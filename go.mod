@@ -36,9 +36,9 @@ require (
 	github.com/filecoin-project/specs-actors/v6 v6.0.1
 	github.com/filecoin-project/specs-actors/v7 v7.0.0-rc1
 	github.com/filecoin-project/specs-storage v0.1.1-0.20211228030229-6d460d25a0c9
-	github.com/filecoin-project/venus v1.2.0-rc2
-	github.com/filecoin-project/venus-market v1.0.2-0.20220209102104-2edeb8e8c5b0
-	github.com/filecoin-project/venus-messager v1.4.0-rc1
+	github.com/filecoin-project/venus v1.2.0-rc5.0.20220210073318-71c52bbba9c5
+	github.com/filecoin-project/venus-market v1.0.2-0.20220210103815-5ea3e7f6c5ac
+	github.com/filecoin-project/venus-messager v1.4.0-rc2
 	github.com/gbrlsnchs/jwt/v3 v3.0.1
 	github.com/go-kit/kit v0.12.0 // indirect
 	github.com/golang/mock v1.6.0
@@ -48,7 +48,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/icza/backscanner v0.0.0-20210726202459-ac2ffc679f94
 	github.com/ipfs-force-community/venus-common-utils v0.0.0-20211122032945-eb6cab79c62a
-	github.com/ipfs-force-community/venus-gateway v1.2.0-rc1
+	github.com/ipfs-force-community/venus-gateway v1.2.0-rc2
 	github.com/ipfs/go-block-format v0.0.3
 	github.com/ipfs/go-cid v0.1.0
 	github.com/ipfs/go-datastore v0.5.1

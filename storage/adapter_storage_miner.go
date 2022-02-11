@@ -13,27 +13,22 @@ import (
 	"github.com/filecoin-project/go-state-types/crypto"
 	"github.com/filecoin-project/go-state-types/dline"
 	"github.com/filecoin-project/go-state-types/network"
-	"github.com/ipfs/go-cid"
-
 	market2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
 	market5 "github.com/filecoin-project/specs-actors/v5/actors/builtin/market"
-
+	api2 "github.com/filecoin-project/venus-market/api"
+	types4 "github.com/filecoin-project/venus-market/types"
+	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus-sealer/constants"
+	sealing "github.com/filecoin-project/venus-sealer/storage-sealing"
+	types2 "github.com/filecoin-project/venus-sealer/types"
 	chain2 "github.com/filecoin-project/venus/pkg/chain"
 	constants2 "github.com/filecoin-project/venus/pkg/constants"
 	"github.com/filecoin-project/venus/venus-shared/actors"
 	"github.com/filecoin-project/venus/venus-shared/actors/builtin/market"
 	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
 	"github.com/filecoin-project/venus/venus-shared/types"
-
-	api2 "github.com/filecoin-project/venus-market/api"
-	types4 "github.com/filecoin-project/venus-market/types"
-
-	"github.com/filecoin-project/venus-sealer/api"
-	"github.com/filecoin-project/venus-sealer/constants"
-	sealing "github.com/filecoin-project/venus-sealer/storage-sealing"
-	types2 "github.com/filecoin-project/venus-sealer/types"
-
-	types3 "github.com/filecoin-project/venus-messager/types"
+	types3 "github.com/filecoin-project/venus/venus-shared/types/messager"
+	"github.com/ipfs/go-cid"
 )
 
 var _ sealing.SealingAPI = new(SealingAPIAdapter)
@@ -472,7 +467,7 @@ func (s SealingAPIAdapter) MessagerSendMsg(ctx context.Context, from, to address
 		Value:   value,
 		Method:  method,
 		Params:  params,
-	}, &types3.MsgMeta{
+	}, &types3.SendSpec{
 		ExpireEpoch:       0,
 		GasOverEstimation: 0,
 		//todo give a maxFee or for nil

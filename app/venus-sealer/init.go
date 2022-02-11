@@ -36,7 +36,7 @@ import (
 	"github.com/filecoin-project/venus/venus-shared/actors/policy"
 	"github.com/filecoin-project/venus/venus-shared/types"
 
-	types3 "github.com/filecoin-project/venus-messager/types"
+	types3 "github.com/filecoin-project/venus/venus-shared/types/messager"
 
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/config"
@@ -622,7 +622,7 @@ func createStorageMiner(ctx context.Context, nodeAPI api.FullNode, messagerClien
 		GasPremium: gasPrice,
 	}
 
-	msgUid, err := messagerClient.PushMessage(ctx, createStorageMinerMsg, &types3.MsgMeta{MaxFee: types.FromFil(1)})
+	msgUid, err := messagerClient.PushMessage(ctx, createStorageMinerMsg, &types3.SendSpec{MaxFee: types.FromFil(1)})
 	if err != nil {
 		return address.Undef, xerrors.Errorf("pushing createMiner message: %w", err)
 	}
