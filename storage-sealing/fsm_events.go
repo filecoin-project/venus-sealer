@@ -337,6 +337,14 @@ type SectorReplicaUpdateLanded struct{}
 
 func (evt SectorReplicaUpdateLanded) apply(state *types.SectorInfo) {}
 
+type SectorUpdateActive struct{}
+
+func (evt SectorUpdateActive) apply(state *types.SectorInfo) {}
+
+type SectorKeyReleased struct{}
+
+func (evt SectorKeyReleased) apply(state *types.SectorInfo) {}
+
 // Failed state recovery
 
 type SectorRetrySealPreCommit1 struct{}
@@ -446,6 +454,14 @@ func (evt SectorRetrySubmitReplicaUpdate) apply(state *types.SectorInfo) {}
 type SectorSubmitReplicaUpdateFailed struct{}
 
 func (evt SectorSubmitReplicaUpdateFailed) apply(state *types.SectorInfo) {}
+
+type SectorReleaseKeyFailed struct{ error }
+
+func (evt SectorReleaseKeyFailed) FormatError(xerrors.Printer) (next error) {
+	return evt.error
+}
+
+func (evt SectorReleaseKeyFailed) apply(state *types.SectorInfo) {}
 
 // Faults
 

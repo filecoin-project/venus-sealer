@@ -179,8 +179,15 @@ var fsmPlanners = map[types.SectorState]func(events []statemachine.Event, state 
 	types.FinalizeReplicaUpdate: planOne(
 		on(SectorFinalized{}, types.Proving),
 	),
-	// Sealing errors
+	types.UpdateActivating: planOne(
+		on(SectorUpdateActive{}, types.ReleaseSectorKey),
+	),
+	types.ReleaseSectorKey: planOne(
+		on(SectorKeyReleased{}, types.Proving),
+		on(SectorReleaseKeyFailed{}, types.ReleaseSectorKeyFailed),
+	),
 
+	// Sealing errors
 	types.AddPieceFailed: planOne(
 		on(SectorRetryWaitDeals{}, types.WaitDeals),
 		apply(SectorStartPacking{}),
@@ -259,6 +266,9 @@ var fsmPlanners = map[types.SectorState]func(events []statemachine.Event, state 
 		on(SectorInvalidDealIDs{}, types.SnapDealsRecoverDealIDs),
 		on(SectorDealsExpired{}, types.SnapDealsDealsExpired),
 		on(SectorAbortUpgrade{}, types.AbortUpgrade),
+	),
+	types.ReleaseSectorKeyFailed: planOne(
+		on(SectorUpdateActive{}, types.ReleaseSectorKey),
 	),
 
 	// Post-seal
@@ -502,6 +512,10 @@ func (m *Sealing) plan(events []statemachine.Event, state *types.SectorInfo) (fu
 		return m.handleReplicaUpdateWait, processed, nil
 	case types.FinalizeReplicaUpdate:
 		return m.handleFinalizeReplicaUpdate, processed, nil
+	case types.UpdateActivating:
+		return m.handleUpdateActivating, processed, nil
+	case types.ReleaseSectorKey:
+		return m.handleReleaseSectorKey, processed, nil
 
 	// Handled failure modes
 	case types.AddPieceFailed:
@@ -538,6 +552,8 @@ func (m *Sealing) plan(events []statemachine.Event, state *types.SectorInfo) (fu
 		return m.handleSnapDealsRecoverDealIDs, processed, nil
 	case types.ReplicaUpdateFailed:
 		return m.handleSubmitReplicaUpdateFailed, processed, nil
+	case types.ReleaseSectorKeyFailed:
+		return m.handleReleaseSectorKeyFailed, 0, err
 	case types.AbortUpgrade:
 		return m.handleAbortUpgrade, processed, nil
 

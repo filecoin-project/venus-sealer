@@ -85,6 +85,7 @@ var stateOrder = map[types2.SectorState]stateMeta{}
 var stateList = []stateMeta{
 	{col: 39, state: "Total"},
 	{col: color.FgGreen, state: types2.Proving},
+	{col: color.FgGreen, state: types2.UpdateActivating},
 
 	{col: color.FgBlue, state: types2.Empty},
 	{col: color.FgBlue, state: types2.WaitDeals},
@@ -115,6 +116,7 @@ var stateList = []stateMeta{
 	{col: color.FgYellow, state: types2.SubmitReplicaUpdate},
 	{col: color.FgYellow, state: types2.ReplicaUpdateWait},
 	{col: color.FgYellow, state: types2.FinalizeReplicaUpdate},
+	{col: color.FgYellow, state: types2.ReleaseSectorKey},
 
 	{col: color.FgCyan, state: types2.Terminating},
 	{col: color.FgCyan, state: types2.TerminateWait},
@@ -143,6 +145,7 @@ var stateList = []stateMeta{
 	{col: color.FgRed, state: types2.SnapDealsAddPieceFailed},
 	{col: color.FgRed, state: types2.SnapDealsDealsExpired},
 	{col: color.FgRed, state: types2.ReplicaUpdateFailed},
+	{col: color.FgRed, state: types2.ReleaseSectorKeyFailed},
 }
 
 func getActorAddress(ctx context.Context, nodeAPI api.StorageMiner, overrideMaddr string) (maddr address.Address, err error) {

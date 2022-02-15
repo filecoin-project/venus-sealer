@@ -2,6 +2,10 @@ package sealing
 
 import (
 	"bytes"
+	"context"
+	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/venus/venus-shared/actors/policy"
+	"time"
 
 	"golang.org/x/xerrors"
 
@@ -35,6 +39,21 @@ func (m *Sealing) handleProveReplicaUpdate(ctx statemachine.Context, sector type
 	}
 	if sector.CommR == nil {
 		return xerrors.Errorf("invalid sector %d with nil CommR", sector.SectorNumber)
+	}
+	// Abort upgrade for sectors that went faulty since being marked for upgrade
+	tok, _, err := m.api.ChainHead(ctx.Context())
+	if err != nil {
+		log.Errorf("handleProveReplicaUpdate: api error, not proceeding: %+v", err)
+		return nil
+	}
+	active, err := sectorActive(ctx.Context(), m.api, m.maddr, tok, sector.SectorNumber)
+	if err != nil {
+		log.Errorf("sector active check: api error, not proceeding: %+v", err)
+		return nil
+	}
+	if !active {
+		log.Errorf("sector marked for upgrade %d no longer active, aborting upgrade", sector.SectorNumber)
+		return ctx.Send(SectorAbortUpgrade{})
 	}
 
 	vanillaProofs, err := m.sealer.ProveReplicaUpdate1(sector.SealingCtx(ctx.Context()), m.minerSector(sector.SectorType, sector.SectorNumber), *sector.CommR, *sector.UpdateSealed, *sector.UpdateUnsealed)
@@ -204,7 +223,66 @@ func (m *Sealing) handleReplicaUpdateWait(ctx statemachine.Context, sector types
 }
 
 func (m *Sealing) handleFinalizeReplicaUpdate(ctx statemachine.Context, sector types.SectorInfo) error {
+	cfg, err := m.getConfig()
+	if err != nil {
+		return xerrors.Errorf("getting sealing config: %w", err)
+	}
+
+	if err := m.sealer.FinalizeReplicaUpdate(sector.SealingCtx(ctx.Context()), m.minerSector(sector.SectorType, sector.SectorNumber), sector.KeepUnsealedRanges(false, cfg.AlwaysKeepUnsealedCopy)); err != nil {
+		return ctx.Send(SectorFinalizeFailed{xerrors.Errorf("finalize sector: %w", err)})
+	}
 	return ctx.Send(SectorFinalized{})
+}
+
+func (m *Sealing) handleUpdateActivating(ctx statemachine.Context, sector types.SectorInfo) error {
+	try := func() error {
+		mw, err := m.api.MessagerWaitMsg(ctx.Context(), sector.ReplicaUpdateMessage)
+		if err != nil {
+			return err
+		}
+
+		tok, _, err := m.api.ChainHead(ctx.Context())
+		if err != nil {
+			return err
+		}
+
+		nv, err := m.api.StateNetworkVersion(ctx.Context(), tok)
+		if err != nil {
+			return err
+		}
+
+		lb := policy.GetWinningPoStSectorSetLookback(nv)
+		targetHeight := mw.Height + lb + InteractivePoRepConfidence
+
+		return m.events.ChainAt(ctx.Context(), func(context.Context, types.TipSetToken, abi.ChainEpoch) error {
+			return ctx.Send(SectorUpdateActive{})
+		}, func(ctx context.Context, ts types.TipSetToken) error {
+			log.Warn("revert in handleUpdateActivating")
+			return nil
+		}, InteractivePoRepConfidence, targetHeight)
+	}
+
+	for {
+		err := try()
+		if err == nil {
+			break
+		}
+
+		log.Errorw("error in handleUpdateActivating", "error", err)
+
+		// likely an API issue, sleep for a bit and retry
+		time.Sleep(time.Minute)
+	}
+
+	return nil
+}
+
+func (m *Sealing) handleReleaseSectorKey(ctx statemachine.Context, sector types.SectorInfo) error {
+	if err := m.sealer.ReleaseSectorKey(sector.SealingCtx(ctx.Context()), m.minerSector(sector.SectorType, sector.SectorNumber)); err != nil {
+		return ctx.Send(SectorReleaseKeyFailed{err})
+	}
+
+	return ctx.Send(SectorKeyReleased{})
 }
 
 func handleErrors(ctx statemachine.Context, err error, sector types.SectorInfo) error {
