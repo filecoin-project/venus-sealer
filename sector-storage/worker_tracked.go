@@ -195,4 +195,8 @@ func (t *trackedWorker) ProveReplicaUpdate2(ctx context.Context, sector storage.
 	})
 }
 
+func (t *trackedWorker) FinalizeReplicaUpdate(ctx context.Context, sector storage.SectorRef, keepUnsealed []storage.Range) (types.CallID, error) {
+	return t.tracker.track(ctx, t.execute, t.wid, t.workerInfo, sector, types.TTFinalizeReplicaUpdate, func() (types.CallID, error) { return t.Worker.FinalizeReplicaUpdate(ctx, sector, keepUnsealed) })
+}
+
 var _ Worker = &trackedWorker{}

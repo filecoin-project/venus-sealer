@@ -31,6 +31,7 @@ type WorkerStruct struct {
 		SealPreCommit2            func(ctx context.Context, sector storage.SectorRef, pc1o storage.PreCommit1Out) (types.CallID, error)                                                                                     `perm:"admin"`
 		SealCommit1               func(ctx context.Context, sector storage.SectorRef, ticket abi.SealRandomness, seed abi.InteractiveSealRandomness, pieces []abi.PieceInfo, cids storage.SectorCids) (types.CallID, error) `perm:"admin"`
 		SealCommit2               func(ctx context.Context, sector storage.SectorRef, c1o storage.Commit1Out) (types.CallID, error)                                                                                         `perm:"admin"`
+		FinalizeReplicaUpdate     func(p0 context.Context, p1 storage.SectorRef, p2 []storage.Range) (types.CallID, error)                                                                                                  `perm:"admin"`
 		FinalizeSector            func(ctx context.Context, sector storage.SectorRef, keepUnsealed []storage.Range) (types.CallID, error)                                                                                   `perm:"admin"`
 		ReplicaUpdate             func(ctx context.Context, sector storage.SectorRef, pieces []abi.PieceInfo) (types.CallID, error)                                                                                         `perm:"admin"`
 		ProveReplicaUpdate1       func(ctx context.Context, sector storage.SectorRef, sectorKey, newSealed, newUnsealed cid.Cid) (types.CallID, error)                                                                      `perm:"admin"`
@@ -96,6 +97,13 @@ func (w *WorkerStruct) SealCommit1(ctx context.Context, sector storage.SectorRef
 
 func (w *WorkerStruct) SealCommit2(ctx context.Context, sector storage.SectorRef, c1o storage.Commit1Out) (types.CallID, error) {
 	return w.Internal.SealCommit2(ctx, sector, c1o)
+}
+
+func (s *WorkerStruct) FinalizeReplicaUpdate(p0 context.Context, p1 storage.SectorRef, p2 []storage.Range) (types.CallID, error) {
+	if s.Internal.FinalizeReplicaUpdate == nil {
+		return *new(types.CallID), ErrNotSupported
+	}
+	return s.Internal.FinalizeReplicaUpdate(p0, p1, p2)
 }
 
 func (w *WorkerStruct) FinalizeSector(ctx context.Context, sector storage.SectorRef, keepUnsealed []storage.Range) (types.CallID, error) {

@@ -200,20 +200,21 @@ func rfunc(in interface{}) func(context.Context, types.CallID, storiface.WorkerR
 }
 
 var returnFunc = map[types.ReturnType]func(context.Context, types.CallID, storiface.WorkerReturn, interface{}, *storiface.CallError) error{
-	types.ReturnAddPiece:            rfunc(storiface.WorkerReturn.ReturnAddPiece),
-	types.ReturnSealPreCommit1:      rfunc(storiface.WorkerReturn.ReturnSealPreCommit1),
-	types.ReturnSealPreCommit2:      rfunc(storiface.WorkerReturn.ReturnSealPreCommit2),
-	types.ReturnSealCommit1:         rfunc(storiface.WorkerReturn.ReturnSealCommit1),
-	types.ReturnSealCommit2:         rfunc(storiface.WorkerReturn.ReturnSealCommit2),
-	types.ReturnFinalizeSector:      rfunc(storiface.WorkerReturn.ReturnFinalizeSector),
-	types.ReturnReleaseUnsealed:     rfunc(storiface.WorkerReturn.ReturnReleaseUnsealed),
-	types.ReturnReplicaUpdate:       rfunc(storiface.WorkerReturn.ReturnReplicaUpdate),
-	types.ReturnProveReplicaUpdate1: rfunc(storiface.WorkerReturn.ReturnProveReplicaUpdate1),
-	types.ReturnProveReplicaUpdate2: rfunc(storiface.WorkerReturn.ReturnProveReplicaUpdate2),
-	types.ReturnGenerateSectorKey:   rfunc(storiface.WorkerReturn.ReturnGenerateSectorKeyFromData),
-	types.ReturnMoveStorage:         rfunc(storiface.WorkerReturn.ReturnMoveStorage),
-	types.ReturnUnsealPiece:         rfunc(storiface.WorkerReturn.ReturnUnsealPiece),
-	types.ReturnFetch:               rfunc(storiface.WorkerReturn.ReturnFetch),
+	types.ReturnAddPiece:              rfunc(storiface.WorkerReturn.ReturnAddPiece),
+	types.ReturnSealPreCommit1:        rfunc(storiface.WorkerReturn.ReturnSealPreCommit1),
+	types.ReturnSealPreCommit2:        rfunc(storiface.WorkerReturn.ReturnSealPreCommit2),
+	types.ReturnSealCommit1:           rfunc(storiface.WorkerReturn.ReturnSealCommit1),
+	types.ReturnSealCommit2:           rfunc(storiface.WorkerReturn.ReturnSealCommit2),
+	types.ReturnFinalizeSector:        rfunc(storiface.WorkerReturn.ReturnFinalizeSector),
+	types.ReturnReleaseUnsealed:       rfunc(storiface.WorkerReturn.ReturnReleaseUnsealed),
+	types.ReturnReplicaUpdate:         rfunc(storiface.WorkerReturn.ReturnReplicaUpdate),
+	types.ReturnProveReplicaUpdate1:   rfunc(storiface.WorkerReturn.ReturnProveReplicaUpdate1),
+	types.ReturnProveReplicaUpdate2:   rfunc(storiface.WorkerReturn.ReturnProveReplicaUpdate2),
+	types.ReturnGenerateSectorKey:     rfunc(storiface.WorkerReturn.ReturnGenerateSectorKeyFromData),
+	types.ReturnFinalizeReplicaUpdate: rfunc(storiface.WorkerReturn.ReturnFinalizeReplicaUpdate),
+	types.ReturnMoveStorage:           rfunc(storiface.WorkerReturn.ReturnMoveStorage),
+	types.ReturnUnsealPiece:           rfunc(storiface.WorkerReturn.ReturnUnsealPiece),
+	types.ReturnFetch:                 rfunc(storiface.WorkerReturn.ReturnFetch),
 }
 
 func (l *LocalWorker) asyncCall(ctx context.Context, sector storage.SectorRef, rt types.ReturnType, work func(ctx context.Context, ci types.CallID) (interface{}, error)) (types.CallID, error) {
@@ -454,6 +455,26 @@ func (l *LocalWorker) FinalizeSector(ctx context.Context, sector storage.SectorR
 	})
 }
 
+func (l *LocalWorker) FinalizeReplicaUpdate(ctx context.Context, sector storage.SectorRef, keepUnsealed []storage.Range) (types.CallID, error) {
+	sb, err := l.executor()
+	if err != nil {
+		return types.UndefCall, err
+	}
+
+	return l.asyncCall(ctx, sector, types.ReturnFinalizeReplicaUpdate, func(ctx context.Context, ci types.CallID) (interface{}, error) {
+		if err := sb.FinalizeReplicaUpdate(ctx, sector, keepUnsealed); err != nil {
+			return nil, xerrors.Errorf("finalizing sector: %w", err)
+		}
+
+		if len(keepUnsealed) == 0 {
+			if err := l.storage.Remove(ctx, sector.ID, storiface.FTUnsealed, true, nil); err != nil {
+				return nil, xerrors.Errorf("removing unsealed data: %w", err)
+			}
+		}
+
+		return nil, err
+	})
+}
 func (l *LocalWorker) ReleaseUnsealed(ctx context.Context, sector storage.SectorRef, safeToFree []storage.Range) (types.CallID, error) {
 	return types.UndefCall, xerrors.Errorf("implement me")
 }

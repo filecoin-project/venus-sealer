@@ -217,7 +217,7 @@ func (m *Sealing) handleSubmitReplicaUpdateFailed(ctx statemachine.Context, sect
 
 	tok, _, err := m.api.ChainHead(ctx.Context())
 	if err != nil {
-		log.Errorf("handleCommitting: api error, not proceeding: %+v", err)
+		log.Errorf("handleSubmitReplicaUpdateFailed: api error, not proceeding: %+v", err)
 		return nil
 	}
 
@@ -243,11 +243,32 @@ func (m *Sealing) handleSubmitReplicaUpdateFailed(ctx statemachine.Context, sect
 		}
 	}
 
+	// Abort upgrade for sectors that went faulty since being marked for upgrade
+	active, err := sectorActive(ctx.Context(), m.api, m.maddr, tok, sector.SectorNumber)
+	if err != nil {
+		log.Errorf("sector active check: api error, not proceeding: %+v", err)
+		return nil
+	}
+	if !active {
+		log.Errorf("sector marked for upgrade %d no longer active, aborting upgrade", sector.SectorNumber)
+		return ctx.Send(SectorAbortUpgrade{})
+	}
+
 	if err := m.failedCooldown(ctx, sector); err != nil {
 		return err
 	}
 
 	return ctx.Send(SectorRetrySubmitReplicaUpdate{})
+}
+
+func (m *Sealing) handleReleaseSectorKeyFailed(ctx statemachine.Context, sector types.SectorInfo) error {
+	// not much we can do, wait for a bit and try again
+
+	if err := m.failedCooldown(ctx, sector); err != nil {
+		return err
+	}
+
+	return ctx.Send(SectorUpdateActive{})
 }
 
 func (m *Sealing) handleCommitFailed(ctx statemachine.Context, sector types.SectorInfo) error {

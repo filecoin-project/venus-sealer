@@ -94,6 +94,9 @@ func (s *schedTestWorker) Remove(ctx context.Context, sector storage.SectorRef) 
 	panic("implement me")
 }
 
+func (t *testExec) FinalizeReplicaUpdate(ctx context.Context, sector storage.SectorRef, keepUnsealed []storage.Range) error {
+	panic("implement me")
+}
 func (s *schedTestWorker) NewSector(ctx context.Context, sector storage.SectorRef) (types.CallID, error) {
 	panic("implement me")
 }
@@ -115,6 +118,10 @@ func (s *schedTestWorker) ProveReplicaUpdate2(ctx context.Context, sector storag
 }
 
 func (s *schedTestWorker) GenerateSectorKeyFromData(ctx context.Context, sector storage.SectorRef, commD cid.Cid) (types.CallID, error) {
+	panic("implement me")
+}
+
+func (s *schedTestWorker) FinalizeReplicaUpdate(ctx context.Context, sector storage.SectorRef, keepUnsealed []storage.Range) (types.CallID, error) {
 	panic("implement me")
 }
 
