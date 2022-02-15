@@ -37,7 +37,6 @@ import (
 //  * Generate markdown docs
 //  * Generate openrpc blobs
 
-
 var ErrNotSupported = xerrors.New("method not supported")
 
 // StorageMiner is a low-level interface to the Filecoin network storage miner node
@@ -245,6 +244,7 @@ type StorageMinerStruct struct {
 		ReturnUnsealPiece               func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                                             `perm:"admin" retry:"true"`
 		ReturnReadPiece                 func(ctx context.Context, callID types.CallID, ok bool, err *storiface.CallError) error                                    `perm:"admin" retry:"true"`
 		ReturnFetch                     func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                                             `perm:"admin" retry:"true"`
+		ReturnFinalizeReplicaUpdate     func(ctx context.Context, callID types.CallID, err *storiface.CallError) error                                             `perm:"admin" retry:"true"`
 
 		SealingSchedDiag   func(context.Context, bool) (interface{}, error)   `perm:"admin"`
 		SealingAbort       func(ctx context.Context, call types.CallID) error `perm:"admin"`
@@ -292,9 +292,9 @@ type StorageMinerStruct struct {
 
 		CheckProvable func(ctx context.Context, pp abi.RegisteredPoStProof, sectors []storage.SectorRef, expensive bool) (map[abi.SectorNumber]string, error) `perm:"admin"`
 
-		MessagerWaitMessage func(ctx context.Context, uuid string, confidence uint64) (*types2.MsgLookup, error) `perm:"read"`
+		MessagerWaitMessage func(ctx context.Context, uuid string, confidence uint64) (*types2.MsgLookup, error)    `perm:"read"`
 		MessagerPushMessage func(ctx context.Context, msg *types2.Message, spec *messager.SendSpec) (string, error) `perm:"sign"`
-		MessagerGetMessage  func(ctx context.Context, uuid string) (*messager.Message, error)                      `perm:"write"`
+		MessagerGetMessage  func(ctx context.Context, uuid string) (*messager.Message, error)                       `perm:"write"`
 
 		IsUnsealed    func(ctx context.Context, sector storage.SectorRef, offset storiface.UnpaddedByteIndex, size abi.UnpaddedPieceSize) (bool, error) `perm:"read"`
 		SectorsStatus func(ctx context.Context, sid abi.SectorNumber, showOnChainInfo bool) (SectorInfo, error)                                         `perm:"read"`
@@ -473,6 +473,13 @@ func (c *StorageMinerStruct) ReturnSealCommit2(ctx context.Context, callID types
 	return c.Internal.ReturnSealCommit2(ctx, callID, proof, err)
 }
 
+func (s *StorageMinerStruct) ReturnFinalizeReplicaUpdate(p0 context.Context, callID types.CallID, err *storiface.CallError) error {
+	if s.Internal.ReturnFinalizeReplicaUpdate == nil {
+		return ErrNotSupported
+	}
+	return s.Internal.ReturnFinalizeReplicaUpdate(p0, callID, err)
+}
+
 func (c *StorageMinerStruct) ReturnFinalizeSector(ctx context.Context, callID types.CallID, err *storiface.CallError) error {
 	return c.Internal.ReturnFinalizeSector(ctx, callID, err)
 }
@@ -516,7 +523,6 @@ func (c *StorageMinerStruct) ReturnFetch(ctx context.Context, callID types.CallI
 func (c *StorageMinerStruct) SealingSchedDiag(ctx context.Context, doSched bool) (interface{}, error) {
 	return c.Internal.SealingSchedDiag(ctx, doSched)
 }
-
 
 func (s *StorageMinerStruct) SectorAbortUpgrade(p0 context.Context, p1 abi.SectorNumber) error {
 	if s.Internal.SectorAbortUpgrade == nil {
