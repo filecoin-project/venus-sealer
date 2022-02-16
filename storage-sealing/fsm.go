@@ -177,7 +177,7 @@ var fsmPlanners = map[types.SectorState]func(events []statemachine.Event, state 
 		on(SectorAbortUpgrade{}, types.AbortUpgrade),
 	),
 	types.FinalizeReplicaUpdate: planOne(
-		on(SectorFinalized{}, types.Proving),
+		on(SectorFinalized{}, types.UpdateActivating),
 	),
 	types.UpdateActivating: planOne(
 		on(SectorUpdateActive{}, types.ReleaseSectorKey),
