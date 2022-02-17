@@ -1,3 +1,5 @@
+datastore/
+sealer.db*
 venus-sealer
 venus-worker
 ./venus-sealer
@@ -8,7 +10,8 @@ app/sealer/sealer
 sealing.db*
 venus-sealer
 venus-worker
-
+lotus-convert
+lotus-fix
 .task
 .idea
 .vscode
