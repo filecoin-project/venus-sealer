@@ -67,6 +67,7 @@ func DefaultMainnetStorageMiner() *StorageMiner {
 			AllowUnseal:              true,
 			AllowReplicaUpdate:       true,
 			AllowProveReplicaUpdate2: true,
+			AllowRegenSectorKey:      true,
 
 			// Default to 10 - tcp should still be able to figure this out, and
 			// it's the ratio between 10gbit / 1gbit
@@ -96,7 +97,7 @@ func DefaultMainnetStorageMiner() *StorageMiner {
 		},
 		NetParams: NetParamsConfig{
 			UpgradeIgnitionHeight: 94000,
-			UpgradeOhSnapHeight:   999999999999,
+			UpgradeOhSnapHeight:   1594680,
 			ForkLengthThreshold:   policy.ChainFinality,
 			BlockDelaySecs:        30,
 		},
@@ -148,6 +149,7 @@ func DefaultForceNetStorageMiner() *StorageMiner {
 			AllowUnseal:              true,
 			AllowReplicaUpdate:       true,
 			AllowProveReplicaUpdate2: true,
+			AllowRegenSectorKey:      true,
 
 			// Default to 10 - tcp should still be able to figure this out, and
 			// it's the ratio between 10gbit / 1gbit
@@ -230,6 +232,7 @@ func DefaultCalibrationStorageMiner() *StorageMiner {
 			AllowUnseal:              true,
 			AllowReplicaUpdate:       true,
 			AllowProveReplicaUpdate2: true,
+			AllowRegenSectorKey:      true,
 
 			// Default to 10 - tcp should still be able to figure this out, and
 			// it's the ratio between 10gbit / 1gbit
@@ -260,9 +263,9 @@ func DefaultCalibrationStorageMiner() *StorageMiner {
 		NetParams: NetParamsConfig{
 			UpgradeIgnitionHeight: -3,
 			// 2022-02-10T19:23:00Z
-			UpgradeOhSnapHeight:   682006,
-			ForkLengthThreshold:   policy.ChainFinality,
-			BlockDelaySecs:        30,
+			UpgradeOhSnapHeight: 682006,
+			ForkLengthThreshold: policy.ChainFinality,
+			BlockDelaySecs:      30,
 		},
 		DB: DbConfig{
 			Type: "sqlite",
@@ -344,6 +347,7 @@ func Default2kStorageMiner() *StorageMiner {
 			AllowUnseal:              true,
 			AllowReplicaUpdate:       true,
 			AllowProveReplicaUpdate2: true,
+			AllowRegenSectorKey:      true,
 
 			// Default to 10 - tcp should still be able to figure this out, and
 			// it's the ratio between 10gbit / 1gbit
@@ -429,6 +433,7 @@ func DefaultButterflyStorageMiner() *StorageMiner {
 			AllowUnseal:              true,
 			AllowReplicaUpdate:       true,
 			AllowProveReplicaUpdate2: true,
+			AllowRegenSectorKey:      true,
 
 			// Default to 10 - tcp should still be able to figure this out, and
 			// it's the ratio between 10gbit / 1gbit

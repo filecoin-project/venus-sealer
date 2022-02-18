@@ -43,6 +43,11 @@ var runCmd = &cli.Command{
 			Usage: "manage open file limit",
 			Value: true,
 		},
+		&cli.BoolFlag{
+			Name:  "regen-sector-key",
+			Usage: "enable regen sector key",
+			Value: true,
+		},
 	},
 	Action: func(cctx *cli.Context) error {
 		if !cctx.Bool("enable-gpu-proving") {
