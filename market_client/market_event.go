@@ -3,9 +3,10 @@ package market_client
 import (
 	"context"
 	"encoding/json"
+	types3 "github.com/filecoin-project/venus/venus-shared/types"
+	"github.com/filecoin-project/venus/venus-shared/types/gateway"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/modern-go/reflect2"
 	"golang.org/x/xerrors"
 
@@ -29,7 +30,7 @@ import (
 var log = logging.Logger("market_event")
 
 type MarketEvent struct {
-	client       *MarketEventClient
+	client       IMarketEventClient
 	mAddr        types2.MinerAddress
 	stor         *stores.Remote
 	sectorBlocks *sectorblocks.SectorBlocks
@@ -60,7 +61,7 @@ func (e *MarketEvent) listenMarketRequest(ctx context.Context) {
 func (e *MarketEvent) listenMarketRequestOnce(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	policy := &marketevent.MarketRegisterPolicy{
+	policy := &gateway.MarketRegisterPolicy{
 		Miner: address.Address(e.mAddr),
 	}
 	marketEventCh, err := e.client.ListenMarketEvent(ctx, policy)
@@ -82,26 +83,26 @@ func (e *MarketEvent) listenMarketRequestOnce(ctx context.Context) error {
 			req := marketevent.IsUnsealRequest{}
 			err := json.Unmarshal(marketEvent.Payload, &req)
 			if err != nil {
-				_ = e.client.ResponseMarketEvent(ctx, &types.ResponseEvent{
-					Id:      marketEvent.Id,
+				_ = e.client.ResponseMarketEvent(ctx, &gateway.ResponseEvent{
+					ID:      marketEvent.ID,
 					Payload: nil,
 					Error:   err.Error(),
 				})
 				continue
 			}
-			e.processIsUnsealed(ctx, marketEvent.Id, req)
+			e.processIsUnsealed(ctx, marketEvent.ID, req)
 		case "SectorsUnsealPiece":
 			req := marketevent.UnsealRequest{}
 			err := json.Unmarshal(marketEvent.Payload, &req)
 			if err != nil {
-				_ = e.client.ResponseMarketEvent(ctx, &types.ResponseEvent{
-					Id:      marketEvent.Id,
+				_ = e.client.ResponseMarketEvent(ctx, &gateway.ResponseEvent{
+					ID:      marketEvent.ID,
 					Payload: nil,
 					Error:   err.Error(),
 				})
 				continue
 			}
-			e.processSectorUnsealed(ctx, marketEvent.Id, req)
+			e.processSectorUnsealed(ctx, marketEvent.ID, req)
 		default:
 			log.Errorf("unexpect market event type %s", marketEvent.Method)
 		}
@@ -110,7 +111,7 @@ func (e *MarketEvent) listenMarketRequestOnce(ctx context.Context) error {
 	return nil
 }
 
-func (e *MarketEvent) processIsUnsealed(ctx context.Context, reqId uuid.UUID, req marketevent.IsUnsealRequest) {
+func (e *MarketEvent) processIsUnsealed(ctx context.Context, reqId types3.UUID, req marketevent.IsUnsealRequest) {
 	has, err := e.stor.CheckIsUnsealed(ctx, req.Sector, abi.PaddedPieceSize(req.Offset), req.Size)
 	if err != nil {
 		e.error(ctx, reqId, err)
@@ -120,7 +121,7 @@ func (e *MarketEvent) processIsUnsealed(ctx context.Context, reqId uuid.UUID, re
 	e.val(ctx, reqId, has)
 }
 
-func (e *MarketEvent) processSectorUnsealed(ctx context.Context, reqId uuid.UUID, req marketevent.UnsealRequest) {
+func (e *MarketEvent) processSectorUnsealed(ctx context.Context, reqId types3.UUID, req marketevent.UnsealRequest) {
 	sectorInfo, err := e.sectorBlocks.GetSectorInfo(req.Sector.ID.Number)
 	if err != nil {
 		e.error(ctx, reqId, err)
@@ -173,15 +174,15 @@ func (e *MarketEvent) processSectorUnsealed(ctx context.Context, reqId uuid.UUID
 	e.val(ctx, reqId, nil)
 }
 
-func (e *MarketEvent) error(ctx context.Context, reqId uuid.UUID, err error) {
-	_ = e.client.ResponseMarketEvent(ctx, &types.ResponseEvent{
-		Id:      reqId,
+func (e *MarketEvent) error(ctx context.Context, reqId types3.UUID, err error) {
+	_ = e.client.ResponseMarketEvent(ctx, &gateway.ResponseEvent{
+		ID:      reqId,
 		Payload: nil,
 		Error:   err.Error(),
 	})
 }
-func (e *MarketEvent) val(ctx context.Context, reqId uuid.UUID, val interface{}) {
 
+func (e *MarketEvent) val(ctx context.Context, reqId types3.UUID, val interface{}) {
 	var respBytes []byte
 	if !reflect2.IsNil(val) {
 		var err error
@@ -192,8 +193,8 @@ func (e *MarketEvent) val(ctx context.Context, reqId uuid.UUID, val interface{})
 		}
 	}
 
-	err := e.client.ResponseMarketEvent(ctx, &types.ResponseEvent{
-		Id:      reqId,
+	err := e.client.ResponseMarketEvent(ctx, &gateway.ResponseEvent{
+		ID:      reqId,
 		Payload: respBytes,
 		Error:   "",
 	})

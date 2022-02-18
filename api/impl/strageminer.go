@@ -3,6 +3,8 @@ package impl
 import (
 	"context"
 	"encoding/json"
+	"github.com/filecoin-project/venus/venus-shared/api/market"
+	mtypes "github.com/filecoin-project/venus/venus-shared/types/market"
 	"github.com/filecoin-project/venus/venus-shared/types/messager"
 	"net/http"
 	"strconv"
@@ -24,9 +26,6 @@ import (
 	multi "github.com/hashicorp/go-multierror"
 
 	proof7 "github.com/filecoin-project/specs-actors/v7/actors/runtime/proof"
-
-	api4 "github.com/filecoin-project/venus-market/api"
-	types4 "github.com/filecoin-project/venus-market/types"
 
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/config"
@@ -61,14 +60,14 @@ type StorageMinerAPI struct {
 
 	Stor *stores.Remote
 
-	MarketClient         api4.MarketFullNode
+	MarketClient         market.IMarket
 	LogService           *service.LogService
 	NetParams            *config.NetParamsConfig
 	SetSealingConfigFunc types2.SetSealingConfigFunc
 	GetSealingConfigFunc types2.GetSealingConfigFunc
 }
 
-func (sm *StorageMinerAPI) GetDeals(ctx context.Context, pageIndex, pageSize int) ([]*types4.DealInfo, error) {
+func (sm *StorageMinerAPI) GetDeals(ctx context.Context, pageIndex, pageSize int) ([]*mtypes.DealInfo, error) {
 	addr := sm.Miner.Address()
 	deals, err := sm.MarketClient.GetDeals(ctx, addr, pageIndex, pageSize)
 	return deals, err

@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"errors"
+	"github.com/filecoin-project/venus/venus-shared/api/market"
 	"time"
 
 	"github.com/ipfs/go-cid"
@@ -17,7 +18,6 @@ import (
 	"github.com/filecoin-project/go-state-types/network"
 	"github.com/filecoin-project/specs-storage/storage"
 
-	api2 "github.com/filecoin-project/venus-market/api"
 	"github.com/filecoin-project/venus-market/piecestorage"
 
 	"github.com/filecoin-project/venus/pkg/events"
@@ -50,7 +50,7 @@ var log = logging.Logger("storageminer")
 type Miner struct {
 	pieceStorage      piecestorage.IPieceStorage
 	messager          api.IMessager
-	marketClient      api2.MarketFullNode
+	marketClient      market.IMarket
 	metadataService   *service.MetadataService
 	sectorInfoService *service.SectorInfoService
 	logService        *service.LogService
@@ -141,7 +141,7 @@ type fullNodeFilteredAPI interface {
 func NewMiner(api fullNodeFilteredAPI,
 	pieceStorage piecestorage.IPieceStorage,
 	messager api.IMessager,
-	marketClient api2.MarketFullNode,
+	marketClient market.IMarket,
 	maddr address.Address,
 	metaService *service.MetadataService,
 	sectorInfoService *service.SectorInfoService,

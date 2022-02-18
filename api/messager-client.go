@@ -4,8 +4,9 @@ import (
 	"context"
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-jsonrpc"
-	"github.com/filecoin-project/venus-messager/api/client"
+
 	"github.com/filecoin-project/venus-sealer/config"
+	mapi "github.com/filecoin-project/venus/venus-shared/api/messager"
 	"github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
@@ -23,11 +24,12 @@ type IMessager interface {
 
 var _ IMessager = (*Messager)(nil)
 
+// Messager todo: why not use mapi.IMessager.WaitMessage directly ??
 type Messager struct {
-	in client.IMessager
+	in mapi.IMessager
 }
 
-func NewMessager(in client.IMessager) *Messager {
+func NewMessager(in mapi.IMessager) *Messager {
 	return &Messager{in: in}
 }
 
@@ -103,11 +105,12 @@ func NewMessageRPC(messagerCfg *config.MessagerConfig) (IMessager, jsonrpc.Clien
 		Token: []byte(messagerCfg.Token),
 	}
 
+
 	addr, err := apiInfo.DialArgs("v0")
 	if err != nil {
 		return nil, nil, err
 	}
-	client, closer, err := client.NewMessageRPC(context.Background(), addr, apiInfo.AuthHeader())
+	client, closer, err := mapi.NewIMessagerRPC(context.TODO(), addr, apiInfo.AuthHeader())
 	if err != nil {
 		return nil, nil, err
 	}

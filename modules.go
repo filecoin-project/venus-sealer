@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"github.com/filecoin-project/venus/venus-shared/api/market"
 	"net/http"
 	"time"
 
@@ -32,7 +33,6 @@ import (
 	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 	types2 "github.com/filecoin-project/venus-sealer/types"
 
-	api2 "github.com/filecoin-project/venus-market/api"
 	config2 "github.com/filecoin-project/venus-market/config"
 	"github.com/filecoin-project/venus-market/piecestorage"
 
@@ -251,7 +251,7 @@ func NewPieceStorage(cfg *config2.PieceStorage, preSignOp piecestorage.IPreSignO
 	return piecestorage.NewPieceStorage(cfg)
 }
 
-func NewPreSignS3Op(cfg *config2.PieceStorage, marketAPI api2.MarketFullNode) piecestorage.IPreSignOp {
+func NewPreSignS3Op(cfg *config2.PieceStorage, marketAPI market.IMarket) piecestorage.IPreSignOp {
 	return marketAPI
 }
 
@@ -262,7 +262,7 @@ type StorageMinerParams struct {
 	MetricsCtx         MetricsCtx
 	API                api.FullNode
 	Messager           api.IMessager
-	MarketClient       api2.MarketFullNode
+	MarketClient       market.IMarket
 	MetadataService    *service.MetadataService
 	LogService         *service.LogService
 	SectorInfoService  *service.SectorInfoService

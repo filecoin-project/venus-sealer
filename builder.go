@@ -2,7 +2,7 @@ package venus_sealer
 
 import (
 	"context"
-
+	"github.com/filecoin-project/venus/venus-shared/api/market"
 	logging "github.com/ipfs/go-log/v2"
 	metricsi "github.com/ipfs/go-metrics-interface"
 	"github.com/multiformats/go-multiaddr"
@@ -12,7 +12,6 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	storage2 "github.com/filecoin-project/specs-storage/storage"
 
-	api3 "github.com/filecoin-project/venus-market/api"
 	config3 "github.com/filecoin-project/venus-market/config"
 	"github.com/filecoin-project/venus-market/piecestorage"
 
@@ -153,6 +152,10 @@ func Online(cfg *config.StorageMiner) Option {
 		Override(new(*storage.Miner), StorageMiner(config.DefaultMainnetStorageMiner().Fees)),
 		// Override(new(*storage.AddressSelector), AddressSelector(nil)), // venus-sealer run: Call Repo before, Online after,will overwrite the original injection(MinerAddressConfig)
 		Override(new(types.NetworkName), StorageNetworkName),
+
+		Override(new(proof_client.GatewayClientSets), proof_client.NewGatewayFullnodes),
+		Override(new(market_client.MarketEventClientSets), market_client.NewMarketEvents),
+
 		Override(GetParamsKey, GetParams),
 		Override(AutoMigrateKey, models.AutoMigrate),
 		Override(SetNetParamsKey, SetupNetParams),
@@ -179,7 +182,7 @@ func Repo(cfg *config.StorageMiner) Option {
 			Override(new(*config.RegisterProofConfig), &cfg.RegisterProof),
 			ConfigAPI(cfg),
 			Override(new(api.IMessager), api.NewMessageRPC),
-			Override(new(api3.MarketFullNode), api.NewMarketNodeRPCAPIV0),
+			Override(new(market.IMarket), api.NewMarketNodeRPCAPIV0),
 			Override(new(piecestorage.IPreSignOp), NewPreSignS3Op),
 			Override(new(piecestorage.IPieceStorage), NewPieceStorage),
 			Override(new(repo.Repo), models.SetDataBase),
