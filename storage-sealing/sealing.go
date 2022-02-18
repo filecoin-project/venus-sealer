@@ -3,6 +3,7 @@ package sealing
 import (
 	"context"
 	"errors"
+	market2 "github.com/filecoin-project/venus/venus-shared/types/market"
 	"sync"
 	"time"
 
@@ -32,7 +33,6 @@ import (
 	types2 "github.com/filecoin-project/venus-sealer/types"
 
 	"github.com/filecoin-project/venus-market/piecestorage"
-	types3 "github.com/filecoin-project/venus-market/types"
 )
 
 var log = logging.Logger("sectors")
@@ -78,7 +78,7 @@ type SealingAPI interface {
 	MessagerSendMsg(ctx context.Context, from, to address.Address, method abi.MethodNum, value, maxFee abi.TokenAmount, params []byte) (string, error)
 
 	//for market
-	GetUnPackedDeals(ctx context.Context, miner address.Address, spec *types3.GetDealSpec) ([]*types3.DealInfoIncludePath, error)                   //perm:read
+	GetUnPackedDeals(ctx context.Context, miner address.Address, spec *market2.GetDealSpec) ([]*market2.DealInfoIncludePath, error)                   //perm:read
 	MarkDealsAsPacking(ctx context.Context, miner address.Address, deals []abi.DealID) error                                                        //perm:write
 	UpdateDealOnPacking(ctx context.Context, miner address.Address, dealId abi.DealID, sectorid abi.SectorNumber, offset abi.PaddedPieceSize) error //perm:write
 }

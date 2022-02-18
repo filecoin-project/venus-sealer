@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	mtypes "github.com/filecoin-project/venus/venus-shared/types/market"
 	"github.com/filecoin-project/venus/venus-shared/types/messager"
 	"golang.org/x/xerrors"
 	"time"
@@ -14,7 +15,6 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	abinetwork "github.com/filecoin-project/go-state-types/network"
 	"github.com/filecoin-project/specs-storage/storage"
-	types4 "github.com/filecoin-project/venus-market/types"
 	"github.com/filecoin-project/venus/venus-shared/actors/builtin"
 	types2 "github.com/filecoin-project/venus/venus-shared/types"
 
@@ -173,7 +173,7 @@ type StorageMiner interface {
 	MessagerGetMessage(ctx context.Context, uuid string) (*messager.Message, error)
 
 	//for market
-	GetDeals(ctx context.Context, pageIndex, pageSize int) ([]*types4.DealInfo, error)
+	GetDeals(ctx context.Context, pageIndex, pageSize int) ([]*mtypes.DealInfo, error)
 	MarkDealsAsPacking(ctx context.Context, deals []abi.DealID) error
 	UpdateDealStatus(ctx context.Context, dealId abi.DealID, status string) error
 
@@ -303,7 +303,7 @@ type StorageMinerStruct struct {
 
 		DealSector func(ctx context.Context) ([]types.DealAssign, error) `perm:"admin"`
 
-		GetDeals           func(ctx context.Context, pageIndex, pageSize int) ([]*types4.DealInfo, error) `perm:"admin"`
+		GetDeals           func(ctx context.Context, pageIndex, pageSize int) ([]*mtypes.DealInfo, error) `perm:"admin"`
 		MarkDealsAsPacking func(ctx context.Context, deals []abi.DealID) error                            `perm:"admin"`
 		UpdateDealStatus   func(ctx context.Context, dealId abi.DealID, status string) error              `perm:"admin"`
 	}
@@ -699,7 +699,7 @@ func (c *StorageMinerStruct) DealSector(ctx context.Context) ([]types.DealAssign
 	return c.Internal.DealSector(ctx)
 }
 
-func (c *StorageMinerStruct) GetDeals(ctx context.Context, pageIndex, pageSize int) ([]*types4.DealInfo, error) {
+func (c *StorageMinerStruct) GetDeals(ctx context.Context, pageIndex, pageSize int) ([]*mtypes.DealInfo, error) {
 	return c.Internal.GetDeals(ctx, pageIndex, pageSize)
 }
 

@@ -18,7 +18,6 @@ require (
 	github.com/filecoin-project/go-bitfield v0.2.4
 	github.com/filecoin-project/go-cbor-util v0.0.1
 	github.com/filecoin-project/go-commp-utils v0.1.3
-	github.com/filecoin-project/go-crypto v0.0.1 // indirect
 	github.com/filecoin-project/go-data-transfer v1.12.1
 	github.com/filecoin-project/go-fil-commcid v0.1.0
 	github.com/filecoin-project/go-fil-markets v1.14.1
@@ -36,11 +35,9 @@ require (
 	github.com/filecoin-project/specs-actors/v6 v6.0.1
 	github.com/filecoin-project/specs-actors/v7 v7.0.0-rc1
 	github.com/filecoin-project/specs-storage v0.2.0
-	github.com/filecoin-project/venus v1.2.0-rc5.0.20220210073318-71c52bbba9c5
+	github.com/filecoin-project/venus v1.2.0-rc5.0.20220218025415-a3ca359cb8c3
 	github.com/filecoin-project/venus-market v1.0.2-0.20220210103815-5ea3e7f6c5ac
-	github.com/filecoin-project/venus-messager v1.4.0-rc2
 	github.com/gbrlsnchs/jwt/v3 v3.0.1
-	github.com/go-kit/kit v0.12.0 // indirect
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
@@ -56,7 +53,6 @@ require (
 	github.com/ipfs/go-graphsync v0.11.5
 	github.com/ipfs/go-ipfs-blockstore v1.1.2
 	github.com/ipfs/go-ipfs-ds-help v1.1.0
-	github.com/ipfs/go-ipfs-files v0.0.9 // indirect
 	github.com/ipfs/go-ipfs-util v0.0.2
 	github.com/ipfs/go-ipld-cbor v0.0.6
 	github.com/ipfs/go-ipld-legacy v0.1.1 // indirect
@@ -72,6 +68,7 @@ require (
 	github.com/multiformats/go-base32 v0.0.4
 	github.com/multiformats/go-multiaddr v0.4.1
 	github.com/multiformats/go-multihash v0.1.0
+	github.com/pkg/errors v0.9.1
 	github.com/polydawn/refmt v0.0.0-20201211092308-30ac6d18308e
 	github.com/raulk/clock v1.1.0
 	github.com/stretchr/testify v1.7.0

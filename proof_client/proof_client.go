@@ -2,20 +2,19 @@ package proof_client
 
 import (
 	"context"
-	"github.com/filecoin-project/go-jsonrpc"
+	gwapi0 "github.com/filecoin-project/venus/venus-shared/api/gateway/v0"
+	gtypes "github.com/filecoin-project/venus/venus-shared/types/gateway"
 	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
-	"github.com/ipfs-force-community/venus-gateway/proofevent"
-	"github.com/ipfs-force-community/venus-gateway/types"
+	xerrors "github.com/pkg/errors"
 	"go.uber.org/fx"
 )
 
-type ProofEventClient struct {
-	ResponseProofEvent func(ctx context.Context, resp *types.ResponseEvent) error
-	ListenProofEvent   func(ctx context.Context, policy *proofevent.ProofRegisterPolicy) (chan *types.RequestEvent, error)
+type IProofEventClient interface {
+	ResponseProofEvent(ctx context.Context, resp *gtypes.ResponseEvent) error
+	ListenProofEvent(ctx context.Context, policy *gtypes.ProofRegisterPolicy) (<-chan *gtypes.RequestEvent, error)
 }
 
-func NewProofEventClient(lc fx.Lifecycle, url, token string) (*ProofEventClient, error) {
-	pvc := &ProofEventClient{}
+func newGateway(lc fx.Lifecycle, ctx context.Context, url, token string) (gwapi0.IGateway, error) {
 	apiInfo := apiinfo.APIInfo{
 		Addr:  url,
 		Token: []byte(token),
@@ -24,9 +23,9 @@ func NewProofEventClient(lc fx.Lifecycle, url, token string) (*ProofEventClient,
 	if err != nil {
 		return nil, err
 	}
-	closer, err := jsonrpc.NewMergeClient(context.Background(), addr, "Gateway", []interface{}{pvc}, apiInfo.AuthHeader())
+	client, closer, err := gwapi0.NewIGatewayRPC(ctx, addr, apiInfo.AuthHeader())
 	if err != nil {
-		return nil, err
+		return nil, xerrors.Errorf("create gateway fullnode:%s failed:%w", addr, err)
 	}
 	lc.Append(fx.Hook{
 		OnStop: func(_ context.Context) error {
@@ -34,5 +33,5 @@ func NewProofEventClient(lc fx.Lifecycle, url, token string) (*ProofEventClient,
 			return nil
 		},
 	})
-	return pvc, nil
+	return client, nil
 }
