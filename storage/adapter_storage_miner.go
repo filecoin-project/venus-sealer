@@ -3,6 +3,8 @@ package storage
 import (
 	"bytes"
 	"context"
+	mapi "github.com/filecoin-project/venus/venus-shared/api/market"
+	market3 "github.com/filecoin-project/venus/venus-shared/types/market"
 
 	cbg "github.com/whyrusleeping/cbor-gen"
 	"golang.org/x/xerrors"
@@ -15,8 +17,6 @@ import (
 	"github.com/filecoin-project/go-state-types/network"
 	market2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
 	market5 "github.com/filecoin-project/specs-actors/v5/actors/builtin/market"
-	api2 "github.com/filecoin-project/venus-market/api"
-	types4 "github.com/filecoin-project/venus-market/types"
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/constants"
 	sealing "github.com/filecoin-project/venus-sealer/storage-sealing"
@@ -36,10 +36,10 @@ var _ sealing.SealingAPI = new(SealingAPIAdapter)
 type SealingAPIAdapter struct {
 	delegate  fullNodeFilteredAPI
 	messager  api.IMessager
-	marketAPI api2.MarketFullNode
+	marketAPI mapi.IMarket
 }
 
-func NewSealingAPIAdapter(api fullNodeFilteredAPI, messager api.IMessager, marketAPI api2.MarketFullNode) SealingAPIAdapter {
+func NewSealingAPIAdapter(api fullNodeFilteredAPI, messager api.IMessager, marketAPI mapi.IMarket) SealingAPIAdapter {
 	return SealingAPIAdapter{delegate: api, messager: messager, marketAPI: marketAPI}
 }
 
@@ -476,7 +476,7 @@ func (s SealingAPIAdapter) MessagerSendMsg(ctx context.Context, from, to address
 	})
 }
 
-func (s SealingAPIAdapter) GetUnPackedDeals(ctx context.Context, miner address.Address, spec *types4.GetDealSpec) ([]*types4.DealInfoIncludePath, error) {
+func (s SealingAPIAdapter) GetUnPackedDeals(ctx context.Context, miner address.Address, spec *market3.GetDealSpec) ([]*market3.DealInfoIncludePath, error) {
 	return s.marketAPI.GetUnPackedDeals(ctx, miner, spec)
 }
 
