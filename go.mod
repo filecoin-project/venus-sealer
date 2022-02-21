@@ -6,7 +6,7 @@ require (
 	contrib.go.opencensus.io/exporter/jaeger v0.2.1
 	github.com/BurntSushi/toml v0.4.1
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
-	github.com/containerd/cgroups v0.0.0-20201119153540-4cbc285b3327
+	github.com/containerd/cgroups v1.0.3
 	github.com/detailyang/go-fallocate v0.0.0-20180908115635-432fa640bd2e
 	github.com/dgraph-io/badger/v2 v2.2007.3
 	github.com/docker/go-units v0.4.0
@@ -35,7 +35,7 @@ require (
 	github.com/filecoin-project/specs-actors/v6 v6.0.1
 	github.com/filecoin-project/specs-actors/v7 v7.0.0-rc1
 	github.com/filecoin-project/specs-storage v0.2.0
-	github.com/filecoin-project/venus v1.2.0-rc5.0.20220218025415-a3ca359cb8c3
+	github.com/filecoin-project/venus v1.2.0-rc6.0.20220221094150-d4d38654e179
 	github.com/filecoin-project/venus-market v1.0.2-0.20220210103815-5ea3e7f6c5ac
 	github.com/gbrlsnchs/jwt/v3 v3.0.1
 	github.com/golang/mock v1.6.0
@@ -81,8 +81,8 @@ require (
 	go.uber.org/multierr v1.7.0
 	go.uber.org/zap v1.19.1
 	golang.org/x/crypto v0.0.0-20211209193657-4570a0811e8b // indirect
-	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2
-	golang.org/x/sys v0.0.0-20211209171907-798191bca915
+	golang.org/x/net v0.0.0-20211216030914-fe4d6282115f
+	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 	gorm.io/driver/mysql v1.1.1
 	gorm.io/driver/sqlite v1.1.4
