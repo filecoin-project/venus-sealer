@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/filecoin-project/go-padreader"
-	market2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
 	"github.com/filecoin-project/venus/venus-shared/types/market"
 
 	"github.com/filecoin-project/venus-sealer/types"
@@ -39,19 +38,7 @@ func (m *Sealing) DealSector(ctx context.Context) ([]types.DealAssign, error) {
 		so, err := m.SectorAddPieceToAny(ctx, deal.Length.Unpadded(), padR, types.PieceDealInfo{
 			PublishCid: &deal.PublishCid,
 			DealID:     deal.DealID,
-			DealProposal: &market2.DealProposal{
-				PieceCID:             deal.DealProposal.PieceCID,
-				PieceSize:            deal.DealProposal.PieceSize,
-				VerifiedDeal:         deal.VerifiedDeal,
-				Client:               deal.Client,
-				Provider:             deal.Provider,
-				Label:                deal.Label,
-				StartEpoch:           deal.StartEpoch,
-				EndEpoch:             deal.EndEpoch,
-				StoragePricePerEpoch: deal.StoragePricePerEpoch,
-				ProviderCollateral:   deal.ProviderCollateral,
-				ClientCollateral:     deal.ClientCollateral,
-			},
+			DealProposal: &deal.DealProposal,
 			DealSchedule: types.DealSchedule{StartEpoch: deal.StartEpoch, EndEpoch: deal.EndEpoch},
 			KeepUnsealed: deal.FastRetrieval,
 		})

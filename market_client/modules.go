@@ -32,6 +32,7 @@ func NewMarketEvents(gatewayEvents proof_client.GatewayClientSets,
 		}
 		if url == nodeConfig.Url {
 			marketClients[url] = marketNode
+			continue
 		}
 		log.Warnf("Don't kown endpoint :%s is a market node or gateway node", url)
 	}
