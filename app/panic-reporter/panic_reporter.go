@@ -39,7 +39,7 @@ var PanicReportJournalTail = defaultJournalTail
 func GeneratePanicReport(persistPath, repoPath, label string) {
 	// make sure we always dump the latest logs on the way out
 	// especially since we're probably panicking
-	defer panicLog.Sync() //nolint:errcheck
+	defer panicLog.Sync() // nolint:errcheck
 
 	if persistPath == "" && repoPath == "" {
 		panicLog.Warn("missing persist and repo paths, aborting panic report creation")
