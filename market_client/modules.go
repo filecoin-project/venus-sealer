@@ -2,12 +2,11 @@ package market_client
 
 import (
 	"context"
+	"github.com/filecoin-project/venus-market/piecestorage"
 	"github.com/filecoin-project/venus-sealer/proof_client"
 	"github.com/filecoin-project/venus/venus-shared/api/market"
+	xerrors "github.com/pkg/errors"
 	"go.uber.org/fx"
-	"golang.org/x/xerrors"
-
-	"github.com/filecoin-project/venus-market/piecestorage"
 
 	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/sector-storage"
@@ -25,23 +24,31 @@ func NewMarketEvents(gatewayEvents proof_client.GatewayClientSets,
 
 	var marketClients = make(map[string]IMarketEventClient)
 
-	for _, url := range mrgCfg.Urls {
-		if client, exist := gatewayEvents[url]; exist && client != nil {
+	if len(mrgCfg.Urls) == 0 { // RegisterMarket is not set in configurations, use all
+		for url, client := range gatewayEvents {
 			marketClients[url] = client
-			continue
 		}
-		if url == nodeConfig.Url {
-			marketClients[url] = marketNode
-			continue
+		if marketNode != nil {
+			marketClients[nodeConfig.Url] = marketNode
 		}
-		log.Warnf("Don't kown endpoint :%s is a market node or gateway node", url)
+	} else {
+		for _, url := range mrgCfg.Urls {
+			if client, exist := gatewayEvents[url]; exist && client != nil {
+				marketClients[url] = client
+				continue
+			}
+			if url == nodeConfig.Url {
+				marketClients[url] = marketNode
+				continue
+			}
+			log.Warnf("Don't kown endpoint :%s is a market node or gateway node", url)
+		}
+		if len(marketClients) == 0 {
+			return nil, xerrors.Errorf("RegisterMarket is set in configurations, but its neither a 'market' nor a 'gateway'")
+		}
 	}
 
-	if len(marketClients) == 0 {
-		return nil, xerrors.New("no MarketEventClient")
-	}
 	return marketClients, nil
-
 }
 
 func StartMarketEvent(lc fx.Lifecycle, stores *stores.Remote,

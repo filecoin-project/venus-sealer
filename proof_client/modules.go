@@ -3,6 +3,7 @@ package proof_client
 import (
 	"context"
 	"go.uber.org/fx"
+	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/storage"
@@ -20,6 +21,10 @@ func NewGatewayFullnodes(lc fx.Lifecycle, cfg *config.RegisterProofConfig) (Gate
 		if clients[addr], err = newGateway(lc, ctx, addr, cfg.Token); err != nil {
 			return nil, err
 		}
+	}
+
+	if len(clients) == 0 {
+		return nil, xerrors.Errorf("must have a GateWayNode, check 'RegisterProof' configuration")
 	}
 	return clients, nil
 }
