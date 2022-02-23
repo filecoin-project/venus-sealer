@@ -55,6 +55,7 @@ const (
 	//proof
 	StartProofEventKey
 	StartMarketEventKey
+	WarmupKey
 	_nInvokes // keep this last
 )
 
@@ -161,6 +162,7 @@ func Online(cfg *config.StorageMiner) Option {
 		Override(SetNetParamsKey, SetupNetParams),
 		Override(StartProofEventKey, proof_client.StartProofEvent),
 		Override(StartMarketEventKey, market_client.StartMarketEvent),
+		Override(WarmupKey, DoPoStWarmup),
 	)
 }
 

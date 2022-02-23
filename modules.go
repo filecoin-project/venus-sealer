@@ -4,7 +4,11 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"github.com/filecoin-project/go-bitfield"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin"
 	"github.com/filecoin-project/venus/venus-shared/api/market"
+	"math"
+	"math/rand"
 	"net/http"
 	"time"
 
@@ -275,6 +279,79 @@ type StorageMinerParams struct {
 	AddrSel            *storage.AddressSelector
 	NetworkParams      *config.NetParamsConfig
 	PieceStorage       piecestorage.IPieceStorage `optional:"true"`
+}
+
+func DoPoStWarmup(ctx MetricsCtx, api api.FullNode, metadataService *service.MetadataService, prover storage.WinningPoStProver) error {
+	maddr, err := metadataService.GetMinerAddress()
+	if err != nil {
+		return err
+	}
+	deadlines, err := api.StateMinerDeadlines(ctx, maddr, types.EmptyTSK)
+	if err != nil {
+		return xerrors.Errorf("getting deadlines: %w", err)
+	}
+
+	var sector abi.SectorNumber = math.MaxUint64
+
+out:
+	for dlIdx := range deadlines {
+		partitions, err := api.StateMinerPartitions(ctx, maddr, uint64(dlIdx), types.EmptyTSK)
+		if err != nil {
+			return xerrors.Errorf("getting partitions for deadline %d: %w", dlIdx, err)
+		}
+
+		for _, partition := range partitions {
+			b, err := partition.ActiveSectors.First()
+			if err == bitfield.ErrNoBitsSet {
+				continue
+			}
+			if err != nil {
+				return err
+			}
+
+			sector = abi.SectorNumber(b)
+			break out
+		}
+	}
+
+	if sector == math.MaxUint64 {
+		log.Info("skipping winning PoSt warmup, no sectors")
+		return nil
+	}
+
+	log.Infow("starting winning PoSt warmup", "sector", sector)
+	start := time.Now()
+
+	var r abi.PoStRandomness = make([]byte, abi.RandomnessLength)
+	_, _ = rand.Read(r)
+
+	si, err := api.StateSectorGetInfo(ctx, maddr, sector, types.EmptyTSK)
+	if err != nil {
+		return xerrors.Errorf("getting sector info: %w", err)
+	}
+
+	ts, err := api.ChainHead(ctx)
+	if err != nil {
+		return xerrors.Errorf("PostWarmup failed: call ChainHead failed:%w", err)
+	}
+
+	version, err := api.StateNetworkVersion(ctx, ts.Key())
+	if err != nil {
+		return xerrors.Errorf("PostWarmup failed: get network version failed:%w", err)
+	}
+	_, err = prover.ComputeProof(ctx, []builtin.ExtendedSectorInfo{
+		{
+			SealProof:    si.SealProof,
+			SectorNumber: sector,
+			SealedCID:    si.SealedCID,
+		}}, r, ts.Height(), version)
+	if err != nil {
+		log.Errorw("failed to compute proof: %w, please check your storage and restart sealer after fixed", err)
+		return nil
+	}
+
+	log.Infow("winning PoSt warmup successful", "took", time.Since(start))
+	return nil
 }
 
 func StorageMiner(fc config.MinerFeeConfig) func(params StorageMinerParams) (*storage.Miner, error) {
