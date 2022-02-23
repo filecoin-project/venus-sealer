@@ -308,7 +308,6 @@ out:
 			if err != nil {
 				return err
 			}
-
 			sector = abi.SectorNumber(b)
 			break out
 		}
@@ -343,6 +342,7 @@ out:
 		{
 			SealProof:    si.SealProof,
 			SectorNumber: sector,
+			SectorKey:    si.SectorKeyCID,
 			SealedCID:    si.SealedCID,
 		}}, r, ts.Height(), version)
 	if err != nil {
