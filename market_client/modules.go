@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/filecoin-project/venus-market/piecestorage"
 	"github.com/filecoin-project/venus-sealer/proof_client"
+	gwapi0 "github.com/filecoin-project/venus/venus-shared/api/gateway/v0"
 	"github.com/filecoin-project/venus/venus-shared/api/market"
 	xerrors "github.com/pkg/errors"
 	"go.uber.org/fx"
@@ -15,14 +16,14 @@ import (
 	"github.com/filecoin-project/venus-sealer/types"
 )
 
-type MarketEventClientSets map[string]IMarketEventClient
+type MarketEventClientSets map[string]gwapi0.IMarketServiceProvider
 
 func NewMarketEvents(gatewayEvents proof_client.GatewayClientSets,
 	mrgCfg *config.RegisterMarketConfig,
 	nodeConfig *config.MarketNodeConfig,
 	marketNode market.IMarket) (MarketEventClientSets, error) {
 
-	var marketClients = make(map[string]IMarketEventClient)
+	var marketClients = make(map[string]gwapi0.IMarketServiceProvider)
 
 	if len(mrgCfg.Urls) == 0 { // RegisterMarket is not set in configurations, use all
 		for url, client := range gatewayEvents {
