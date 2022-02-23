@@ -346,7 +346,7 @@ out:
 			SealedCID:    si.SealedCID,
 		}}, r, ts.Height(), version)
 	if err != nil {
-		log.Errorw("failed to compute proof: %w, please check your storage and restart sealer after fixed", err)
+		log.Errorf("failed to compute proof: %s, please check your storage and restart sealer after fixed", err.Error())
 		return nil
 	}
 
