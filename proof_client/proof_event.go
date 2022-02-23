@@ -3,6 +3,7 @@ package proof_client
 import (
 	"context"
 	"encoding/json"
+	gateway2 "github.com/filecoin-project/venus/venus-shared/api/gateway/v0"
 	types3 "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/filecoin-project/venus/venus-shared/types/gateway"
 	"time"
@@ -13,15 +14,13 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/venus-sealer/storage"
 	types2 "github.com/filecoin-project/venus-sealer/types"
-
-	"github.com/ipfs-force-community/venus-gateway/types"
 )
 
 var log = logging.Logger("proof_event")
 
 type ProofEvent struct {
 	prover storage.WinningPoStProver
-	client IProofEventClient
+	client gateway2.IProofServiceProvider
 	mAddr  types2.MinerAddress
 }
 
@@ -59,14 +58,14 @@ func (e *ProofEvent) listenProofRequestOnce(ctx context.Context) error {
 	for proofEvent := range proofEventCh {
 		switch proofEvent.Method {
 		case "InitConnect":
-			req := types.ConnectedCompleted{}
+			req := gateway.ConnectedCompleted{}
 			err := json.Unmarshal(proofEvent.Payload, &req)
 			if err != nil {
 				return xerrors.Errorf("odd error in connect %v", err)
 			}
 			log.Infof("success to connect with proof %s", req.ChannelId)
 		case "ComputeProof":
-			req := types.ComputeProofRequest{}
+			req := gateway.ComputeProofRequest{}
 			err := json.Unmarshal(proofEvent.Payload, &req)
 			if err != nil {
 				_ = e.client.ResponseProofEvent(ctx, &gateway.ResponseEvent{
@@ -86,7 +85,7 @@ func (e *ProofEvent) listenProofRequestOnce(ctx context.Context) error {
 }
 
 // context.Context, []builtin.ExtendedSectorInfo, abi.PoStRandomness, abi.ChainEpoch, network.Version
-func (e *ProofEvent) processComputeProof(ctx context.Context, reqId types3.UUID, req types.ComputeProofRequest) {
+func (e *ProofEvent) processComputeProof(ctx context.Context, reqId types3.UUID, req gateway.ComputeProofRequest) {
 	proof, err := e.prover.ComputeProof(ctx, req.SectorInfos, req.Rand, req.Height, req.NWVersion)
 	if err != nil {
 		_ = e.client.ResponseProofEvent(ctx, &gateway.ResponseEvent{

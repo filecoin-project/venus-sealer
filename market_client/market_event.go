@@ -3,6 +3,7 @@ package market_client
 import (
 	"context"
 	"encoding/json"
+	gwapi0 "github.com/filecoin-project/venus/venus-shared/api/gateway/v0"
 	types3 "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/filecoin-project/venus/venus-shared/types/gateway"
 	"time"
@@ -16,8 +17,6 @@ import (
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
 	types2 "github.com/filecoin-project/venus-sealer/types"
 
-	"github.com/ipfs-force-community/venus-gateway/marketevent"
-	"github.com/ipfs-force-community/venus-gateway/types"
 	logging "github.com/ipfs/go-log/v2"
 
 	"github.com/filecoin-project/venus-market/piecestorage"
@@ -30,8 +29,8 @@ import (
 var log = logging.Logger("market_event")
 
 type MarketEvent struct {
-	client       IMarketEventClient
-	mAddr        types2.MinerAddress
+	client gwapi0.IMarketServiceProvider
+	mAddr  types2.MinerAddress
 	stor         *stores.Remote
 	sectorBlocks *sectorblocks.SectorBlocks
 	storageMgr   *sectorstorage.Manager
@@ -73,14 +72,14 @@ func (e *MarketEvent) listenMarketRequestOnce(ctx context.Context) error {
 	for marketEvent := range marketEventCh {
 		switch marketEvent.Method {
 		case "InitConnect":
-			req := types.ConnectedCompleted{}
+			req := gateway.ConnectedCompleted{}
 			err := json.Unmarshal(marketEvent.Payload, &req)
 			if err != nil {
 				return xerrors.Errorf("odd error in connect %v", err)
 			}
 			log.Infof("success to connect with market %s", req.ChannelId)
 		case "IsUnsealed":
-			req := marketevent.IsUnsealRequest{}
+			req := gateway.IsUnsealRequest{}
 			err := json.Unmarshal(marketEvent.Payload, &req)
 			if err != nil {
 				_ = e.client.ResponseMarketEvent(ctx, &gateway.ResponseEvent{
@@ -92,7 +91,7 @@ func (e *MarketEvent) listenMarketRequestOnce(ctx context.Context) error {
 			}
 			e.processIsUnsealed(ctx, marketEvent.ID, req)
 		case "SectorsUnsealPiece":
-			req := marketevent.UnsealRequest{}
+			req := gateway.UnsealRequest{}
 			err := json.Unmarshal(marketEvent.Payload, &req)
 			if err != nil {
 				_ = e.client.ResponseMarketEvent(ctx, &gateway.ResponseEvent{
@@ -111,7 +110,7 @@ func (e *MarketEvent) listenMarketRequestOnce(ctx context.Context) error {
 	return nil
 }
 
-func (e *MarketEvent) processIsUnsealed(ctx context.Context, reqId types3.UUID, req marketevent.IsUnsealRequest) {
+func (e *MarketEvent) processIsUnsealed(ctx context.Context, reqId types3.UUID, req gateway.IsUnsealRequest) {
 	has, err := e.stor.CheckIsUnsealed(ctx, req.Sector, abi.PaddedPieceSize(req.Offset), req.Size)
 	if err != nil {
 		e.error(ctx, reqId, err)
@@ -121,7 +120,7 @@ func (e *MarketEvent) processIsUnsealed(ctx context.Context, reqId types3.UUID, 
 	e.val(ctx, reqId, has)
 }
 
-func (e *MarketEvent) processSectorUnsealed(ctx context.Context, reqId types3.UUID, req marketevent.UnsealRequest) {
+func (e *MarketEvent) processSectorUnsealed(ctx context.Context, reqId types3.UUID, req gateway.UnsealRequest) {
 	sectorInfo, err := e.sectorBlocks.GetSectorInfo(req.Sector.ID.Number)
 	if err != nil {
 		e.error(ctx, reqId, err)

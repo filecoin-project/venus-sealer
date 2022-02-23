@@ -35,8 +35,8 @@ require (
 	github.com/filecoin-project/specs-actors/v6 v6.0.1
 	github.com/filecoin-project/specs-actors/v7 v7.0.0-rc1
 	github.com/filecoin-project/specs-storage v0.2.0
-	github.com/filecoin-project/venus v1.2.0-rc6.0.20220221094150-d4d38654e179
-	github.com/filecoin-project/venus-market v1.0.2-0.20220210103815-5ea3e7f6c5ac
+	github.com/filecoin-project/venus v1.2.0
+	github.com/filecoin-project/venus-market v1.0.2-0.20220222071139-31fba26405cc
 	github.com/gbrlsnchs/jwt/v3 v3.0.1
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.3.0
@@ -45,7 +45,6 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/icza/backscanner v0.0.0-20210726202459-ac2ffc679f94
 	github.com/ipfs-force-community/venus-common-utils v0.0.0-20211122032945-eb6cab79c62a
-	github.com/ipfs-force-community/venus-gateway v1.2.0-rc2
 	github.com/ipfs/go-block-format v0.0.3
 	github.com/ipfs/go-cid v0.1.0
 	github.com/ipfs/go-datastore v0.5.1
@@ -91,12 +90,10 @@ require (
 	lukechampine.com/blake3 v1.1.7 // indirect
 )
 
-replace github.com/filecoin-project/filecoin-ffi => ./extern/filecoin-ffi
-
-replace github.com/ipfs/go-ipfs-cmds => github.com/ipfs-force-community/go-ipfs-cmds v0.6.1-0.20210521090123-4587df7fa0ab
-
-replace github.com/filecoin-project/go-jsonrpc => github.com/ipfs-force-community/go-jsonrpc v0.1.4-0.20210721095535-a67dff16de21
-
-replace github.com/filecoin-project/go-statemachine => github.com/hunjixin/go-statemachine v0.0.0-20220110084945-5867c28ba08a
-
-replace github.com/filecoin-project/go-statestore => github.com/hunjixin/go-statestore v0.1.1-0.20211229093043-b4de7dc02a01
+replace (
+	github.com/filecoin-project/filecoin-ffi => ./extern/filecoin-ffi
+	github.com/filecoin-project/go-jsonrpc => github.com/ipfs-force-community/go-jsonrpc v0.1.4-0.20210721095535-a67dff16de21
+	github.com/filecoin-project/go-statemachine => github.com/hunjixin/go-statemachine v0.0.0-20220110084945-5867c28ba08a
+	github.com/filecoin-project/go-statestore => github.com/hunjixin/go-statestore v0.1.1-0.20211229093043-b4de7dc02a01
+	github.com/ipfs/go-ipfs-cmds => github.com/ipfs-force-community/go-ipfs-cmds v0.6.1-0.20210521090123-4587df7fa0ab
+)
