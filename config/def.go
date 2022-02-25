@@ -7,14 +7,16 @@ import (
 	"time"
 
 	"github.com/ipfs/go-cid"
+	"github.com/multiformats/go-multiaddr"
 
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
-	"github.com/multiformats/go-multiaddr"
-
-	"github.com/filecoin-project/venus/pkg/types"
 
 	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
+
+	"github.com/filecoin-project/venus-market/config"
+
+	"github.com/filecoin-project/venus/venus-shared/types"
 )
 
 const (
@@ -24,7 +26,6 @@ const (
 	// configured by the user.
 	RetrievalPricingExternalMode = "external"
 )
-
 
 type HomeDir string
 
@@ -41,19 +42,21 @@ func (cfg StorageWorker) LocalStorage() *LocalStorage {
 
 // StorageMiner is a miner config
 type StorageMiner struct {
-	DataDir        string
-	API            API
-	Dealmaking     DealmakingConfig
-	Sealing        SealingConfig
-	Storage        sectorstorage.SealerConfig
-	Fees           MinerFeeConfig
-	Addresses      MinerAddressConfig
-	NetParams      NetParamsConfig
-	DB             DbConfig
-	Node           NodeConfig
-	JWT            JWTConfig
-	Messager       MessagerConfig
-	Market         MarketConfig
+	DataDir    string
+	API        API
+	Dealmaking DealmakingConfig
+	Sealing    SealingConfig
+	Storage    sectorstorage.SealerConfig
+	Fees       MinerFeeConfig
+	Addresses  MinerAddressConfig
+	NetParams  NetParamsConfig
+	DB         DbConfig
+	Node       NodeConfig
+	JWT        JWTConfig
+	Messager   MessagerConfig
+
+	MarketNode     MarketNodeConfig
+	PieceStorage   config.PieceStorage
 	RegisterProof  RegisterProofConfig
 	RegisterMarket RegisterMarketConfig
 
@@ -78,7 +81,7 @@ type MessagerConfig struct {
 	Token string
 }
 
-type MarketConfig struct {
+type MarketNodeConfig struct {
 	Url   string
 	Token string
 }
@@ -343,6 +346,7 @@ type FeeConfig struct {
 
 type NetParamsConfig struct {
 	UpgradeIgnitionHeight   abi.ChainEpoch
+	UpgradeOhSnapHeight     int64
 	ForkLengthThreshold     abi.ChainEpoch
 	BlockDelaySecs          uint64
 	PreCommitChallengeDelay abi.ChainEpoch

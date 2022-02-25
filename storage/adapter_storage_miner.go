@@ -3,10 +3,9 @@ package storage
 import (
 	"bytes"
 	"context"
-	api2 "github.com/filecoin-project/venus-market/api"
-	"github.com/filecoin-project/venus-market/piece"
+	mapi "github.com/filecoin-project/venus/venus-shared/api/market"
+	market3 "github.com/filecoin-project/venus/venus-shared/types/market"
 
-	"github.com/ipfs/go-cid"
 	cbg "github.com/whyrusleeping/cbor-gen"
 	"golang.org/x/xerrors"
 
@@ -16,24 +15,20 @@ import (
 	"github.com/filecoin-project/go-state-types/crypto"
 	"github.com/filecoin-project/go-state-types/dline"
 	"github.com/filecoin-project/go-state-types/network"
-
 	market2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
 	market5 "github.com/filecoin-project/specs-actors/v5/actors/builtin/market"
-
-	"github.com/filecoin-project/venus/app/submodule/apitypes"
-	chain2 "github.com/filecoin-project/venus/pkg/chain"
-	constants2 "github.com/filecoin-project/venus/pkg/constants"
-	"github.com/filecoin-project/venus/pkg/types"
-	actors "github.com/filecoin-project/venus/pkg/types/specactors"
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/market"
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
-
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/constants"
 	sealing "github.com/filecoin-project/venus-sealer/storage-sealing"
 	types2 "github.com/filecoin-project/venus-sealer/types"
-
-	types3 "github.com/filecoin-project/venus-messager/types"
+	chain2 "github.com/filecoin-project/venus/pkg/chain"
+	constants2 "github.com/filecoin-project/venus/pkg/constants"
+	"github.com/filecoin-project/venus/venus-shared/actors"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin/market"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	"github.com/filecoin-project/venus/venus-shared/types"
+	types3 "github.com/filecoin-project/venus/venus-shared/types/messager"
+	"github.com/ipfs/go-cid"
 )
 
 var _ sealing.SealingAPI = new(SealingAPIAdapter)
@@ -41,10 +36,10 @@ var _ sealing.SealingAPI = new(SealingAPIAdapter)
 type SealingAPIAdapter struct {
 	delegate  fullNodeFilteredAPI
 	messager  api.IMessager
-	marketAPI api2.MarketFullNode
+	marketAPI mapi.IMarket
 }
 
-func NewSealingAPIAdapter(api fullNodeFilteredAPI, messager api.IMessager, marketAPI api2.MarketFullNode) SealingAPIAdapter {
+func NewSealingAPIAdapter(api fullNodeFilteredAPI, messager api.IMessager, marketAPI mapi.IMarket) SealingAPIAdapter {
 	return SealingAPIAdapter{delegate: api, messager: messager, marketAPI: marketAPI}
 }
 
@@ -103,7 +98,7 @@ func (s SealingAPIAdapter) StateMinerWorkerAddress(ctx context.Context, maddr ad
 	return mi.Worker, nil
 }
 
-func (s SealingAPIAdapter) StateMinerDeadlines(ctx context.Context, maddr address.Address, tok types2.TipSetToken) ([]apitypes.Deadline, error) {
+func (s SealingAPIAdapter) StateMinerDeadlines(ctx context.Context, maddr address.Address, tok types2.TipSetToken) ([]types.Deadline, error) {
 	tsk, err := types.TipSetKeyFromBytes(tok)
 	if err != nil {
 		return nil, xerrors.Errorf("failed to unmarshal TipSetToken to TipSetKey: %w", err)
@@ -121,6 +116,15 @@ func (s SealingAPIAdapter) StateMinerSectorAllocated(ctx context.Context, maddr 
 	return s.delegate.StateMinerSectorAllocated(ctx, maddr, sid, tsk)
 }
 
+func (s SealingAPIAdapter) StateMinerActiveSectors(ctx context.Context, maddr address.Address, tok types2.TipSetToken) ([]*miner.SectorOnChainInfo, error) {
+	tsk, err := types.TipSetKeyFromBytes(tok)
+	if err != nil {
+		return nil, xerrors.Errorf("failed to unmarshal TipSetToken to TipSetKey: %w", err)
+	}
+
+	return s.delegate.StateMinerActiveSectors(ctx, maddr, tsk)
+}
+
 func (s SealingAPIAdapter) StateWaitMsg(ctx context.Context, mcid cid.Cid) (types2.MsgLookup, error) {
 	wmsg, err := s.delegate.StateWaitMsg(ctx, mcid, constants.MessageConfidence, constants2.LookbackNoLimit, true)
 	if err != nil {
@@ -130,7 +134,7 @@ func (s SealingAPIAdapter) StateWaitMsg(ctx context.Context, mcid cid.Cid) (type
 	return types2.MsgLookup{
 		Receipt: types2.MessageReceipt{
 			ExitCode: wmsg.Receipt.ExitCode,
-			Return:   wmsg.Receipt.ReturnValue,
+			Return:   wmsg.Receipt.Return,
 			GasUsed:  wmsg.Receipt.GasUsed,
 		},
 		TipSetTok: wmsg.TipSet.Bytes(),
@@ -151,7 +155,7 @@ func (s SealingAPIAdapter) StateSearchMsg(ctx context.Context, c cid.Cid) (*type
 	return &types2.MsgLookup{
 		Receipt: types2.MessageReceipt{
 			ExitCode: wmsg.Receipt.ExitCode,
-			Return:   wmsg.Receipt.ReturnValue,
+			Return:   wmsg.Receipt.Return,
 			GasUsed:  wmsg.Receipt.GasUsed,
 		},
 		TipSetTok: wmsg.TipSet.Bytes(),
@@ -208,7 +212,7 @@ func (s SealingAPIAdapter) StateComputeDataCommitment(ctx context.Context, maddr
 
 	if nv < network.Version13 {
 		var c cbg.CborCid
-		if err := c.UnmarshalCBOR(bytes.NewReader(r.MsgRct.ReturnValue)); err != nil {
+		if err := c.UnmarshalCBOR(bytes.NewReader(r.MsgRct.Return)); err != nil {
 			return cid.Undef, xerrors.Errorf("failed to unmarshal CBOR to CborCid: %w", err)
 		}
 
@@ -216,7 +220,7 @@ func (s SealingAPIAdapter) StateComputeDataCommitment(ctx context.Context, maddr
 	}
 
 	var cr market5.ComputeDataCommitmentReturn
-	if err := cr.UnmarshalCBOR(bytes.NewReader(r.MsgRct.ReturnValue)); err != nil {
+	if err := cr.UnmarshalCBOR(bytes.NewReader(r.MsgRct.Return)); err != nil {
 		return cid.Undef, xerrors.Errorf("failed to unmarshal CBOR to CborCid: %w", err)
 	}
 
@@ -293,7 +297,7 @@ func (s SealingAPIAdapter) StateSectorPartition(ctx context.Context, maddr addre
 	return nil, nil // not found
 }
 
-func (s SealingAPIAdapter) StateMinerPartitions(ctx context.Context, maddr address.Address, dlIdx uint64, tok types2.TipSetToken) ([]apitypes.Partition, error) {
+func (s SealingAPIAdapter) StateMinerPartitions(ctx context.Context, maddr address.Address, dlIdx uint64, tok types2.TipSetToken) ([]types.Partition, error) {
 	tsk, err := types.TipSetKeyFromBytes(tok)
 	if err != nil {
 		return nil, xerrors.Errorf("failed to unmarshal TipSetToken to TipSetKey: %w", err)
@@ -311,7 +315,7 @@ func (s SealingAPIAdapter) StateLookupID(ctx context.Context, addr address.Addre
 	return s.delegate.StateLookupID(ctx, addr, tsk)
 }
 
-func (s SealingAPIAdapter) StateMarketStorageDeal(ctx context.Context, dealID abi.DealID, tok types2.TipSetToken) (*apitypes.MarketDeal, error) {
+func (s SealingAPIAdapter) StateMarketStorageDeal(ctx context.Context, dealID abi.DealID, tok types2.TipSetToken) (*types.MarketDeal, error) {
 	tsk, err := types.TipSetKeyFromBytes(tok)
 	if err != nil {
 		return nil, err
@@ -428,7 +432,7 @@ func (s SealingAPIAdapter) MessagerWaitMsg(ctx context.Context, uuid string) (ty
 	return types2.MsgLookup{
 		Receipt: types2.MessageReceipt{
 			ExitCode: msg.Receipt.ExitCode,
-			Return:   msg.Receipt.ReturnValue,
+			Return:   msg.Receipt.Return,
 			GasUsed:  msg.Receipt.GasUsed,
 		},
 		TipSetTok: msg.TipSetKey.Bytes(),
@@ -447,7 +451,7 @@ func (s SealingAPIAdapter) MessagerSearchMsg(ctx context.Context, uuid string) (
 	return &types2.MsgLookup{
 		Receipt: types2.MessageReceipt{
 			ExitCode: msg.Receipt.ExitCode,
-			Return:   msg.Receipt.ReturnValue,
+			Return:   msg.Receipt.Return,
 			GasUsed:  msg.Receipt.GasUsed,
 		},
 		TipSetTok: msg.TipSetKey.Bytes(),
@@ -456,14 +460,14 @@ func (s SealingAPIAdapter) MessagerSearchMsg(ctx context.Context, uuid string) (
 }
 
 func (s SealingAPIAdapter) MessagerSendMsg(ctx context.Context, from, to address.Address, method abi.MethodNum, value, maxFee abi.TokenAmount, params []byte) (string, error) {
-	return s.messager.PushMessage(ctx, &types.UnsignedMessage{
+	return s.messager.PushMessage(ctx, &types.Message{
 		Version: 0,
 		To:      to,
 		From:    from,
 		Value:   value,
 		Method:  method,
 		Params:  params,
-	}, &types3.MsgMeta{
+	}, &types3.SendSpec{
 		ExpireEpoch:       0,
 		GasOverEstimation: 0,
 		//todo give a maxFee or for nil
@@ -472,7 +476,7 @@ func (s SealingAPIAdapter) MessagerSendMsg(ctx context.Context, from, to address
 	})
 }
 
-func (s SealingAPIAdapter) GetUnPackedDeals(ctx context.Context, miner address.Address, spec *piece.GetDealSpec) ([]*piece.DealInfoIncludePath, error) {
+func (s SealingAPIAdapter) GetUnPackedDeals(ctx context.Context, miner address.Address, spec *market3.GetDealSpec) ([]*market3.DealInfoIncludePath, error) {
 	return s.marketAPI.GetUnPackedDeals(ctx, miner, spec)
 }
 
@@ -480,6 +484,6 @@ func (s SealingAPIAdapter) MarkDealsAsPacking(ctx context.Context, miner address
 	return s.marketAPI.MarkDealsAsPacking(ctx, miner, deals)
 }
 
-func (s SealingAPIAdapter) UpdateDealOnPacking(ctx context.Context, miner address.Address, pieceCID cid.Cid, dealId abi.DealID, sectorid abi.SectorNumber, offset abi.PaddedPieceSize) error {
-	return s.marketAPI.UpdateDealOnPacking(ctx, miner, pieceCID, dealId, sectorid, offset)
+func (s SealingAPIAdapter) UpdateDealOnPacking(ctx context.Context, miner address.Address, dealId abi.DealID, sectorid abi.SectorNumber, offset abi.PaddedPieceSize) error {
+	return s.marketAPI.UpdateDealOnPacking(ctx, miner, dealId, sectorid, offset)
 }

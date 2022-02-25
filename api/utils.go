@@ -9,7 +9,7 @@ import (
 
 	"github.com/ipfs/go-cid"
 
-	"github.com/filecoin-project/venus/app/submodule/apitypes"
+	"github.com/filecoin-project/venus/venus-shared/types"
 )
 
 func SyncWait(ctx context.Context, napi FullNode, blockDelay uint64, watch bool) error {
@@ -47,10 +47,10 @@ func SyncWait(ctx context.Context, napi FullNode, blockDelay uint64, watch bool)
 		working := -1
 		for i, ss := range state.ActiveSyncs {
 			switch ss.Stage {
-			case apitypes.StageSyncComplete:
+			case types.StageSyncComplete:
 			default:
 				working = i
-			case apitypes.StageIdle:
+			case types.StageIdle:
 				// not complete, not actively working
 			}
 		}

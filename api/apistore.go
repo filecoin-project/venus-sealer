@@ -15,53 +15,53 @@ type ChainIO interface {
 	ChainHasObj(context.Context, cid.Cid) (bool, error)
 }
 
-type apiBStore struct {
+type apiBlockstore struct {
 	api ChainIO
 }
 
 func NewAPIBlockstore(cio ChainIO) blockstore.Blockstore {
-	return &apiBStore{
-		api: cio,
-	}
+	bs := &apiBlockstore{api: cio}
+	return blockstore.Adapt(bs) // return an adapted blockstore.
 }
 
-func (a *apiBStore) DeleteBlock(cid.Cid) error {
+func (a *apiBlockstore) DeleteBlock(context.Context, cid.Cid) error {
 	return xerrors.New("not supported")
 }
 
-func (a *apiBStore) Has(c cid.Cid) (bool, error) {
-	return a.api.ChainHasObj(context.TODO(), c)
+func (a *apiBlockstore) Has(ctx context.Context, c cid.Cid) (bool, error) {
+	return a.api.ChainHasObj(ctx, c)
 }
 
-func (a *apiBStore) Get(c cid.Cid) (blocks.Block, error) {
-	bb, err := a.api.ChainReadObj(context.TODO(), c)
+func (a *apiBlockstore) Get(ctx context.Context, c cid.Cid) (blocks.Block, error) {
+	bb, err := a.api.ChainReadObj(ctx, c)
 	if err != nil {
 		return nil, err
 	}
 	return blocks.NewBlockWithCid(bb, c)
 }
 
-func (a *apiBStore) GetSize(c cid.Cid) (int, error) {
-	bb, err := a.api.ChainReadObj(context.TODO(), c)
+func (a *apiBlockstore) GetSize(ctx context.Context, c cid.Cid) (int, error) {
+	bb, err := a.api.ChainReadObj(ctx, c)
 	if err != nil {
 		return 0, err
 	}
 	return len(bb), nil
 }
 
-func (a *apiBStore) Put(blocks.Block) error {
+func (a *apiBlockstore) Put(context.Context, blocks.Block) error {
 	return xerrors.New("not supported")
 }
 
-func (a *apiBStore) PutMany([]blocks.Block) error {
+func (a *apiBlockstore) PutMany(context.Context, []blocks.Block) error {
 	return xerrors.New("not supported")
 }
 
-func (a *apiBStore) AllKeysChan(ctx context.Context) (<-chan cid.Cid, error) {
+func (a *apiBlockstore) AllKeysChan(ctx context.Context) (<-chan cid.Cid, error) {
 	return nil, xerrors.New("not supported")
 }
 
-func (a *apiBStore) HashOnRead(enabled bool) {
+func (a *apiBlockstore) HashOnRead(enabled bool) {
+	return
 }
 
-var _ blockstore.Blockstore = &apiBStore{}
+var _ blockstore.BasicBlockstore = &apiBlockstore{}

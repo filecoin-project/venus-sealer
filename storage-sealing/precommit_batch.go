@@ -3,24 +3,28 @@ package sealing
 import (
 	"bytes"
 	"context"
+	"sort"
+	"sync"
+	"time"
+
+	"golang.org/x/xerrors"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/go-state-types/network"
+
+	miner0 "github.com/filecoin-project/specs-actors/actors/builtin/miner"
 	miner5 "github.com/filecoin-project/specs-actors/v5/actors/builtin/miner"
+
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 	"github.com/filecoin-project/venus-sealer/types"
-	types2 "github.com/filecoin-project/venus/pkg/types"
-	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
-	"golang.org/x/xerrors"
-	"sort"
 
-	miner0 "github.com/filecoin-project/specs-actors/actors/builtin/miner"
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
-	"sync"
-	"time"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	"github.com/filecoin-project/venus/venus-shared/actors/policy"
+	types2 "github.com/filecoin-project/venus/venus-shared/types"
 )
 
 //go:generate go run github.com/golang/mock/mockgen -destination=mocks/mock_precommit_batcher.go -package=mocks . PreCommitBatcherApi

@@ -104,11 +104,30 @@ func UpdateConfig(path string, cfg interface{}) error {
 }
 
 // MinerFromReader loads config from a reader instance.
-func MinerFromReader(reader io.Reader) (*StorageMiner, error) {
+func MinerFromReader(reader interface {
+	io.Reader
+	io.Seeker
+}) (*StorageMiner, error) {
 	cfg := DefaultMainnetStorageMiner()
-	_, err := toml.DecodeReader(reader, cfg)
+	meta, err := toml.DecodeReader(reader, cfg)
 	if err != nil {
 		return nil, err
+	}
+
+	// MarketNodeConfig of venus-sealer v1 in configuration file is define as  'Market',
+	// but in v1.14.0 is 'MarketNode', the following code is just for compatible,
+	// TODO: may there be a more graceful approach to do that.
+	if meta.IsDefined("Market") && !meta.IsDefined("MarketNode") {
+		if _, err := reader.Seek(0, io.SeekStart); err != nil {
+			return nil, xerrors.Errorf("read 'Market' as 'MarketNode' failed, seek file failed:%w", err)
+		}
+		var tmpMinerCfg = &struct {
+			Market MarketNodeConfig `toml:"Market"`
+		}{}
+		if _, err := toml.DecodeReader(reader, tmpMinerCfg); err != nil {
+			return nil, xerrors.Errorf("read 'Market' as 'MarketNode' failed, DecodeReader failed:%w", err)
+		}
+		cfg.MarketNode = tmpMinerCfg.Market
 	}
 
 	err = envconfig.Process("MINER", cfg)

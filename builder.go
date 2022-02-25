@@ -2,9 +2,19 @@ package venus_sealer
 
 import (
 	"context"
+	"github.com/filecoin-project/venus/venus-shared/api/market"
+	logging "github.com/ipfs/go-log/v2"
+	metricsi "github.com/ipfs/go-metrics-interface"
+	"github.com/multiformats/go-multiaddr"
+	"go.uber.org/fx"
+	"golang.org/x/xerrors"
+
 	"github.com/filecoin-project/go-state-types/abi"
 	storage2 "github.com/filecoin-project/specs-storage/storage"
-	api2 "github.com/filecoin-project/venus-market/api"
+
+	config3 "github.com/filecoin-project/venus-market/config"
+	"github.com/filecoin-project/venus-market/piecestorage"
+
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/api/impl"
 	"github.com/filecoin-project/venus-sealer/config"
@@ -13,7 +23,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/models"
 	"github.com/filecoin-project/venus-sealer/models/repo"
 	"github.com/filecoin-project/venus-sealer/proof_client"
-	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
+	"github.com/filecoin-project/venus-sealer/sector-storage"
 	"github.com/filecoin-project/venus-sealer/sector-storage/ffiwrapper"
 	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
@@ -21,11 +31,6 @@ import (
 	"github.com/filecoin-project/venus-sealer/storage"
 	"github.com/filecoin-project/venus-sealer/storage/sectorblocks"
 	"github.com/filecoin-project/venus-sealer/types"
-	logging "github.com/ipfs/go-log/v2"
-	metricsi "github.com/ipfs/go-metrics-interface"
-	"github.com/multiformats/go-multiaddr"
-	"go.uber.org/fx"
-	"golang.org/x/xerrors"
 )
 
 var log = logging.Logger("modules")
@@ -49,7 +54,7 @@ const (
 
 	//proof
 	StartProofEventKey
-	StartWalletEventKey
+	StartMarketEventKey
 	WarmupKey
 	_nInvokes // keep this last
 )
@@ -148,11 +153,15 @@ func Online(cfg *config.StorageMiner) Option {
 		Override(new(*storage.Miner), StorageMiner(config.DefaultMainnetStorageMiner().Fees)),
 		// Override(new(*storage.AddressSelector), AddressSelector(nil)), // venus-sealer run: Call Repo before, Online after,will overwrite the original injection(MinerAddressConfig)
 		Override(new(types.NetworkName), StorageNetworkName),
+
+		Override(new(proof_client.GatewayClientSets), proof_client.NewGatewayFullnodes),
+		Override(new(market_client.MarketEventClientSets), market_client.NewMarketEvents),
+
 		Override(GetParamsKey, GetParams),
 		Override(AutoMigrateKey, models.AutoMigrate),
 		Override(SetNetParamsKey, SetupNetParams),
 		Override(StartProofEventKey, proof_client.StartProofEvent),
-		Override(StartWalletEventKey, market_client.StartMarketEvent),
+		Override(StartMarketEventKey, market_client.StartMarketEvent),
 		Override(WarmupKey, DoPoStWarmup),
 	)
 }
@@ -167,17 +176,17 @@ func Repo(cfg *config.StorageMiner) Option {
 			Override(new(sectorstorage.SealerConfig), cfg.Storage),
 			Override(new(*storage.AddressSelector), AddressSelector(&cfg.Addresses)),
 			Override(new(*config.DbConfig), &cfg.DB),
+			Override(new(*config3.PieceStorage), &cfg.PieceStorage),
 			Override(new(*config.StorageMiner), cfg),
 			Override(new(*config.MessagerConfig), &cfg.Messager),
-			Override(new(*config.MarketConfig), &cfg.Market),
+			Override(new(*config.MarketNodeConfig), &cfg.MarketNode),
 			Override(new(*config.RegisterMarketConfig), &cfg.RegisterMarket),
 			Override(new(*config.RegisterProofConfig), &cfg.RegisterProof),
 			ConfigAPI(cfg),
-
 			Override(new(api.IMessager), api.NewMessageRPC),
-			Override(new(api2.MarketFullNode), api.NewMarketRPC),
-			Override(new(*market_client.MarketEventClient), market_client.NewMarketEventClient),
-			Override(new(*proof_client.ProofEventClient), proof_client.NewProofEventClient),
+			Override(new(market.IMarket), api.NewMarketNodeRPCAPIV0),
+			Override(new(piecestorage.IPreSignOp), NewPreSignS3Op),
+			Override(new(piecestorage.IPieceStorage), NewPieceStorage),
 			Override(new(repo.Repo), models.SetDataBase),
 			Providers(
 				service.NewDealRefServiceService,

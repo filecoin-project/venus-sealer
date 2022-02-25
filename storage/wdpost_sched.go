@@ -17,8 +17,7 @@ import (
 	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
 	"github.com/filecoin-project/venus-sealer/sector-storage/ffiwrapper"
 
-	"github.com/filecoin-project/venus/pkg/chain"
-	"github.com/filecoin-project/venus/pkg/types"
+	"github.com/filecoin-project/venus/venus-shared/types"
 )
 
 // WindowPoStScheduler is the coordinator for WindowPoSt submissions, fault
@@ -132,9 +131,9 @@ func (s *WindowPoStScheduler) Run(ctx context.Context) {
 					log.Errorf("change.Val was nil")
 				}
 				switch change.Type {
-				case chain.HCRevert:
+				case types.HCRevert:
 					lowest = change.Val
-				case chain.HCApply:
+				case types.HCApply:
 					highest = change.Val
 				}
 			}

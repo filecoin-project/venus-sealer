@@ -20,18 +20,20 @@ import (
 	"github.com/filecoin-project/go-bitfield"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
+	"github.com/filecoin-project/go-state-types/network"
 
-	"github.com/filecoin-project/venus/pkg/types"
-	actors "github.com/filecoin-project/venus/pkg/types/specactors"
-	"github.com/filecoin-project/venus/pkg/types/specactors/adt"
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
-	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
+	"github.com/filecoin-project/venus/venus-shared/actors"
+	"github.com/filecoin-project/venus/venus-shared/actors/adt"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	"github.com/filecoin-project/venus/venus-shared/actors/policy"
+	"github.com/filecoin-project/venus/venus-shared/types"
 
 	miner5 "github.com/filecoin-project/specs-actors/v5/actors/builtin/miner"
 
 	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/lib/blockstore"
-	"github.com/filecoin-project/venus-sealer/lib/bufbstore"
 	"github.com/filecoin-project/venus-sealer/lib/tablewriter"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
 	types2 "github.com/filecoin-project/venus-sealer/types"
@@ -54,11 +56,14 @@ var sectorsCmd = &cli.Command{
 		sectorsExtendCmd,
 		sectorsTerminateCmd,
 		sectorsRemoveCmd,
+		sectorsSnapUpCmd,
+		sectorsSnapAbortCmd,
 		sectorsMarkForUpgradeCmd,
 		sectorsStartSealCmd,
 		sectorsSealDelayCmd,
 		sectorsCapacityCollateralCmd,
 		sectorsBatching,
+		sectorsRefreshPieceMatchingCmd,
 		sectorsRedoCmd,
 	},
 }
@@ -244,6 +249,23 @@ var sectorsStatusCmd = &cli.Command{
 			fmt.Printf("Last Error:\t\t%s\n", status.LastErr)
 		}
 
+		fmt.Printf("CCUpdate:\t%v\n", status.CCUpdate)
+
+		if status.CCUpdate {
+			var updateSealed, updateUnsealed string
+
+			if status.UpdateSealed != nil {
+				updateSealed = status.UpdateSealed.String()
+			}
+			if status.UpdateUnsealed != nil {
+				updateUnsealed = status.UpdateUnsealed.String()
+			}
+
+			fmt.Printf("UpdateSealed:\t%s\n", updateSealed)
+			fmt.Printf("UpdateUnsealed:\t%s\n", updateUnsealed)
+			fmt.Printf("ReplicaUpdateMessage:%s\n", status.ReplicaUpdateMessage)
+		}
+
 		if onChainInfo {
 			fmt.Printf("\nSector On Chain Info\n")
 			fmt.Printf("SealProof:\t\t%x\n", status.SealProof)
@@ -274,7 +296,7 @@ var sectorsStatusCmd = &cli.Command{
 				return err
 			}
 
-			tbs := bufbstore.NewTieredBstore(api.NewAPIBlockstore(fullApi), blockstore.NewTemporary())
+			tbs := blockstore.NewTieredBstore(api.NewAPIBlockstore(fullApi), blockstore.NewMemory())
 			mas, err := miner.Load(adt.WrapStore(ctx, cbor.NewCborStore(tbs)), mact)
 			if err != nil {
 				return err
@@ -958,7 +980,7 @@ var sectorsRenewCmd = &cli.Command{
 			return err
 		}
 
-		tbs := bufbstore.NewTieredBstore(api.NewAPIBlockstore(fullApi), blockstore.NewTemporary())
+		tbs := blockstore.NewTieredBstore(api.NewAPIBlockstore(fullApi), blockstore.NewMemory())
 		mas, err := miner.Load(adt.WrapStore(ctx, cbor.NewCborStore(tbs)), mact)
 		if err != nil {
 			return err
@@ -1594,9 +1616,47 @@ var sectorsRemoveCmd = &cli.Command{
 	},
 }
 
-var sectorsMarkForUpgradeCmd = &cli.Command{
-	Name:      "mark-for-upgrade",
-	Usage:     "Mark a committed capacity sector for replacement by a sector with deals",
+var sectorsSnapUpCmd = &cli.Command{
+	Name:      "snap-up",
+	Usage:     "Mark a committed capacity sector to be filled with deals",
+	ArgsUsage: "<sectorNum>",
+	Action: func(cctx *cli.Context) error {
+		if cctx.Args().Len() != 1 {
+			return ShowHelp(cctx, xerrors.Errorf("must pass sector number"))
+		}
+
+		nodeApi, closer, err := api.GetStorageMinerAPI(cctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+		fullnodeAPI, nCloser, err := api.GetFullNodeAPIV2(cctx)
+		if err != nil {
+			return err
+		}
+		defer nCloser()
+		ctx := api.ReqContext(cctx)
+
+		nv, err := fullnodeAPI.StateNetworkVersion(ctx, types.EmptyTSK)
+		if err != nil {
+			return xerrors.Errorf("failed to get network version: %w", err)
+		}
+		if nv < network.Version15 {
+			return xerrors.Errorf("snap deals upgrades enabled in network v15")
+		}
+
+		id, err := strconv.ParseUint(cctx.Args().Get(0), 10, 64)
+		if err != nil {
+			return xerrors.Errorf("could not parse sector number: %w", err)
+		}
+
+		return nodeApi.SectorMarkForUpgrade(ctx, abi.SectorNumber(id), true)
+	},
+}
+
+var sectorsSnapAbortCmd = &cli.Command{
+	Name:      "abort-upgrade",
+	Usage:     "Abort the attempted (SnapDeals) upgrade of a CC sector, reverting it to as before",
 	ArgsUsage: "<sectorNum>",
 	Action: func(cctx *cli.Context) error {
 		if cctx.Args().Len() != 1 {
@@ -1615,7 +1675,63 @@ var sectorsMarkForUpgradeCmd = &cli.Command{
 			return xerrors.Errorf("could not parse sector number: %w", err)
 		}
 
-		return nodeApi.SectorMarkForUpgrade(ctx, abi.SectorNumber(id))
+		return nodeApi.SectorAbortUpgrade(ctx, abi.SectorNumber(id))
+	},
+}
+
+var sectorsMarkForUpgradeCmd = &cli.Command{
+	Name:      "mark-for-upgrade",
+	Usage:     "Mark a committed capacity sector for replacement by a sector with deals",
+	ArgsUsage: "<sectorNum>",
+	Action: func(cctx *cli.Context) error {
+		if cctx.Args().Len() != 1 {
+			return ShowHelp(cctx, xerrors.Errorf("must pass sector number"))
+		}
+
+		nodeApi, closer, err := api.GetStorageMinerAPI(cctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+		fullnodeAPI, nCloser, err := api.GetFullNodeAPIV2(cctx)
+		if err != nil {
+			return err
+		}
+		defer nCloser()
+		ctx := api.ReqContext(cctx)
+
+		nv, err := fullnodeAPI.StateNetworkVersion(ctx, types.EmptyTSK)
+		if err != nil {
+			return xerrors.Errorf("failed to get network version: %w", err)
+		}
+		if nv >= network.Version15 {
+			return xerrors.Errorf("classic cc upgrades disabled v15 and beyond, use `snap-up`")
+		}
+
+		// disable mark for upgrade two days before the ntwk v15 upgrade
+		// TODO: remove the following block in v1.15.1
+		head, err := fullnodeAPI.ChainHead(ctx)
+		if err != nil {
+			return xerrors.Errorf("failed to get chain head: %w", err)
+		}
+		twoDays := abi.ChainEpoch(2 * builtin.EpochsInDay)
+		repoPath := cctx.String("repo")
+		cfgPath := config.FsConfig(repoPath)
+		cfg, err := config.MinerFromFile(cfgPath)
+		if err != nil {
+			return err
+		}
+		if head.Height() > (abi.ChainEpoch(cfg.NetParams.UpgradeOhSnapHeight) - twoDays) {
+			return xerrors.Errorf("OhSnap is coming soon, " +
+				"please use `snap-up` to upgrade your cc sectors after the network v15 upgrade!")
+		}
+
+		id, err := strconv.ParseUint(cctx.Args().Get(0), 10, 64)
+		if err != nil {
+			return xerrors.Errorf("could not parse sector number: %w", err)
+		}
+
+		return nodeApi.SectorMarkForUpgrade(ctx, abi.SectorNumber(id), false)
 	},
 }
 
@@ -1771,6 +1887,11 @@ var sectorsUpdateCmd = &cli.Command{
 			return xerrors.Errorf("could not parse sector number: %w", err)
 		}
 
+		_, err = nodeApi.SectorsStatus(ctx, abi.SectorNumber(id), false)
+		if err != nil {
+			return xerrors.Errorf("sector %d not found, could not change state", id)
+		}
+
 		newState := cctx.Args().Get(1)
 		if _, ok := types2.ExistSectorStateList[types2.SectorState(newState)]; !ok {
 			fmt.Printf(" \"%s\" is not a valid state. Possible states for sectors are: \n", newState)
@@ -1871,7 +1992,7 @@ var sectorsExpiredCmd = &cli.Command{
 			return err
 		}
 
-		tbs := bufbstore.NewTieredBstore(api.NewAPIBlockstore(fullApi), blockstore.NewTemporary())
+		tbs := blockstore.NewTieredBstore(api.NewAPIBlockstore(fullApi), blockstore.NewMemory())
 		mas, err := miner.Load(adt.WrapStore(ctx, cbor.NewCborStore(tbs)), mact)
 		if err != nil {
 			return err
@@ -2115,6 +2236,25 @@ var sectorsBatchingPendingPreCommit = &cli.Command{
 		}
 
 		fmt.Println("No sectors queued to be committed")
+		return nil
+	},
+}
+
+var sectorsRefreshPieceMatchingCmd = &cli.Command{
+	Name:  "match-pending-pieces",
+	Usage: "force a refreshed match of pending pieces to open sectors without manually waiting for more deals",
+	Action: func(cctx *cli.Context) error {
+		nodeApi, closer, err := api.GetStorageMinerAPI(cctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+		ctx := api.ReqContext(cctx)
+
+		if err := nodeApi.SectorMatchPendingPiecesToOpenSectors(ctx); err != nil {
+			return err
+		}
+
 		return nil
 	},
 }

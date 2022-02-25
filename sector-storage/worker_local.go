@@ -29,7 +29,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/types"
 )
 
-var pathTypes = []storiface.SectorFileType{storiface.FTUnsealed, storiface.FTSealed, storiface.FTCache}
+var pathTypes = []storiface.SectorFileType{storiface.FTUnsealed, storiface.FTSealed, storiface.FTCache, storiface.FTUpdate, storiface.FTUpdateCache}
 
 type WorkerConfig struct {
 	TaskTypes []types.TaskType
@@ -40,11 +40,12 @@ type WorkerConfig struct {
 	// with the local worker.
 	IgnoreResourceFiltering bool
 
-	TaskTotal  int64
+	TaskTotal int64
 }
 
 // used do provide custom proofs impl (mostly used in testing)
 type ExecutorFunc func() (ffiwrapper.Storage, error)
+type EnvFunc func(string) (string, bool)
 
 type LocalWorker struct {
 	storage    stores.Store
@@ -53,6 +54,7 @@ type LocalWorker struct {
 	ret        storiface.WorkerReturn
 	executor   ExecutorFunc
 	noSwap     bool
+	envLookup  EnvFunc
 
 	// see equivalent field on WorkerConfig.
 	ignoreResources bool
@@ -69,7 +71,7 @@ type LocalWorker struct {
 	closing     chan struct{}
 }
 
-func newLocalWorker(executor ExecutorFunc, wcfg WorkerConfig, store stores.Store, local *stores.Local, sindex stores.SectorIndex, ret storiface.WorkerReturn, cst statestore.StateStore) *LocalWorker {
+func newLocalWorker(executor ExecutorFunc, wcfg WorkerConfig, envLookup EnvFunc, store stores.Store, local *stores.Local, sindex stores.SectorIndex, ret storiface.WorkerReturn, cst statestore.StateStore) *LocalWorker {
 	acceptTasks := map[types.TaskType]struct{}{}
 	for _, taskType := range wcfg.TaskTypes {
 		acceptTasks[taskType] = struct{}{}
@@ -88,6 +90,7 @@ func newLocalWorker(executor ExecutorFunc, wcfg WorkerConfig, store stores.Store
 		taskTotal:       wcfg.TaskTotal,
 		executor:        executor,
 		noSwap:          wcfg.NoSwap,
+		envLookup:       envLookup,
 		ignoreResources: wcfg.IgnoreResourceFiltering,
 		session:         uuid.New(),
 		closing:         make(chan struct{}),
@@ -121,7 +124,7 @@ func newLocalWorker(executor ExecutorFunc, wcfg WorkerConfig, store stores.Store
 }
 
 func NewLocalWorker(wcfg WorkerConfig, store stores.Store, local *stores.Local, sindex stores.SectorIndex, ret storiface.WorkerReturn, cst statestore.StateStore) *LocalWorker {
-	return newLocalWorker(nil, wcfg, store, local, sindex, ret, cst)
+	return newLocalWorker(nil, wcfg, os.LookupEnv, store, local, sindex, ret, cst)
 }
 
 type localWorkerPathProvider struct {
@@ -151,7 +154,6 @@ func (l *localWorkerPathProvider) AcquireSector(ctx context.Context, sector stor
 			}
 
 			sid := storiface.PathByType(storageIDs, fileType)
-
 			if err := l.w.sindex.StorageDeclareSector(ctx, stores.ID(sid), sector.ID, fileType, l.op == storiface.AcquireMove); err != nil {
 				log.Errorf("declare sector error: %+v", err)
 			}
@@ -198,16 +200,21 @@ func rfunc(in interface{}) func(context.Context, types.CallID, storiface.WorkerR
 }
 
 var returnFunc = map[types.ReturnType]func(context.Context, types.CallID, storiface.WorkerReturn, interface{}, *storiface.CallError) error{
-	types.ReturnAddPiece:        rfunc(storiface.WorkerReturn.ReturnAddPiece),
-	types.ReturnSealPreCommit1:  rfunc(storiface.WorkerReturn.ReturnSealPreCommit1),
-	types.ReturnSealPreCommit2:  rfunc(storiface.WorkerReturn.ReturnSealPreCommit2),
-	types.ReturnSealCommit1:     rfunc(storiface.WorkerReturn.ReturnSealCommit1),
-	types.ReturnSealCommit2:     rfunc(storiface.WorkerReturn.ReturnSealCommit2),
-	types.ReturnFinalizeSector:  rfunc(storiface.WorkerReturn.ReturnFinalizeSector),
-	types.ReturnReleaseUnsealed: rfunc(storiface.WorkerReturn.ReturnReleaseUnsealed),
-	types.ReturnMoveStorage:     rfunc(storiface.WorkerReturn.ReturnMoveStorage),
-	types.ReturnUnsealPiece:     rfunc(storiface.WorkerReturn.ReturnUnsealPiece),
-	types.ReturnFetch:           rfunc(storiface.WorkerReturn.ReturnFetch),
+	types.ReturnAddPiece:              rfunc(storiface.WorkerReturn.ReturnAddPiece),
+	types.ReturnSealPreCommit1:        rfunc(storiface.WorkerReturn.ReturnSealPreCommit1),
+	types.ReturnSealPreCommit2:        rfunc(storiface.WorkerReturn.ReturnSealPreCommit2),
+	types.ReturnSealCommit1:           rfunc(storiface.WorkerReturn.ReturnSealCommit1),
+	types.ReturnSealCommit2:           rfunc(storiface.WorkerReturn.ReturnSealCommit2),
+	types.ReturnFinalizeSector:        rfunc(storiface.WorkerReturn.ReturnFinalizeSector),
+	types.ReturnReleaseUnsealed:       rfunc(storiface.WorkerReturn.ReturnReleaseUnsealed),
+	types.ReturnReplicaUpdate:         rfunc(storiface.WorkerReturn.ReturnReplicaUpdate),
+	types.ReturnProveReplicaUpdate1:   rfunc(storiface.WorkerReturn.ReturnProveReplicaUpdate1),
+	types.ReturnProveReplicaUpdate2:   rfunc(storiface.WorkerReturn.ReturnProveReplicaUpdate2),
+	types.ReturnGenerateSectorKey:     rfunc(storiface.WorkerReturn.ReturnGenerateSectorKeyFromData),
+	types.ReturnFinalizeReplicaUpdate: rfunc(storiface.WorkerReturn.ReturnFinalizeReplicaUpdate),
+	types.ReturnMoveStorage:           rfunc(storiface.WorkerReturn.ReturnMoveStorage),
+	types.ReturnUnsealPiece:           rfunc(storiface.WorkerReturn.ReturnUnsealPiece),
+	types.ReturnFetch:                 rfunc(storiface.WorkerReturn.ReturnFetch),
 }
 
 func (l *LocalWorker) asyncCall(ctx context.Context, sector storage.SectorRef, rt types.ReturnType, work func(ctx context.Context, ci types.CallID) (interface{}, error)) (types.CallID, error) {
@@ -242,7 +249,6 @@ func (l *LocalWorker) asyncCall(ctx context.Context, sector storage.SectorRef, r
 		}
 
 		res, err := work(ctx, ci)
-
 		if err != nil {
 			rb, err := json.Marshal(res)
 			if err != nil {
@@ -260,7 +266,6 @@ func (l *LocalWorker) asyncCall(ctx context.Context, sector storage.SectorRef, r
 			}
 		}
 	}()
-
 	return ci, nil
 }
 
@@ -333,11 +338,11 @@ func (l *LocalWorker) SealPreCommit1(ctx context.Context, sector storage.SectorR
 
 		{
 			// cleanup previous failed attempts if they exist
-			if err := l.storage.Remove(ctx, sector.ID, storiface.FTSealed, true); err != nil {
+			if err := l.storage.Remove(ctx, sector.ID, storiface.FTSealed, true, nil); err != nil {
 				return nil, xerrors.Errorf("cleaning up sealed data: %w", err)
 			}
 
-			if err := l.storage.Remove(ctx, sector.ID, storiface.FTCache, true); err != nil {
+			if err := l.storage.Remove(ctx, sector.ID, storiface.FTCache, true, nil); err != nil {
 				return nil, xerrors.Errorf("cleaning up cache data: %w", err)
 			}
 		}
@@ -384,6 +389,51 @@ func (l *LocalWorker) SealCommit2(ctx context.Context, sector storage.SectorRef,
 	})
 }
 
+func (l *LocalWorker) ReplicaUpdate(ctx context.Context, sector storage.SectorRef, pieces []abi.PieceInfo) (types.CallID, error) {
+	sb, err := l.executor()
+	if err != nil {
+		return types.UndefCall, err
+	}
+
+	return l.asyncCall(ctx, sector, types.ReturnReplicaUpdate, func(ctx context.Context, ci types.CallID) (interface{}, error) {
+		sealerOut, err := sb.ReplicaUpdate(ctx, sector, pieces)
+		return sealerOut, err
+	})
+}
+
+func (l *LocalWorker) ProveReplicaUpdate1(ctx context.Context, sector storage.SectorRef, sectorKey, newSealed, newUnsealed cid.Cid) (types.CallID, error) {
+	sb, err := l.executor()
+	if err != nil {
+		return types.UndefCall, err
+	}
+
+	return l.asyncCall(ctx, sector, types.ReturnProveReplicaUpdate1, func(ctx context.Context, ci types.CallID) (interface{}, error) {
+		return sb.ProveReplicaUpdate1(ctx, sector, sectorKey, newSealed, newUnsealed)
+	})
+}
+
+func (l *LocalWorker) ProveReplicaUpdate2(ctx context.Context, sector storage.SectorRef, sectorKey, newSealed, newUnsealed cid.Cid, vanillaProofs storage.ReplicaVanillaProofs) (types.CallID, error) {
+	sb, err := l.executor()
+	if err != nil {
+		return types.UndefCall, err
+	}
+
+	return l.asyncCall(ctx, sector, types.ReturnProveReplicaUpdate2, func(ctx context.Context, ci types.CallID) (interface{}, error) {
+		return sb.ProveReplicaUpdate2(ctx, sector, sectorKey, newSealed, newUnsealed, vanillaProofs)
+	})
+}
+
+func (l *LocalWorker) GenerateSectorKeyFromData(ctx context.Context, sector storage.SectorRef, commD cid.Cid) (types.CallID, error) {
+	sb, err := l.executor()
+	if err != nil {
+		return types.UndefCall, err
+	}
+
+	return l.asyncCall(ctx, sector, types.ReturnGenerateSectorKey, func(ctx context.Context, ci types.CallID) (interface{}, error) {
+		return nil, sb.GenerateSectorKeyFromData(ctx, sector, commD)
+	})
+}
+
 func (l *LocalWorker) FinalizeSector(ctx context.Context, sector storage.SectorRef, keepUnsealed []storage.Range) (types.CallID, error) {
 	sb, err := l.executor()
 	if err != nil {
@@ -396,7 +446,7 @@ func (l *LocalWorker) FinalizeSector(ctx context.Context, sector storage.SectorR
 		}
 
 		if len(keepUnsealed) == 0 {
-			if err := l.storage.Remove(ctx, sector.ID, storiface.FTUnsealed, true); err != nil {
+			if err := l.storage.Remove(ctx, sector.ID, storiface.FTUnsealed, true, nil); err != nil {
 				return nil, xerrors.Errorf("removing unsealed data: %w", err)
 			}
 		}
@@ -405,6 +455,26 @@ func (l *LocalWorker) FinalizeSector(ctx context.Context, sector storage.SectorR
 	})
 }
 
+func (l *LocalWorker) FinalizeReplicaUpdate(ctx context.Context, sector storage.SectorRef, keepUnsealed []storage.Range) (types.CallID, error) {
+	sb, err := l.executor()
+	if err != nil {
+		return types.UndefCall, err
+	}
+
+	return l.asyncCall(ctx, sector, types.ReturnFinalizeReplicaUpdate, func(ctx context.Context, ci types.CallID) (interface{}, error) {
+		if err := sb.FinalizeReplicaUpdate(ctx, sector, keepUnsealed); err != nil {
+			return nil, xerrors.Errorf("finalizing sector: %w", err)
+		}
+
+		if len(keepUnsealed) == 0 {
+			if err := l.storage.Remove(ctx, sector.ID, storiface.FTUnsealed, true, nil); err != nil {
+				return nil, xerrors.Errorf("removing unsealed data: %w", err)
+			}
+		}
+
+		return nil, err
+	})
+}
 func (l *LocalWorker) ReleaseUnsealed(ctx context.Context, sector storage.SectorRef, safeToFree []storage.Range) (types.CallID, error) {
 	return types.UndefCall, xerrors.Errorf("implement me")
 }
@@ -412,13 +482,13 @@ func (l *LocalWorker) ReleaseUnsealed(ctx context.Context, sector storage.Sector
 func (l *LocalWorker) Remove(ctx context.Context, sector abi.SectorID) error {
 	var err error
 
-	if rerr := l.storage.Remove(ctx, sector, storiface.FTSealed, true); rerr != nil {
+	if rerr := l.storage.Remove(ctx, sector, storiface.FTSealed, true, nil); rerr != nil {
 		err = multierror.Append(err, xerrors.Errorf("removing sector (sealed): %w", rerr))
 	}
-	if rerr := l.storage.Remove(ctx, sector, storiface.FTCache, true); rerr != nil {
+	if rerr := l.storage.Remove(ctx, sector, storiface.FTCache, true, nil); rerr != nil {
 		err = multierror.Append(err, xerrors.Errorf("removing sector (cache): %w", rerr))
 	}
-	if rerr := l.storage.Remove(ctx, sector, storiface.FTUnsealed, true); rerr != nil {
+	if rerr := l.storage.Remove(ctx, sector, storiface.FTUnsealed, true, nil); rerr != nil {
 		err = multierror.Append(err, xerrors.Errorf("removing sector (unsealed): %w", rerr))
 	}
 
@@ -489,6 +559,52 @@ func (l *LocalWorker) TaskNumbers(context.Context) (string, error) {
 	return str, nil
 }
 
+func (l *LocalWorker) memInfo() (memPhysical, memUsed, memSwap, memSwapUsed uint64, err error) {
+	h, err := sysinfo.Host()
+	if err != nil {
+		return 0, 0, 0, 0, err
+	}
+
+	mem, err := h.Memory()
+	if err != nil {
+		return 0, 0, 0, 0, err
+	}
+	memPhysical = mem.Total
+	// mem.Available is memory available without swapping, it is more relevant for this calculation
+	memUsed = mem.Total - mem.Available
+	memSwap = mem.VirtualTotal
+	memSwapUsed = mem.VirtualUsed
+
+	if cgMemMax, cgMemUsed, cgSwapMax, cgSwapUsed, err := cgroupV1Mem(); err == nil {
+		if cgMemMax > 0 && cgMemMax < memPhysical {
+			memPhysical = cgMemMax
+			memUsed = cgMemUsed
+		}
+		if cgSwapMax > 0 && cgSwapMax < memSwap {
+			memSwap = cgSwapMax
+			memSwapUsed = cgSwapUsed
+		}
+	}
+
+	if cgMemMax, cgMemUsed, cgSwapMax, cgSwapUsed, err := cgroupV2Mem(); err == nil {
+		if cgMemMax > 0 && cgMemMax < memPhysical {
+			memPhysical = cgMemMax
+			memUsed = cgMemUsed
+		}
+		if cgSwapMax > 0 && cgSwapMax < memSwap {
+			memSwap = cgSwapMax
+			memSwapUsed = cgSwapUsed
+		}
+	}
+
+	if l.noSwap {
+		memSwap = 0
+		memSwapUsed = 0
+	}
+
+	return memPhysical, memUsed, memSwap, memSwapUsed, nil
+}
+
 func (l *LocalWorker) Info(context.Context) (storiface.WorkerInfo, error) {
 	hostname, err := os.Hostname() // TODO: allow overriding from config
 	if err != nil {
@@ -500,30 +616,29 @@ func (l *LocalWorker) Info(context.Context) (storiface.WorkerInfo, error) {
 		log.Errorf("getting gpu devices failed: %+v", err)
 	}
 
-	h, err := sysinfo.Host()
-	if err != nil {
-		return storiface.WorkerInfo{}, xerrors.Errorf("getting host info: %w", err)
-	}
-
-	mem, err := h.Memory()
+	memPhysical, memUsed, memSwap, memSwapUsed, err := l.memInfo()
 	if err != nil {
 		return storiface.WorkerInfo{}, xerrors.Errorf("getting memory info: %w", err)
 	}
 
-	memSwap := mem.VirtualTotal
-	if l.noSwap {
-		memSwap = 0
+	resEnv, err := storiface.ParseResourceEnv(func(key, def string) (string, bool) {
+		return l.envLookup(key)
+	})
+	if err != nil {
+		return storiface.WorkerInfo{}, xerrors.Errorf("interpreting resource env vars: %w", err)
 	}
 
 	return storiface.WorkerInfo{
 		Hostname:        hostname,
 		IgnoreResources: l.ignoreResources,
 		Resources: storiface.WorkerResources{
-			MemPhysical: mem.Total,
+			MemPhysical: memPhysical,
+			MemUsed:     memUsed,
 			MemSwap:     memSwap,
-			MemReserved: mem.VirtualUsed + mem.Total - mem.Available, // TODO: sub this process
+			MemSwapUsed: memSwapUsed,
 			CPUs:        uint64(runtime.NumCPU()),
 			GPUs:        gpus,
+			Resources:   resEnv,
 		},
 	}, nil
 }

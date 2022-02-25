@@ -14,7 +14,7 @@ import (
 	network "github.com/filecoin-project/go-state-types/network"
 	miner "github.com/filecoin-project/specs-actors/actors/builtin/miner"
 	types "github.com/filecoin-project/venus-sealer/types"
-	miner0 "github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
+	miner0 "github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -151,7 +151,7 @@ func (mr *MockCommitBatcherApiMockRecorder) StateNetworkVersion(arg0, arg1 inter
 func (m *MockCommitBatcherApi) StateSectorPreCommitInfo(arg0 context.Context, arg1 address.Address, arg2 abi.SectorNumber, arg3 types.TipSetToken) (*miner0.SectorPreCommitOnChainInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StateSectorPreCommitInfo", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(*miner.SectorPreCommitOnChainInfo)
+	ret0, _ := ret[0].(*miner0.SectorPreCommitOnChainInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

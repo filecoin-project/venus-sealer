@@ -11,8 +11,8 @@ import (
 	"github.com/filecoin-project/go-state-types/exitcode"
 	"github.com/filecoin-project/specs-storage/storage"
 
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
-	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	"github.com/filecoin-project/venus/venus-shared/actors/policy"
 
 	"github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
 
@@ -94,7 +94,7 @@ type SectorInfo struct {
 
 	// PreCommit2
 	CommD *cid.Cid
-	CommR *cid.Cid
+	CommR *cid.Cid // SectorKey
 	Proof []byte
 
 	PreCommitInfo    *miner.SectorPreCommitInfo
@@ -111,6 +111,14 @@ type SectorInfo struct {
 	// Committing
 	CommitMessage string
 	InvalidProofs uint64 // failed proof computations (doesn't validate with proof inputs; can't compute)
+
+	// CCUpdate
+	CCUpdate             bool
+	CCPieces             []Piece
+	UpdateSealed         *cid.Cid
+	UpdateUnsealed       *cid.Cid
+	ReplicaUpdateProof   storage.ReplicaUpdateProof
+	ReplicaUpdateMessage string
 
 	// Faults
 	FaultReportMsg string

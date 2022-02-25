@@ -3,6 +3,7 @@ package sealing
 import (
 	"context"
 	"errors"
+	market2 "github.com/filecoin-project/venus/venus-shared/types/market"
 	"sync"
 	"time"
 
@@ -16,13 +17,12 @@ import (
 	"github.com/filecoin-project/go-state-types/crypto"
 	"github.com/filecoin-project/go-state-types/dline"
 	"github.com/filecoin-project/go-state-types/network"
-	statemachine "github.com/filecoin-project/go-statemachine"
+	"github.com/filecoin-project/go-statemachine"
 	"github.com/filecoin-project/specs-storage/storage"
 
-	"github.com/filecoin-project/venus/app/submodule/apitypes"
-	"github.com/filecoin-project/venus/pkg/types"
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/market"
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin/market"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	"github.com/filecoin-project/venus/venus-shared/types"
 
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/config"
@@ -32,15 +32,12 @@ import (
 	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 	types2 "github.com/filecoin-project/venus-sealer/types"
 
-	"github.com/filecoin-project/venus-market/piece"
+	"github.com/filecoin-project/venus-market/piecestorage"
 )
 
 var log = logging.Logger("sectors")
 
-type SectorLocation struct {
-	Deadline  uint64
-	Partition uint64
-}
+type SectorLocation = miner.SectorLocation
 
 var ErrSectorAllocated = errors.New("sectorNumber is allocated, but PreCommit info wasn't found on chain")
 
@@ -61,28 +58,29 @@ type SealingAPI interface {
 	StateMinerInfo(context.Context, address.Address, types2.TipSetToken) (miner.MinerInfo, error)
 	StateMinerAvailableBalance(context.Context, address.Address, types2.TipSetToken) (big.Int, error)
 	StateMinerSectorAllocated(context.Context, address.Address, abi.SectorNumber, types2.TipSetToken) (bool, error)
-	StateMarketStorageDeal(context.Context, abi.DealID, types2.TipSetToken) (*apitypes.MarketDeal, error)
+	StateMinerActiveSectors(context.Context, address.Address, types2.TipSetToken) ([]*miner.SectorOnChainInfo, error)
+	StateMarketStorageDeal(context.Context, abi.DealID, types2.TipSetToken) (*types.MarketDeal, error)
 	StateMarketStorageDealProposal(context.Context, abi.DealID, types2.TipSetToken) (market.DealProposal, error)
 	StateNetworkVersion(ctx context.Context, tok types2.TipSetToken) (network.Version, error)
 	StateMinerProvingDeadline(context.Context, address.Address, types2.TipSetToken) (*dline.Info, error)
-	StateMinerPartitions(ctx context.Context, m address.Address, dlIdx uint64, tok types2.TipSetToken) ([]apitypes.Partition, error)
+	StateMinerPartitions(ctx context.Context, m address.Address, dlIdx uint64, tok types2.TipSetToken) ([]types.Partition, error)
 	//	SendMsg(ctx context.Context, from, to address.Address, method abi.MethodNum, value, maxFee abi.TokenAmount, params []byte) (cid.Cid, error)
 	ChainHead(ctx context.Context) (types2.TipSetToken, abi.ChainEpoch, error)
 	ChainBaseFee(context.Context, types2.TipSetToken) (abi.TokenAmount, error)
 	ChainGetMessage(ctx context.Context, mc cid.Cid) (*types.Message, error)
 	StateGetRandomnessFromBeacon(ctx context.Context, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte, tok types2.TipSetToken) (abi.Randomness, error)
-	StateGetRandomnessFromTickets(ctx context.Context,personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte, tok types2.TipSetToken) (abi.Randomness, error)
+	StateGetRandomnessFromTickets(ctx context.Context, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte, tok types2.TipSetToken) (abi.Randomness, error)
 	ChainReadObj(context.Context, cid.Cid) ([]byte, error)
-	
+
 	//for messager
 	MessagerWaitMsg(context.Context, string) (types2.MsgLookup, error)
 	MessagerSearchMsg(context.Context, string) (*types2.MsgLookup, error)
 	MessagerSendMsg(ctx context.Context, from, to address.Address, method abi.MethodNum, value, maxFee abi.TokenAmount, params []byte) (string, error)
 
 	//for market
-	GetUnPackedDeals(ctx context.Context, miner address.Address, spec *piece.GetDealSpec) ([]*piece.DealInfoIncludePath, error)                                       //perm:read
-	MarkDealsAsPacking(ctx context.Context, miner address.Address, deals []abi.DealID) error                                                                          //perm:write
-	UpdateDealOnPacking(ctx context.Context, miner address.Address, pieceCID cid.Cid, dealId abi.DealID, sectorid abi.SectorNumber, offset abi.PaddedPieceSize) error //perm:write
+	GetUnPackedDeals(ctx context.Context, miner address.Address, spec *market2.GetDealSpec) ([]*market2.DealInfoIncludePath, error)                   //perm:read
+	MarkDealsAsPacking(ctx context.Context, miner address.Address, deals []abi.DealID) error                                                        //perm:write
+	UpdateDealOnPacking(ctx context.Context, miner address.Address, dealId abi.DealID, sectorid abi.SectorNumber, offset abi.PaddedPieceSize) error //perm:write
 }
 
 type SectorStateNotifee func(before, after types2.SectorInfo)
@@ -90,7 +88,7 @@ type SectorStateNotifee func(before, after types2.SectorInfo)
 type AddrSel func(ctx context.Context, mi miner.MinerInfo, use api.AddrUse, goodFunds, minFunds abi.TokenAmount) (address.Address, abi.TokenAmount, error)
 
 type Sealing struct {
-	api    SealingAPI
+	api      SealingAPI
 	DealInfo *CurrentDealInfoManager
 
 	feeCfg config.MinerFeeConfig
@@ -126,16 +124,29 @@ type Sealing struct {
 	precommiter *PreCommitBatcher
 	commiter    *CommitBatcher
 
-	getConfig types2.GetSealingConfigFunc
-
+	getConfig    types2.GetSealingConfigFunc
+	pieceStorage piecestorage.IPieceStorage
 	//service
 	logService *service.LogService
 }
 
 type openSector struct {
-	used abi.UnpaddedPieceSize // change to bitfield/rle when AddPiece gains offset support to better fill sectors
+	used     abi.UnpaddedPieceSize // change to bitfield/rle when AddPiece gains offset support to better fill sectors
+	number   abi.SectorNumber
+	ccUpdate bool
 
 	maybeAccept func(cid.Cid) error // called with inputLk
+}
+
+func (o *openSector) dealFitsInLifetime(dealEnd abi.ChainEpoch, expF func(sn abi.SectorNumber) (abi.ChainEpoch, error)) (bool, error) {
+	if !o.ccUpdate {
+		return true, nil
+	}
+	expiration, err := expF(o.number)
+	if err != nil {
+		return false, err
+	}
+	return expiration >= dealEnd, nil
 }
 
 type pendingPiece struct {
@@ -148,13 +159,14 @@ type pendingPiece struct {
 	accepted func(abi.SectorNumber, abi.UnpaddedPieceSize, error)
 }
 
-func New(mctx context.Context, api SealingAPI, fc config.MinerFeeConfig, events Events, maddr address.Address, metaDataService *service.MetadataService, sectorInfoService *service.SectorInfoService, logService *service.LogService, sealer sectorstorage.SectorManager, sc types2.SectorIDCounter, verif ffiwrapper.Verifier, prov ffiwrapper.Prover, pcp PreCommitPolicy, gc types2.GetSealingConfigFunc, notifee SectorStateNotifee, as AddrSel, networkParams *config.NetParamsConfig) *Sealing {
+func New(mctx context.Context, api SealingAPI, fc config.MinerFeeConfig, events Events, maddr address.Address, metaDataService *service.MetadataService, sectorInfoService *service.SectorInfoService, logService *service.LogService, sealer sectorstorage.SectorManager, sc types2.SectorIDCounter, verif ffiwrapper.Verifier, prov ffiwrapper.Prover, pcp PreCommitPolicy, gc types2.GetSealingConfigFunc, notifee SectorStateNotifee, as AddrSel, networkParams *config.NetParamsConfig, pieceStorage piecestorage.IPieceStorage) *Sealing {
 	s := &Sealing{
-		api:    api,
+		api:      api,
 		DealInfo: &CurrentDealInfoManager{api},
-		feeCfg: fc,
-		events: events,
+		feeCfg:   fc,
+		events:   events,
 
+		pieceStorage:  pieceStorage,
 		networkParams: networkParams,
 		maddr:         maddr,
 		sealer:        sealer,
@@ -179,12 +191,13 @@ func New(mctx context.Context, api SealingAPI, fc config.MinerFeeConfig, events 
 		getConfig: gc,
 
 		stats: types2.SectorStats{
-			BySector: map[abi.SectorID]types2.StatSectorState{},
+			BySector: map[abi.SectorID]types2.SectorState{},
+			ByState:  map[types2.SectorState]int64{},
 		},
 	}
 	s.startupWait.Add(1)
 
-	s.sectors = statemachine.New(sectorInfoService, s, types2.SectorInfo{})
+	s.sectors = statemachine.NewFromStateStore(sectorInfoService, s, types2.SectorInfo{})
 
 	return s
 }

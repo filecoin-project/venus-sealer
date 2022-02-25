@@ -1,31 +1,30 @@
 package types
 
 import (
-	"bytes"
-
+	"context"
+	"github.com/filecoin-project/specs-actors/actors/builtin/miner"
+	"github.com/filecoin-project/specs-actors/v7/actors/builtin/market"
+	miner0 "github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	"github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/ipfs/go-cid"
-
-	"github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
-
-	miner0 "github.com/filecoin-project/specs-actors/actors/builtin/miner"
 
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
-	"github.com/filecoin-project/go-state-types/exitcode"
 	"github.com/filecoin-project/specs-storage/storage"
 )
 
 type SectorPreCommitInfo = miner0.SectorPreCommitInfo
 
-// DealSchedule communicates the time interval of a storage deal. The deal must
-// appear in a sealed (proven) sector no later than StartEpoch, otherwise it
-// is invalid.
+type PieceWithDealInfo struct {
+	Piece    abi.PieceInfo
+	DealInfo PieceDealInfo
+}
+
 type DealSchedule struct {
 	StartEpoch abi.ChainEpoch
 	EndEpoch   abi.ChainEpoch
 }
 
-// DealInfo is a tuple of deal identity and its schedule
 type PieceDealInfo struct {
 	PublishCid   *cid.Cid
 	DealID       abi.DealID
@@ -34,14 +33,13 @@ type PieceDealInfo struct {
 	KeepUnsealed bool
 }
 
-// Piece is a tuple of piece and deal info
-type PieceWithDealInfo struct {
-	Piece    abi.PieceInfo
-	DealInfo PieceDealInfo
-}
-
 // Piece is a tuple of piece info and optional deal
 type Piece struct {
+	Piece    abi.PieceInfo
+	DealInfo *PieceDealInfo // nil for pieces which do not appear in deals (e.g. filler pieces)
+}
+
+type SectorPiece struct {
 	Piece    abi.PieceInfo
 	DealInfo *PieceDealInfo // nil for pieces which do not appear in deals (e.g. filler pieces)
 }
@@ -57,13 +55,6 @@ type Log struct {
 }
 
 type ReturnState string
-
-const (
-	RetPreCommit1      = ReturnState(PreCommit1)
-	RetPreCommitting   = ReturnState(PreCommitting)
-	RetPreCommitFailed = ReturnState(PreCommitFailed)
-	RetCommitFailed    = ReturnState(CommitFailed)
-)
 
 type SectorInfo struct {
 	State        SectorState
@@ -82,10 +73,10 @@ type SectorInfo struct {
 
 	// PreCommit2
 	CommD *cid.Cid
-	CommR *cid.Cid
+	CommR *cid.Cid // SectorKey
 	Proof []byte
 
-	PreCommitInfo    *SectorPreCommitInfo
+	PreCommitInfo    *miner.SectorPreCommitInfo
 	PreCommitDeposit big.Int
 	PreCommitMessage *cid.Cid
 	PreCommitTipSet  TipSetToken
@@ -99,6 +90,14 @@ type SectorInfo struct {
 	// Committing
 	CommitMessage *cid.Cid
 	InvalidProofs uint64 // failed proof computations (doesn't validate with proof inputs; can't compute)
+
+	// CCUpdate
+	CCUpdate             bool
+	CCPieces             []Piece
+	UpdateSealed         *cid.Cid
+	UpdateUnsealed       *cid.Cid
+	ReplicaUpdateProof   storage.ReplicaUpdateProof
+	ReplicaUpdateMessage *cid.Cid
 
 	// Faults
 	FaultReportMsg *cid.Cid
@@ -116,24 +115,74 @@ type SectorInfo struct {
 	Log []Log
 }
 
-type SectorIDCounter interface {
-	Next() (abi.SectorNumber, error)
+type msgCidGetter interface {
+	GetMessageByUid(context.Context, string) (*messager.Message, error)
+}
+
+
+func (t *SectorInfo) pieceInfos() []abi.PieceInfo {
+	out := make([]abi.PieceInfo, len(t.Pieces))
+	for i, p := range t.Pieces {
+		out[i] = p.Piece
+	}
+	return out
+}
+
+func (t *SectorInfo) dealIDs() []abi.DealID {
+	out := make([]abi.DealID, 0, len(t.Pieces))
+	for _, p := range t.Pieces {
+		if p.DealInfo == nil {
+			continue
+		}
+		out = append(out, p.DealInfo.DealID)
+	}
+	return out
+}
+
+func (t *SectorInfo) existingPieceSizes() []abi.UnpaddedPieceSize {
+	out := make([]abi.UnpaddedPieceSize, len(t.Pieces))
+	for i, p := range t.Pieces {
+		out[i] = p.Piece.Size.Unpadded()
+	}
+	return out
+}
+
+func (t *SectorInfo) hasDeals() bool {
+	for _, piece := range t.Pieces {
+		if piece.DealInfo != nil {
+			return true
+		}
+	}
+	return false
+}
+
+// Returns list of offset/length tuples of sector data ranges which clients
+// requested to keep unsealed
+func (t *SectorInfo) keepUnsealedRanges(invert, alwaysKeep bool) []storage.Range {
+	var out []storage.Range
+
+	var at abi.UnpaddedPieceSize
+	for _, piece := range t.Pieces {
+		psize := piece.Piece.Size.Unpadded()
+		at += psize
+
+		if piece.DealInfo == nil {
+			continue
+		}
+
+		keep := piece.DealInfo.KeepUnsealed || alwaysKeep
+
+		if keep == invert {
+			continue
+		}
+
+		out = append(out, storage.Range{
+			Offset: at - psize,
+			Size:   psize,
+		})
+	}
+
+	return out
 }
 
 type TipSetToken []byte
-
-type MsgLookup struct {
-	Receipt   MessageReceipt
-	TipSetTok TipSetToken
-	Height    abi.ChainEpoch
-}
-
-type MessageReceipt struct {
-	ExitCode exitcode.ExitCode
-	Return   []byte
-	GasUsed  int64
-}
-
-func (mr *MessageReceipt) Equals(o *MessageReceipt) bool {
-	return mr.ExitCode == o.ExitCode && bytes.Equal(mr.Return, o.Return) && mr.GasUsed == o.GasUsed
-}

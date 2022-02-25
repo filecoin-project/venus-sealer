@@ -3,13 +3,16 @@ package sealing
 import (
 	"context"
 
+	"golang.org/x/xerrors"
+
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/network"
 
 	"github.com/filecoin-project/venus-sealer/types"
 
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
-	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	"github.com/filecoin-project/venus/venus-shared/actors/policy"
 )
 
 type PreCommitPolicy interface {
@@ -36,20 +39,20 @@ type Chain interface {
 // If we're in Mode 2: The pre-commit expiration epoch will be set to the
 // current epoch + the provided default duration.
 type BasicPreCommitPolicy struct {
-	api Chain
+	api              Chain
+	getSealingConfig types.GetSealingConfigFunc
 
-	provingBuffer    abi.ChainEpoch
-	ccLifetimeEpochs abi.ChainEpoch
+	provingBuffer abi.ChainEpoch
 }
 
 // NewBasicPreCommitPolicy produces a BasicPreCommitPolicy.
 //
 // The provided duration is used as the default sector expiry when the sector
 // contains no deals. The proving boundary is used to adjust/align the sector's expiration.
-func NewBasicPreCommitPolicy(api Chain, ccLifetimeEpochs abi.ChainEpoch, provingBuffer abi.ChainEpoch) BasicPreCommitPolicy {
+func NewBasicPreCommitPolicy(api Chain, cfgGetter types.GetSealingConfigFunc, provingBuffer abi.ChainEpoch) BasicPreCommitPolicy {
 	return BasicPreCommitPolicy{
 		api:              api,
-		ccLifetimeEpochs: ccLifetimeEpochs,
+		getSealingConfig: cfgGetter,
 		provingBuffer:    provingBuffer,
 	}
 }
@@ -102,19 +105,25 @@ func (p *BasicPreCommitPolicy) Expiration(ctx context.Context, ps ...types.Piece
 }
 
 func (p *BasicPreCommitPolicy) getCCSectorLifetime() (abi.ChainEpoch, error) {
-	// if zero value in config, assume maximum sector extension
-	if p.ccLifetimeEpochs == 0 {
-		p.ccLifetimeEpochs = policy.GetMaxSectorExpirationExtension()
+	c, err := p.getSealingConfig()
+	if err != nil {
+		return 0, xerrors.Errorf("sealing config load error: %w", err)
 	}
 
-	if minExpiration := abi.ChainEpoch(miner.MinSectorExpiration); p.ccLifetimeEpochs < minExpiration {
+	var ccLifetimeEpochs = abi.ChainEpoch(uint64(c.CommittedCapacitySectorLifetime.Seconds()) / builtin.EpochDurationSeconds)
+	// if zero value in config, assume maximum sector extension
+	if ccLifetimeEpochs == 0 {
+		ccLifetimeEpochs = policy.GetMaxSectorExpirationExtension()
+	}
+
+	if minExpiration := abi.ChainEpoch(miner.MinSectorExpiration); ccLifetimeEpochs < minExpiration {
 		log.Warnf("value for CommittedCapacitySectorLiftime is too short, using default minimum (%d epochs)", minExpiration)
 		return minExpiration, nil
 	}
-	if maxExpiration := policy.GetMaxSectorExpirationExtension(); p.ccLifetimeEpochs > maxExpiration {
+	if maxExpiration := policy.GetMaxSectorExpirationExtension(); ccLifetimeEpochs > maxExpiration {
 		log.Warnf("value for CommittedCapacitySectorLiftime is too long, using default maximum (%d epochs)", maxExpiration)
 		return maxExpiration, nil
 	}
 
-	return p.ccLifetimeEpochs - p.provingBuffer, nil
+	return ccLifetimeEpochs - p.provingBuffer, nil
 }

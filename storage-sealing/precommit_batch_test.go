@@ -8,8 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
-
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 
@@ -21,7 +19,8 @@ import (
 	miner0 "github.com/filecoin-project/specs-actors/actors/builtin/miner"
 	miner6 "github.com/filecoin-project/specs-actors/v6/actors/builtin/miner"
 
-	"github.com/filecoin-project/venus/pkg/types"
+	"github.com/filecoin-project/venus/venus-shared/actors/policy"
+	"github.com/filecoin-project/venus/venus-shared/types"
 
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/config"
@@ -29,7 +28,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/storage-sealing/mocks"
 	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 	types2 "github.com/filecoin-project/venus-sealer/types"
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
 )
 
 var fc = config.MinerFeeConfig{
@@ -60,10 +59,10 @@ func TestPrecommitBatcher(t *testing.T) {
 			WaitDealsDelay:            time.Hour * 6,
 			AlwaysKeepUnsealedCopy:    true,
 
-			BatchPreCommits:     true,
-			MaxPreCommitBatch:   maxBatch,
-			PreCommitBatchWait:  24 * time.Hour,
-			PreCommitBatchSlack: 3 * time.Hour,
+			BatchPreCommits:            true,
+			MaxPreCommitBatch:          maxBatch,
+			PreCommitBatchWait:         24 * time.Hour,
+			PreCommitBatchSlack:        3 * time.Hour,
 			BatchPreCommitAboveBaseFee: big.NewInt(10000),
 
 			AggregateCommits: true,

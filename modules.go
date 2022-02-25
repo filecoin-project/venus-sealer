@@ -2,16 +2,15 @@ package venus_sealer
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"github.com/filecoin-project/go-bitfield"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin"
+	"github.com/filecoin-project/venus/venus-shared/api/market"
 	"math"
+	"math/rand"
 	"net/http"
 	"time"
-
-	"github.com/filecoin-project/go-bitfield"
-	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
-	api2 "github.com/filecoin-project/venus-market/api"
 
 	"github.com/gbrlsnchs/jwt/v3"
 	"github.com/ipfs/go-datastore"
@@ -22,7 +21,7 @@ import (
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-jsonrpc/auth"
-	paramfetch "github.com/filecoin-project/go-paramfetch"
+	"github.com/filecoin-project/go-paramfetch"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-storedcounter"
 
@@ -37,10 +36,14 @@ import (
 	"github.com/filecoin-project/venus-sealer/storage"
 	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 	types2 "github.com/filecoin-project/venus-sealer/types"
+
+	config2 "github.com/filecoin-project/venus-market/config"
+	"github.com/filecoin-project/venus-market/piecestorage"
+
 	"github.com/filecoin-project/venus/fixtures/asset"
-	"github.com/filecoin-project/venus/pkg/types"
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
-	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	"github.com/filecoin-project/venus/venus-shared/actors/policy"
+	"github.com/filecoin-project/venus/venus-shared/types"
 )
 
 func OpenFilesystemJournal(homeDir config.HomeDir, lc fx.Lifecycle, disabled journal.DisabledEvents) (journal.Journal, error) {
@@ -193,7 +196,6 @@ func GetParams(mctx MetricsCtx, spt abi.RegisteredSealProof) error {
 	if err != nil {
 		return err
 	}
-
 	if err := paramfetch.GetParams(mctx, ps, srs, uint64(ssize)); err != nil {
 		return xerrors.Errorf("get params: %w", err)
 	}
@@ -240,6 +242,23 @@ func AddressSelector(addrConf *config.MinerAddressConfig) func() (*storage.Addre
 	}
 }
 
+func NewPieceStorage(cfg *config2.PieceStorage, preSignOp piecestorage.IPreSignOp) (piecestorage.IPieceStorage, error) {
+	if cfg.PreSignS3.Enable {
+		piecestorage.RegisterPieceStorageCtor(piecestorage.PreSignS3,
+			func(cfg interface{}) (piecestorage.IPieceStorage, error) {
+				return piecestorage.NewPresignS3Storage(preSignOp), nil
+			})
+	}
+	if !cfg.S3.Enable && !cfg.Fs.Enable && !cfg.PreSignS3.Enable {
+		return nil, nil
+	}
+	return piecestorage.NewPieceStorage(cfg)
+}
+
+func NewPreSignS3Op(cfg *config2.PieceStorage, marketAPI market.IMarket) piecestorage.IPreSignOp {
+	return marketAPI
+}
+
 type StorageMinerParams struct {
 	fx.In
 
@@ -247,7 +266,7 @@ type StorageMinerParams struct {
 	MetricsCtx         MetricsCtx
 	API                api.FullNode
 	Messager           api.IMessager
-	MarketClient       api2.MarketFullNode
+	MarketClient       market.IMarket
 	MetadataService    *service.MetadataService
 	LogService         *service.LogService
 	SectorInfoService  *service.SectorInfoService
@@ -259,56 +278,7 @@ type StorageMinerParams struct {
 	Journal            journal.Journal
 	AddrSel            *storage.AddressSelector
 	NetworkParams      *config.NetParamsConfig
-}
-
-func StorageMiner(fc config.MinerFeeConfig) func(params StorageMinerParams) (*storage.Miner, error) {
-	return func(params StorageMinerParams) (*storage.Miner, error) {
-		var (
-			metadataService   = params.MetadataService
-			sectorinfoService = params.SectorInfoService
-			logService        = params.LogService
-			mctx              = params.MetricsCtx
-			lc                = params.Lifecycle
-			api               = params.API
-			messager          = params.Messager
-			marketClient      = params.MarketClient
-			sealer            = params.Sealer
-			sc                = params.SectorIDCounter
-			verif             = params.Verifier
-			prover            = params.Prover
-			gsd               = params.GetSealingConfigFn
-			j                 = params.Journal
-			as                = params.AddrSel
-			np                = params.NetworkParams
-		)
-
-		maddr, err := metadataService.GetMinerAddress()
-		if err != nil {
-			return nil, err
-		}
-
-		ctx := LifecycleCtx(mctx, lc)
-
-		fps, err := storage.NewWindowedPoStScheduler(api, messager, fc, as, sealer, verif, sealer, j, maddr, np)
-		if err != nil {
-			return nil, err
-		}
-
-		sm, err := storage.NewMiner(api, messager, marketClient, maddr, metadataService, sectorinfoService, logService, sealer, sc, verif, prover, gsd, fc, j, as, np)
-		if err != nil {
-			return nil, err
-		}
-
-		lc.Append(fx.Hook{
-			OnStart: func(context.Context) error {
-				go fps.Run(ctx)
-				return sm.Run(ctx)
-			},
-			OnStop: sm.Stop,
-		})
-
-		return sm, nil
-	}
+	PieceStorage       piecestorage.IPieceStorage `optional:"true"`
 }
 
 func DoPoStWarmup(ctx MetricsCtx, api api.FullNode, metadataService *service.MetadataService, prover storage.WinningPoStProver) error {
@@ -338,7 +308,6 @@ out:
 			if err != nil {
 				return err
 			}
-
 			sector = abi.SectorNumber(b)
 			break out
 		}
@@ -360,20 +329,80 @@ out:
 		return xerrors.Errorf("getting sector info: %w", err)
 	}
 
-	_, err = prover.ComputeProof(ctx, []proof2.SectorInfo{
+	ts, err := api.ChainHead(ctx)
+	if err != nil {
+		return xerrors.Errorf("PostWarmup failed: call ChainHead failed:%w", err)
+	}
+
+	version, err := api.StateNetworkVersion(ctx, ts.Key())
+	if err != nil {
+		return xerrors.Errorf("PostWarmup failed: get network version failed:%w", err)
+	}
+	_, err = prover.ComputeProof(ctx, []builtin.ExtendedSectorInfo{
 		{
 			SealProof:    si.SealProof,
 			SectorNumber: sector,
+			SectorKey:    si.SectorKeyCID,
 			SealedCID:    si.SealedCID,
-		},
-	}, r)
+		}}, r, ts.Height(), version)
 	if err != nil {
-		log.Errorw("failed to compute proof: %w, please check your storage and restart sealer after fixed", err)
+		log.Errorf("failed to compute proof: %s, please check your storage and restart sealer after fixed", err.Error())
 		return nil
 	}
 
 	log.Infow("winning PoSt warmup successful", "took", time.Since(start))
 	return nil
+}
+
+func StorageMiner(fc config.MinerFeeConfig) func(params StorageMinerParams) (*storage.Miner, error) {
+	return func(params StorageMinerParams) (*storage.Miner, error) {
+		var (
+			metadataService   = params.MetadataService
+			sectorinfoService = params.SectorInfoService
+			logService        = params.LogService
+			mctx              = params.MetricsCtx
+			lc                = params.Lifecycle
+			api               = params.API
+			messager          = params.Messager
+			marketClient      = params.MarketClient
+			sealer            = params.Sealer
+			sc                = params.SectorIDCounter
+			verif             = params.Verifier
+			prover            = params.Prover
+			gsd               = params.GetSealingConfigFn
+			j                 = params.Journal
+			as                = params.AddrSel
+			np                = params.NetworkParams
+			ps                = params.PieceStorage
+		)
+
+		maddr, err := metadataService.GetMinerAddress()
+		if err != nil {
+			return nil, err
+		}
+
+		ctx := LifecycleCtx(mctx, lc)
+
+		fps, err := storage.NewWindowedPoStScheduler(api, messager, fc, as, sealer, verif, sealer, j, maddr, np)
+		if err != nil {
+			return nil, err
+		}
+
+		sm, err := storage.NewMiner(api, ps, messager, marketClient, maddr, metadataService, sectorinfoService, logService, sealer, sc, verif, prover, gsd, fc, j, as, np)
+		if err != nil {
+			return nil, err
+		}
+
+		lc.Append(fx.Hook{
+			OnStart: func(context.Context) error {
+				go fps.Run(ctx)
+				return sm.Run(ctx)
+			},
+			OnStop: sm.Stop,
+		})
+
+		return sm, nil
+	}
 }
 
 func NewSetSealConfigFunc(r *config.StorageMiner) (types2.SetSealingConfigFunc, error) {

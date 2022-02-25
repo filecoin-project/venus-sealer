@@ -14,8 +14,8 @@ import (
 	"github.com/filecoin-project/go-state-types/network"
 	"github.com/filecoin-project/specs-storage/storage"
 
-	proof2 "github.com/filecoin-project/specs-actors/v2/actors/runtime/proof"
 	"github.com/filecoin-project/specs-actors/v3/actors/runtime/proof"
+	proof7 "github.com/filecoin-project/specs-actors/v7/actors/runtime/proof"
 
 	"go.opencensus.io/trace"
 	"golang.org/x/xerrors"
@@ -23,14 +23,13 @@ import (
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/constants"
 
-	types3 "github.com/filecoin-project/venus-messager/types"
+	types3 "github.com/filecoin-project/venus/venus-shared/types/messager"
 
-	"github.com/filecoin-project/venus/app/submodule/apitypes"
 	"github.com/filecoin-project/venus/pkg/messagepool"
-	"github.com/filecoin-project/venus/pkg/types"
-	actors "github.com/filecoin-project/venus/pkg/types/specactors"
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
-	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
+	"github.com/filecoin-project/venus/venus-shared/actors"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	"github.com/filecoin-project/venus/venus-shared/actors/policy"
+	"github.com/filecoin-project/venus/venus-shared/types"
 )
 
 // recordPoStFailure records a failure in the journal.
@@ -183,9 +182,10 @@ func (s *WindowPoStScheduler) runSubmitPoST(
 		post.ChainCommitRand = commRand
 
 		// Submit PoST
-		uid, submitErr := s.submitPoStMessage(ctx, post)
-		if submitErr != nil {
-			log.Errorf("submit window post failed: %+v", submitErr)
+		uid, err := s.submitPoStMessage(ctx, post)
+		if err != nil {
+			log.Errorf("submit window post failed: %+v", err)
+			submitErr = err
 		} else {
 			s.recordProofsEvent(post.Partitions, uid)
 		}
@@ -253,7 +253,7 @@ func (s *WindowPoStScheduler) checkSectors(ctx context.Context, check bitfield.B
 // TODO: the waiting should happen in the background. Right now this
 //  is blocking/delaying the actual generation and submission of WindowPoSts in
 //  this deadline!
-func (s *WindowPoStScheduler) declareRecoveries(ctx context.Context, dlIdx uint64, partitions []apitypes.Partition, tsk types.TipSetKey) ([]miner.RecoveryDeclaration, *types3.MessageWithUID, error) {
+func (s *WindowPoStScheduler) declareRecoveries(ctx context.Context, dlIdx uint64, partitions []types.Partition, tsk types.TipSetKey) ([]miner.RecoveryDeclaration, *types3.MessageWithUID, error) {
 	ctx, span := trace.StartSpan(ctx, "storage.declareRecoveries")
 	defer span.End()
 
@@ -315,7 +315,7 @@ func (s *WindowPoStScheduler) declareRecoveries(ctx context.Context, dlIdx uint6
 		return recoveries, nil, xerrors.Errorf("could not serialize declare recoveries parameters: %w", aerr)
 	}
 
-	msg := &types.UnsignedMessage{
+	msg := &types.Message{
 		To:     s.actor,
 		Method: miner.Methods.DeclareFaultsRecovered,
 		Params: enc,
@@ -326,7 +326,7 @@ func (s *WindowPoStScheduler) declareRecoveries(ctx context.Context, dlIdx uint6
 		return recoveries, nil, err
 	}
 
-	uid, err := s.Messager.PushMessage(ctx, msg, &types3.MsgMeta{MaxFee: abi.TokenAmount(s.feeCfg.MaxWindowPoStGasFee)})
+	uid, err := s.Messager.PushMessage(ctx, msg, &types3.SendSpec{MaxFee: abi.TokenAmount(s.feeCfg.MaxWindowPoStGasFee)})
 	if err != nil {
 		return recoveries, nil, xerrors.Errorf("pushing message to mpool: %w", err)
 	}
@@ -362,7 +362,7 @@ func (s *WindowPoStScheduler) declareRecoveries(ctx context.Context, dlIdx uint6
 // TODO: the waiting should happen in the background. Right now this
 //  is blocking/delaying the actual generation and submission of WindowPoSts in
 //  this deadline!
-func (s *WindowPoStScheduler) declareFaults(ctx context.Context, dlIdx uint64, partitions []apitypes.Partition, tsk types.TipSetKey) ([]miner.FaultDeclaration, *types3.MessageWithUID, error) {
+func (s *WindowPoStScheduler) declareFaults(ctx context.Context, dlIdx uint64, partitions []types.Partition, tsk types.TipSetKey) ([]miner.FaultDeclaration, *types3.MessageWithUID, error) {
 	ctx, span := trace.StartSpan(ctx, "storage.declareFaults")
 	defer span.End()
 
@@ -428,7 +428,7 @@ func (s *WindowPoStScheduler) declareFaults(ctx context.Context, dlIdx uint64, p
 		return faults, nil, err
 	}
 
-	uid, err := s.Messager.PushMessage(ctx, msg, &types3.MsgMeta{MaxFee: spec.MaxFee})
+	uid, err := s.Messager.PushMessage(ctx, msg, &types3.SendSpec{MaxFee: spec.MaxFee})
 	if err != nil {
 		return faults, nil, xerrors.Errorf("pushing message to mpool: %w", err)
 	}
@@ -576,7 +576,7 @@ func (s *WindowPoStScheduler) runPoStCycle(ctx context.Context, di dline.Info, t
 		for retries := 0; ; retries++ {
 			skipCount := uint64(0)
 			var partitions []miner.PoStPartition
-			var sinfos []proof2.SectorInfo
+			var xsinfos []proof7.ExtendedSectorInfo
 			for partIdx, partition := range batch {
 				// TODO: Can do this in parallel
 				toProve, err := bitfield.SubtractBitField(partition.LiveSectors, partition.FaultySectors)
@@ -619,14 +619,14 @@ func (s *WindowPoStScheduler) runPoStCycle(ctx context.Context, di dline.Info, t
 					continue
 				}
 
-				sinfos = append(sinfos, ssi...)
+				xsinfos = append(xsinfos, ssi...)
 				partitions = append(partitions, miner.PoStPartition{
 					Index:   uint64(batchPartitionStartIdx + partIdx),
 					Skipped: skipped,
 				})
 			}
 
-			if len(sinfos) == 0 {
+			if len(xsinfos) == 0 {
 				// nothing to prove for this batch
 				break
 			}
@@ -645,14 +645,21 @@ func (s *WindowPoStScheduler) runPoStCycle(ctx context.Context, di dline.Info, t
 				return nil, err
 			}
 
-			postOut, ps, err := s.prover.GenerateWindowPoSt(ctx, abi.ActorID(mid), sinfos, append(abi.PoStRandomness{}, rand...))
+			defer func() {
+				if r := recover(); r != nil {
+					log.Errorf("recover: %s", r)
+				}
+			}()
+			postOut, ps, err := s.prover.GenerateWindowPoSt(ctx, abi.ActorID(mid), xsinfos, append(abi.PoStRandomness{}, rand...))
 			elapsed := time.Since(tsStart)
-
 			log.Infow("computing window post", "batch", batchIdx, "elapsed", elapsed)
-
+			if err != nil {
+				log.Errorf("error generating window post: %s", err)
+			}
 			if err == nil {
 				// If we proved nothing, something is very wrong.
 				if len(postOut) == 0 {
+					log.Errorf("len(postOut) == 0")
 					return nil, xerrors.Errorf("received no proofs back from generate window post")
 				}
 
@@ -673,6 +680,14 @@ func (s *WindowPoStScheduler) runPoStCycle(ctx context.Context, di dline.Info, t
 				}
 
 				// If we generated an incorrect proof, try again.
+				sinfos := make([]proof7.SectorInfo, len(xsinfos))
+				for i, xsi := range xsinfos {
+					sinfos[i] = proof7.SectorInfo{
+						SealProof:    xsi.SealProof,
+						SectorNumber: xsi.SectorNumber,
+						SealedCID:    xsi.SealedCID,
+					}
+				}
 				if correct, err := s.verifier.VerifyWindowPoSt(ctx, proof.WindowPoStVerifyInfo{
 					Randomness:        abi.PoStRandomness(checkRand),
 					Proofs:            postOut,
@@ -695,7 +710,7 @@ func (s *WindowPoStScheduler) runPoStCycle(ctx context.Context, di dline.Info, t
 			}
 
 			// Proof generation failed, so retry
-
+			log.Debugf("Proof generation failed, retry")
 			if len(ps) == 0 {
 				// If we didn't skip any new sectors, we failed
 				// for some other reason and we need to abort.
@@ -723,14 +738,12 @@ func (s *WindowPoStScheduler) runPoStCycle(ctx context.Context, di dline.Info, t
 		if !somethingToProve {
 			continue
 		}
-
 		posts = append(posts, params)
 	}
-
 	return posts, nil
 }
 
-func (s *WindowPoStScheduler) batchPartitions(partitions []apitypes.Partition, nv network.Version) ([][]apitypes.Partition, error) {
+func (s *WindowPoStScheduler) batchPartitions(partitions []types.Partition, nv network.Version) ([][]types.Partition, error) {
 	// We don't want to exceed the number of sectors allowed in a message.
 	// So given the number of sectors in a partition, work out the number of
 	// partitions that can be in a message without exceeding sectors per
@@ -763,7 +776,7 @@ func (s *WindowPoStScheduler) batchPartitions(partitions []apitypes.Partition, n
 	}
 
 	// Split the partitions into batches
-	batches := make([][]apitypes.Partition, 0, batchCount)
+	batches := make([][]types.Partition, 0, batchCount)
 	for i := 0; i < len(partitions); i += partitionsPerMsg {
 		end := i + partitionsPerMsg
 		if end > len(partitions) {
@@ -775,7 +788,7 @@ func (s *WindowPoStScheduler) batchPartitions(partitions []apitypes.Partition, n
 	return batches, nil
 }
 
-func (s *WindowPoStScheduler) sectorsForProof(ctx context.Context, goodSectors, allSectors bitfield.BitField, ts *types.TipSet) ([]proof2.SectorInfo, error) {
+func (s *WindowPoStScheduler) sectorsForProof(ctx context.Context, goodSectors, allSectors bitfield.BitField, ts *types.TipSet) ([]proof7.ExtendedSectorInfo, error) {
 	sset, err := s.api.StateMinerSectors(ctx, s.actor, &goodSectors, ts.Key())
 	if err != nil {
 		return nil, err
@@ -785,22 +798,24 @@ func (s *WindowPoStScheduler) sectorsForProof(ctx context.Context, goodSectors, 
 		return nil, nil
 	}
 
-	substitute := proof2.SectorInfo{
+	substitute := proof7.ExtendedSectorInfo{
 		SectorNumber: sset[0].SectorNumber,
 		SealedCID:    sset[0].SealedCID,
 		SealProof:    sset[0].SealProof,
+		SectorKey:    sset[0].SectorKeyCID,
 	}
 
-	sectorByID := make(map[uint64]proof2.SectorInfo, len(sset))
+	sectorByID := make(map[uint64]proof7.ExtendedSectorInfo, len(sset))
 	for _, sector := range sset {
-		sectorByID[uint64(sector.SectorNumber)] = proof2.SectorInfo{
+		sectorByID[uint64(sector.SectorNumber)] = proof7.ExtendedSectorInfo{
 			SectorNumber: sector.SectorNumber,
 			SealedCID:    sector.SealedCID,
 			SealProof:    sector.SealProof,
+			SectorKey:    sector.SectorKeyCID,
 		}
 	}
 
-	proofSectors := make([]proof2.SectorInfo, 0, len(sset))
+	proofSectors := make([]proof7.ExtendedSectorInfo, 0, len(sset))
 	if err := allSectors.ForEach(func(sectorNo uint64) error {
 		if info, found := sectorByID[sectorNo]; found {
 			proofSectors = append(proofSectors, info)
@@ -850,7 +865,7 @@ func (s *WindowPoStScheduler) submitPoStMessage(ctx context.Context, proof *mine
 		}
 
 		// TODO: consider maybe caring about the output
-		uid, err = s.Messager.PushMessage(ctx, msg, &types3.MsgMeta{MaxFee: spec.MaxFee})
+		uid, err = s.Messager.PushMessage(ctx, msg, &types3.SendSpec{MaxFee: spec.MaxFee})
 		if err != nil {
 			log.Errorf("[%d] pushing SubmitWindowedPoSt message failed: %v", idx+1, err)
 			time.Sleep(10 * time.Second)

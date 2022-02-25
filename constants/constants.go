@@ -14,7 +14,7 @@ import (
 var InsecurePoStValidation = false
 
 const (
-	NewestNetworkVersion = network.Version13
+	NewestNetworkVersion = network.Version15
 	MessageConfidence    = uint64(2)
 )
 
@@ -27,10 +27,11 @@ const AddressMainnetEnvVar = "_mainnet_"
 var BlocksPerEpoch = uint64(builtin2.ExpectedLeadersPerEpoch)
 
 var (
-	FullAPIVersion0   = newVer(1, 4, 0)
-	FullAPIVersion1   = newVer(2, 1, 0)
-	MinerAPIVersion0  = newVer(1, 2, 0)
-	WorkerAPIVersion0 = newVer(1, 1, 0)
+	FullAPIVersion0   = newVer(1, 5, 0)
+	FullAPIVersion1   = newVer(2, 2, 0)
+
+	MinerAPIVersion0  = newVer(1, 3, 0)
+	WorkerAPIVersion0 = newVer(1, 5, 0)
 
 	MinerVersion = newVer(1, 3, 0)
 )

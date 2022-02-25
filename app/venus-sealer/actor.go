@@ -24,10 +24,10 @@ import (
 
 	miner2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/miner"
 
-	"github.com/filecoin-project/venus/pkg/types"
-	actors "github.com/filecoin-project/venus/pkg/types/specactors"
-	"github.com/filecoin-project/venus/pkg/types/specactors/adt"
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
+	"github.com/filecoin-project/venus/venus-shared/actors"
+	"github.com/filecoin-project/venus/venus-shared/actors/adt"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	"github.com/filecoin-project/venus/venus-shared/types"
 
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/constants"
@@ -299,7 +299,7 @@ var actorWithdrawCmd = &cli.Command{
 
 		if nv >= network.Version14 {
 			var withdrawn abi.TokenAmount
-			if err := withdrawn.UnmarshalCBOR(bytes.NewReader(wait.Receipt.ReturnValue)); err != nil {
+			if err := withdrawn.UnmarshalCBOR(bytes.NewReader(wait.Receipt.Return)); err != nil {
 				return err
 			}
 

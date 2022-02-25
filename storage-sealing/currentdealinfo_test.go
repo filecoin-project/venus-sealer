@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-
 	"golang.org/x/net/context"
 	"golang.org/x/xerrors"
 
@@ -25,10 +24,9 @@ import (
 	"github.com/ipfs/go-cid"
 	"github.com/stretchr/testify/require"
 
-	"github.com/filecoin-project/venus/app/submodule/apitypes"
 	evtmock "github.com/filecoin-project/venus/pkg/events/state/mock"
-	"github.com/filecoin-project/venus/pkg/types"
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/market"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin/market"
+	"github.com/filecoin-project/venus/venus-shared/types"
 
 	types2 "github.com/filecoin-project/venus-sealer/types"
 )
@@ -62,14 +60,14 @@ func TestGetCurrentDealInfo(t *testing.T) {
 		ClientCollateral:     abi.NewTokenAmount(1),
 		Label:                "other",
 	}
-	successDeal := &apitypes.MarketDeal{
+	successDeal := &types.MarketDeal{
 		Proposal: proposal,
 		State: market.DealState{
 			SectorStartEpoch: 1,
 			LastUpdatedEpoch: 2,
 		},
 	}
-	earlierDeal := &apitypes.MarketDeal{
+	earlierDeal := &types.MarketDeal{
 		Proposal: otherProposal,
 		State: market.DealState{
 			SectorStartEpoch: 1,
@@ -80,11 +78,11 @@ func TestGetCurrentDealInfo(t *testing.T) {
 	type testCaseData struct {
 		searchMessageLookup *types2.MsgLookup
 		searchMessageErr    error
-		marketDeals         map[abi.DealID]*apitypes.MarketDeal
+		marketDeals         map[abi.DealID]*types.MarketDeal
 		publishCid          cid.Cid
 		targetProposal      *market.DealProposal
 		expectedDealID      abi.DealID
-		expectedMarketDeal  *apitypes.MarketDeal
+		expectedMarketDeal  *types.MarketDeal
 		expectedError       error
 	}
 	testCases := map[string]testCaseData{
@@ -96,7 +94,7 @@ func TestGetCurrentDealInfo(t *testing.T) {
 					Return:   makePublishDealsReturnBytes(t, []abi.DealID{successDealID}),
 				},
 			},
-			marketDeals: map[abi.DealID]*apitypes.MarketDeal{
+			marketDeals: map[abi.DealID]*types.MarketDeal{
 				successDealID: successDeal,
 			},
 			targetProposal:     &proposal,
@@ -111,7 +109,7 @@ func TestGetCurrentDealInfo(t *testing.T) {
 					Return:   makePublishDealsReturnBytes(t, []abi.DealID{earlierDealID, successDealID}),
 				},
 			},
-			marketDeals: map[abi.DealID]*apitypes.MarketDeal{
+			marketDeals: map[abi.DealID]*types.MarketDeal{
 				earlierDealID: earlierDeal,
 				successDealID: successDeal,
 			},
@@ -127,7 +125,7 @@ func TestGetCurrentDealInfo(t *testing.T) {
 					Return:   makePublishDealsReturnBytes(t, []abi.DealID{earlierDealID}),
 				},
 			},
-			marketDeals: map[abi.DealID]*apitypes.MarketDeal{
+			marketDeals: map[abi.DealID]*types.MarketDeal{
 				earlierDealID: earlierDeal,
 			},
 			targetProposal: &proposal,
@@ -142,7 +140,7 @@ func TestGetCurrentDealInfo(t *testing.T) {
 					Return:   makePublishDealsReturnBytes(t, []abi.DealID{earlierDealID}),
 				},
 			},
-			marketDeals: map[abi.DealID]*apitypes.MarketDeal{
+			marketDeals: map[abi.DealID]*types.MarketDeal{
 				earlierDealID: earlierDeal,
 				successDealID: successDeal,
 			},
@@ -158,7 +156,7 @@ func TestGetCurrentDealInfo(t *testing.T) {
 					Return:   makePublishDealsReturnBytes(t, []abi.DealID{successDealID}),
 				},
 			},
-			marketDeals: map[abi.DealID]*apitypes.MarketDeal{
+			marketDeals: map[abi.DealID]*types.MarketDeal{
 				successDealID: successDeal,
 			},
 			targetProposal:     nil,
@@ -173,7 +171,7 @@ func TestGetCurrentDealInfo(t *testing.T) {
 					Return:   makePublishDealsReturnBytes(t, []abi.DealID{earlierDealID, successDealID}),
 				},
 			},
-			marketDeals: map[abi.DealID]*apitypes.MarketDeal{
+			marketDeals: map[abi.DealID]*types.MarketDeal{
 				earlierDealID: earlierDeal,
 				successDealID: successDeal,
 			},
@@ -224,7 +222,7 @@ func TestGetCurrentDealInfo(t *testing.T) {
 			defer cancel()
 			ts, err := evtmock.MockTipset(address.TestAddress, rand.Uint64())
 			require.NoError(t, err)
-			marketDeals := make(map[marketDealKey]*apitypes.MarketDeal)
+			marketDeals := make(map[marketDealKey]*types.MarketDeal)
 			for dealID, deal := range data.marketDeals {
 				marketDeals[marketDealKey{dealID, ts.Key()}] = deal
 			}
@@ -259,7 +257,7 @@ type CurrentDealInfoMockAPI struct {
 	SearchMessageLookup *types2.MsgLookup
 	SearchMessageErr    error
 
-	MarketDeals map[marketDealKey]*apitypes.MarketDeal
+	MarketDeals map[marketDealKey]*types.MarketDeal
 }
 
 func (mapi *CurrentDealInfoMockAPI) ChainGetMessage(ctx context.Context, c cid.Cid) (*types.Message, error) {
@@ -293,7 +291,7 @@ func (mapi *CurrentDealInfoMockAPI) StateLookupID(ctx context.Context, addr addr
 	return addr, nil
 }
 
-func (mapi *CurrentDealInfoMockAPI) StateMarketStorageDeal(ctx context.Context, dealID abi.DealID, tok types2.TipSetToken) (*apitypes.MarketDeal, error) {
+func (mapi *CurrentDealInfoMockAPI) StateMarketStorageDeal(ctx context.Context, dealID abi.DealID, tok types2.TipSetToken) (*types.MarketDeal, error) {
 	tsk, err := types.TipSetKeyFromBytes(tok)
 	if err != nil {
 		return nil, err

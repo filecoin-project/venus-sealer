@@ -57,6 +57,8 @@ type SectorStorageInfo struct {
 	Primary bool
 }
 
+//go:generate go run github.com/golang/mock/mockgen -destination=mocks/index.go -package=mocks . SectorIndex
+
 type SectorIndex interface { // part of storage-miner api
 	StorageAttach(context.Context, StorageInfo, fsutil.FsStat) error
 	StorageInfo(context.Context, ID) (StorageInfo, error)
@@ -71,6 +73,7 @@ type SectorIndex interface { // part of storage-miner api
 	// atomically acquire locks on all sector file types. close ctx to unlock
 	StorageLock(ctx context.Context, sector abi.SectorID, read storiface.SectorFileType, write storiface.SectorFileType) error
 	StorageTryLock(ctx context.Context, sector abi.SectorID, read storiface.SectorFileType, write storiface.SectorFileType) (bool, error)
+	StorageGetLocks(ctx context.Context) (storiface.SectorLocks, error)
 
 	StorageList(ctx context.Context) (map[ID][]Decl, error)
 }

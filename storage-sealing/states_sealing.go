@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/filecoin-project/go-commp-utils/zerocomm"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/go-state-types/crypto"
@@ -19,9 +20,9 @@ import (
 	"github.com/filecoin-project/specs-storage/storage"
 
 	builtin2 "github.com/filecoin-project/specs-actors/v2/actors/builtin"
-	actors "github.com/filecoin-project/venus/pkg/types/specactors"
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
-	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
+	actors "github.com/filecoin-project/venus/venus-shared/actors"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	"github.com/filecoin-project/venus/venus-shared/actors/policy"
 
 	"github.com/filecoin-project/specs-actors/v5/actors/runtime/proof"
 
@@ -131,9 +132,14 @@ func (m *Sealing) padSector(ctx context.Context, sectorID storage.SectorRef, bDe
 
 	out := make([]abi.PieceInfo, len(sizes))
 	for i, size := range sizes {
+		expectCid := zerocomm.ZeroPieceCommitment(size)
+
 		ppi, err := m.sealer.AddPiece(ctx, sectorID, existingPieceSizes, size, NewNullReader(size))
 		if err != nil {
 			return nil, xerrors.Errorf("add piece: %w", err)
+		}
+		if !expectCid.Equals(ppi.PieceCID) {
+			return nil, xerrors.Errorf("got unexpected padding piece CID: expected:%s, got:%s", expectCid, ppi.PieceCID)
 		}
 
 		existingPieceSizes = append(existingPieceSizes, size)
@@ -252,7 +258,7 @@ func (m *Sealing) handleGetTicket(ctx statemachine.Context, sector types.SectorI
 }
 
 func (m *Sealing) handlePreCommit1(ctx statemachine.Context, sector types.SectorInfo) error {
-	if err := checkPieces(ctx.Context(), m.maddr, sector, m.api); err != nil { // Sanity check state
+	if err := checkPieces(ctx.Context(), m.maddr, sector, m.api, false); err != nil { // Sanity check state
 		switch err.(type) {
 		case *ErrApi:
 			log.Errorf("handlePreCommit1: api error, not proceeding: %+v", err)
@@ -373,8 +379,8 @@ func (m *Sealing) handlePreCommit2(ctx statemachine.Context, sector types.Sector
 }
 
 // TODO: We should probably invoke this method in most (if not all) state transition failures after handlePreCommitting
-func (m *Sealing) remarkForUpgrade(sid abi.SectorNumber) {
-	err := m.MarkForUpgrade(sid)
+func (m *Sealing) remarkForUpgrade(ctx context.Context, sid abi.SectorNumber) {
+	err := m.MarkForUpgrade(ctx, sid)
 	if err != nil {
 		log.Errorf("error re-marking sector %d as for upgrade: %+v", sid, err)
 	}
@@ -419,8 +425,6 @@ func (m *Sealing) preCommitParams(ctx statemachine.Context, sector types.SectorI
 		return nil, big.Zero(), nil, ctx.Send(SectorSealPreCommit1Failed{xerrors.Errorf("handlePreCommitting: failed to compute pre-commit expiry: %w", err)})
 	}
 
-	// Sectors must last _at least_ MinSectorExpiration + MaxSealDuration.
-	// TODO: The "+10" allows the pre-commit to take 10 blocks to be accepted.
 	nv, err := m.api.StateNetworkVersion(ctx.Context(), tok)
 	if err != nil {
 		return nil, big.Zero(), nil, ctx.Send(SectorSealPreCommit1Failed{xerrors.Errorf("failed to get network version: %w", err)})
@@ -519,7 +523,7 @@ func (m *Sealing) handlePreCommitting(ctx statemachine.Context, sector types.Sec
 	uid, err := m.api.MessagerSendMsg(ctx.Context(), from, m.maddr, miner.Methods.PreCommitSector, deposit, big.Int(m.feeCfg.MaxPreCommitGasFee), enc.Bytes())
 	if err != nil {
 		if params.ReplaceCapacity {
-			m.remarkForUpgrade(params.ReplaceSectorNumber)
+			m.remarkForUpgrade(ctx.Context(), params.ReplaceSectorNumber)
 		}
 		return ctx.Send(SectorChainPreCommitFailed{xerrors.Errorf("pushing message to mpool: %w", err)})
 	}
@@ -733,7 +737,7 @@ func (m *Sealing) handleCommitting(ctx statemachine.Context, sector types.Sector
 		}
 
 		if err := m.checkCommit(ctx.Context(), sector, proof, tok); err != nil {
-			return ctx.Send(SectorComputeProofFailed{xerrors.Errorf("commit check error: %w", err)})
+			return ctx.Send(SectorCommitFailed{xerrors.Errorf("commit check error: %w", err)})
 		}
 	}
 

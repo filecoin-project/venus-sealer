@@ -24,7 +24,7 @@ func main() {
 	sealer.SetupLogLevels()
 
 	local := []*cli.Command{
-		logCmd, initCmd, runCmd, pprofCmd, sectorsCmd, dealsCmd, actorCmd, infoCmd, sealingCmd, storageCmd, messagerCmds, provingCmd, stopCmd, versionCmd, tokenCmd,
+		logCmd, initCmd, runCmd, pprofCmd, sectorsCmd, dealsCmd, actorCmd, infoCmd, sealingCmd, storageCmd, messagerCmds, provingCmd, stopCmd, versionCmd, tokenCmd, fetchParamCmd,
 	}
 	jaeger := tracing.SetupJaegerTracing("venus-sealer")
 	defer func() {
@@ -61,7 +61,7 @@ func main() {
 			},
 			&cli.StringFlag{
 				Name:  "network",
-				Usage: "network type: one of mainnet,calibration,2k, force, Default: mainnet",
+				Usage: "network type: one of mainnet,butterfly,calibration,2k,force, Default: mainnet",
 			},
 			&cli.BoolFlag{
 				// examined in the Before above

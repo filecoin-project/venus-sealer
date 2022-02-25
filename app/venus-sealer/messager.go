@@ -43,7 +43,7 @@ var waitMessagerCmds = &cli.Command{
 		fmt.Println("Tipset:", msg.TipSet.String())
 		fmt.Println("exitcode:", msg.Receipt.ExitCode)
 		fmt.Println("gas_used:", msg.Receipt.GasUsed)
-		fmt.Println("return_value:", msg.Receipt.ReturnValue)
+		fmt.Println("return_value:", msg.Receipt.Return)
 		return nil
 	},
 }
@@ -75,7 +75,7 @@ var searchMessagerCmds = &cli.Command{
 		fmt.Println("Tipset:", msg.TipSetKey.String())
 		fmt.Println("exitcode:", msg.Receipt.ExitCode)
 		fmt.Println("gas_used:", msg.Receipt.GasUsed)
-		fmt.Println("return_value:", msg.Receipt.ReturnValue)
+		fmt.Println("return_value:", msg.Receipt.Return)
 		return nil
 	},
 }

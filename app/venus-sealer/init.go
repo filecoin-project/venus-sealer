@@ -3,9 +3,9 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"github.com/filecoin-project/venus-market/piecestorage"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -20,23 +20,23 @@ import (
 	"github.com/filecoin-project/venus/fixtures/asset"
 	"github.com/filecoin-project/venus/pkg/gen/genesis"
 
+	power6 "github.com/filecoin-project/specs-actors/v6/actors/builtin/power"
+
 	"github.com/docker/go-units"
 	"github.com/google/uuid"
-	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/mitchellh/go-homedir"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
 	"github.com/ipfs-force-community/venus-common-utils/apiinfo"
 
-	"github.com/filecoin-project/venus/pkg/types"
-	actors "github.com/filecoin-project/venus/pkg/types/specactors"
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/miner"
-	"github.com/filecoin-project/venus/pkg/types/specactors/builtin/power"
-	"github.com/filecoin-project/venus/pkg/types/specactors/policy"
+	actors "github.com/filecoin-project/venus/venus-shared/actors"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin/power"
+	"github.com/filecoin-project/venus/venus-shared/actors/policy"
+	"github.com/filecoin-project/venus/venus-shared/types"
 
-	types3 "github.com/filecoin-project/venus-messager/types"
+	types3 "github.com/filecoin-project/venus/venus-shared/types/messager"
 
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/config"
@@ -131,23 +131,33 @@ var initCmd = &cli.Command{
 		},
 
 		&cli.StringFlag{
+			Name:  "market-mode",
+			Value: "solo",
+			Usage: "indicate the deployment method of the venus-market, one of `solo`, `pool`, Default: `solo`",
+		},
+		&cli.StringFlag{
+			Name:  "market-url",
+			Usage: "market url",
+		},
+		&cli.StringFlag{
+			Name:  "market-token",
+			Usage: "market token",
+		},
+
+		&cli.StringFlag{
 			Name:  "auth-token",
 			Usage: "auth token",
 		},
+
+		&cli.StringFlag{
+			Name:  "piecestorage",
+			Usage: "config storage for piece  (eg  fs:/mnt/piece   s3:{access key}:{secret key}:{option token}@{region}host/{bucket}",
+		},
 	},
 	Action: func(cctx *cli.Context) error {
+		ctx := api.ReqContext(cctx)
+
 		log.Info("Initializing venus sealer")
-
-		sectorSizeInt, err := units.RAMInBytes(cctx.String("sector-size"))
-		if err != nil {
-			return err
-		}
-		ssize := abi.SectorSize(sectorSizeInt)
-
-		gasPrice, err := types.BigFromString(cctx.String("gas-premium"))
-		if err != nil {
-			return xerrors.Errorf("failed to parse gas-price flag: %s", err)
-		}
 
 		symlink := cctx.Bool("symlink-imported-sectors")
 		if symlink {
@@ -160,41 +170,13 @@ var initCmd = &cli.Command{
 			return err
 		}
 
-		setAuthToken(cctx)
-		parseFlag(defaultCfg, cctx)
-		if err := checkURL(defaultCfg); err != nil {
-			return err
-		}
-
-		log.Info("Checking proof parameters")
-		ps, err := asset.Asset("fixtures/_assets/proof-params/parameters.json")
-		if err != nil {
-			return err
-		}
-		srs, err := asset.Asset("fixtures/_assets/proof-params/srs-inner-product.json")
+		err = parseServiceFlag(defaultCfg, cctx)
 		if err != nil {
 			return err
 		}
 
-		ctx := api.ReqContext(cctx)
-		if err := paramfetch.GetParams(ctx, ps, srs, uint64(ssize)); err != nil {
-			return xerrors.Errorf("fetching proof parameters: %w", err)
-		}
-
-		log.Info("Trying to connect to full node RPC")
-
-		fullNode, closer, err := api.GetFullNodeAPIV2(cctx) // TODO: consider storing full node address in config
-		if err != nil {
+		if err := checkServiceConfig(defaultCfg); err != nil {
 			return err
-		}
-		defer closer()
-
-		log.Info("Checking full node sync status")
-
-		if !cctx.Bool("genesis-miner") && !cctx.Bool("nosync") {
-			if err := api.SyncWait(ctx, fullNode, defaultCfg.NetParams.BlockDelaySecs, false); err != nil {
-				return xerrors.Errorf("sync wait: %w", err)
-			}
 		}
 
 		log.Info("Checking if repo exists")
@@ -208,6 +190,33 @@ var initCmd = &cli.Command{
 			return xerrors.Errorf("repo is already initialized at %s", defaultCfg.DataDir)
 		}
 
+		log.Info("Checking proof parameters")
+
+		ps, err := asset.Asset("fixtures/_assets/proof-params/parameters.json")
+		if err != nil {
+			return err
+		}
+		srs, err := asset.Asset("fixtures/_assets/proof-params/srs-inner-product.json")
+		if err != nil {
+			return err
+		}
+
+		log.Info("Trying to connect to full node RPC")
+
+		fullNode, closer, err := api.GetFullNodeFromNodeConfig(ctx, &defaultCfg.Node) // TODO: consider storing full node address in config
+		if err != nil {
+			return err
+		}
+		defer closer()
+
+		log.Info("Checking full node sync status")
+
+		if !cctx.Bool("genesis-miner") && !cctx.Bool("nosync") {
+			if err := api.SyncWait(ctx, fullNode, defaultCfg.NetParams.BlockDelaySecs, false); err != nil {
+				return xerrors.Errorf("sync wait: %w", err)
+			}
+		}
+
 		log.Info("Checking full node version")
 
 		v, err := fullNode.Version(ctx)
@@ -216,20 +225,12 @@ var initCmd = &cli.Command{
 		}
 
 		if !v.APIVersion.EqMajorMinor(constants.FullAPIVersion1) {
-			return xerrors.Errorf("Remote API version didn't match (expected %s, remote %s)", constants.FullAPIVersion0, v.APIVersion)
+			return xerrors.Errorf("Remote API version didn't match (expected %s, remote %s)", constants.FullAPIVersion1, v.APIVersion)
 		}
 
 		log.Info("Initializing repo")
-		messagerClient, closer, err := api.NewMessageRPC(&defaultCfg.Messager)
-		if err != nil {
-			return err
-		}
-		defer closer()
-
-		log.Info("Initializing repo")
-
 		{
-			//write config
+			// write config
 			err = config.SaveConfig(defaultCfg.ConfigPath, defaultCfg)
 			if err != nil {
 				return err
@@ -282,7 +283,24 @@ var initCmd = &cli.Command{
 			}
 		}
 
-		if err := storageMinerInit(ctx, cctx, fullNode, messagerClient, defaultCfg, ssize, gasPrice); err != nil {
+		messagerClient, closer, err := api.NewMessageRPC(&defaultCfg.Messager)
+		if err != nil {
+			return err
+		}
+		defer closer()
+
+		ssize, err := units.RAMInBytes(cctx.String("sector-size"))
+		if err != nil {
+			return fmt.Errorf("failed to parse sector size: %w", err)
+		}
+
+		gasPrice, err := types.BigFromString(cctx.String("gas-premium"))
+		if err != nil {
+			return xerrors.Errorf("failed to parse gas-price flag: %s", err)
+		}
+
+		minerAddr, err := storageMinerInit(ctx, cctx, fullNode, messagerClient, defaultCfg, abi.SectorSize(ssize), gasPrice)
+		if err != nil {
 			log.Errorf("Failed to initialize venus-miner: %+v", err)
 			path, err := homedir.Expand(defaultCfg.DataDir)
 			if err != nil {
@@ -295,48 +313,85 @@ var initCmd = &cli.Command{
 			return xerrors.Errorf("Storage-miner init failed")
 		}
 
+		minerInfo, err := fullNode.StateMinerInfo(ctx, minerAddr, types.EmptyTSK)
+		if err != nil {
+			return err
+		}
 		// TODO: Point to setting storage price, maybe do it interactively or something
 		log.Info("Sealer successfully created, you can now start it with 'venus-sealer run'")
-
+		if err := paramfetch.GetParams(ctx, ps, srs, uint64(minerInfo.SectorSize)); err != nil {
+			return xerrors.Errorf("fetching proof parameters: %w", err)
+		}
 		return nil
 	},
 }
 
-func setAuthToken(cctx *cli.Context) {
-	if cctx.IsSet("auth-token") {
-		authToken := cctx.String("auth-token")
-		_ = cctx.Set("node-token", authToken)
-		_ = cctx.Set("messager-token", authToken)
-		_ = cctx.Set("gateway-token", authToken)
-	}
-}
-
-func parseFlag(cfg *config.StorageMiner, cctx *cli.Context) {
+func parseServiceFlag(cfg *config.StorageMiner, cctx *cli.Context) error {
 	cfg.DataDir = cctx.String("repo")
 
-	if cctx.IsSet("messager-url") {
-		cfg.Messager.Url = cctx.String("messager-url")
+	if cctx.IsSet("auth-token") {
+		authToken := cctx.String("auth-token")
+
+		cfg.Node.Token = authToken
+
+		cfg.Messager.Token = authToken
+
+		cfg.RegisterProof.Token = authToken
 	}
 
 	if cctx.IsSet("node-url") {
 		cfg.Node.Url = cctx.String("node-url")
 	}
-
-	if cctx.IsSet("gateway-url") {
-		cfg.RegisterProof.Urls = cctx.StringSlice("gateway-url")
-	}
-
 	if cctx.IsSet("node-token") {
 		cfg.Node.Token = cctx.String("node-token")
 	}
 
+	if cctx.IsSet("messager-url") {
+		cfg.Messager.Url = cctx.String("messager-url")
+	}
 	if cctx.IsSet("messager-token") {
 		cfg.Messager.Token = cctx.String("messager-token")
 	}
 
+	if cctx.IsSet("gateway-url") {
+		cfg.RegisterProof.Urls = cctx.StringSlice("gateway-url")
+	}
 	if cctx.IsSet("gateway-token") {
 		cfg.RegisterProof.Token = cctx.String("gateway-token")
 	}
+
+	if cctx.IsSet("market-mode") {
+		mode := cctx.String("market-mode")
+		if cctx.IsSet("market-url") {
+			cfg.MarketNode.Url = cctx.String("market-url")
+		} else {
+			return xerrors.Errorf("must set market url when set market mode")
+		}
+
+		if cctx.IsSet("auth-token") {
+			authToken := cctx.String("auth-token")
+			cfg.MarketNode.Token = authToken
+		}
+
+		if cctx.IsSet("market-token") {
+			cfg.MarketNode.Token = cctx.String("market-token")
+		}
+
+		if mode == "solo" { // when venus-market is deployed independently, it not only provides services but also handles events
+			cfg.RegisterMarket.Urls = []string{cfg.MarketNode.Url}
+			cfg.RegisterMarket.Token = cfg.MarketNode.Token
+		} else {
+			cfg.RegisterMarket.Urls = cfg.RegisterProof.Urls
+			cfg.RegisterMarket.Token = cfg.RegisterProof.Token
+		}
+	}
+
+	if cctx.IsSet("piecestorage") {
+		if err := piecestorage.ParserProtocol(cctx.String("piecestorage"), &cfg.PieceStorage); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func parseMultiAddr(url string) error {
@@ -349,9 +404,9 @@ func parseMultiAddr(url string) error {
 	return err
 }
 
-func checkURL(cfg *config.StorageMiner) error {
+func checkServiceConfig(cfg *config.StorageMiner) error {
 	if err := parseMultiAddr(cfg.Messager.Url); err != nil {
-		return xerrors.Errorf("message url: %w", err)
+		return xerrors.Errorf("messager node url: %w", err)
 	}
 
 	if err := parseMultiAddr(cfg.Node.Url); err != nil {
@@ -360,83 +415,84 @@ func checkURL(cfg *config.StorageMiner) error {
 
 	for _, url := range cfg.RegisterProof.Urls {
 		if err := parseMultiAddr(url); err != nil {
-			return xerrors.Errorf("gateway url:[%s]: %w", url, err)
+			return xerrors.Errorf("gateway node url:[%s]: %w", url, err)
+		}
+	}
+
+	if err := parseMultiAddr(cfg.MarketNode.Url); err != nil {
+		return xerrors.Errorf("market node url: %w", err)
+	}
+
+	for _, url := range cfg.RegisterMarket.Urls {
+		if err := parseMultiAddr(url); err != nil {
+			return xerrors.Errorf("register market node url:[%s]: %w", url, err)
 		}
 	}
 
 	return nil
 }
 
-func storageMinerInit(ctx context.Context, cctx *cli.Context, api api.FullNode, messagerClient api.IMessager, cfg *config.StorageMiner, ssize abi.SectorSize, gasPrice types.BigInt) error {
+func storageMinerInit(ctx context.Context, cctx *cli.Context, api api.FullNode, messagerClient api.IMessager, cfg *config.StorageMiner, ssize abi.SectorSize, gasPrice types.BigInt) (address.Address, error) {
 	log.Info("Initializing libp2p identity")
 
 	repo, err := models.SetDataBase(config.HomeDir(cfg.DataDir), &cfg.DB)
 	if err != nil {
-		return err
+		return address.Undef, err
 	}
 	err = repo.AutoMigrate()
 	if err != nil {
-		return err
+		return address.Undef, err
 	}
 
 	metaDataService := service.NewMetadataService(repo)
 	sectorInfoService := service.NewSectorInfoService(repo)
-	p2pSk, _, err := crypto.GenerateEd25519Key(rand.Reader)
-	if err != nil {
-		return xerrors.Errorf("make host key: %w", err)
-	}
-
-	peerid, err := peer.IDFromPrivateKey(p2pSk)
-	if err != nil {
-		return xerrors.Errorf("peer ID from private key: %w", err)
-	}
 
 	var addr address.Address
 	if act := cctx.String("actor"); act != "" {
 		a, err := address.NewFromString(act)
 		if err != nil {
-			return xerrors.Errorf("failed parsing actor flag value (%q): %w", act, err)
+			return address.Undef, xerrors.Errorf("failed parsing actor flag value (%q): %w", act, err)
 		}
 
 		if cctx.Bool("genesis-miner") {
 			if err := metaDataService.SaveMinerAddress(a); err != nil {
-				return err
+				return address.Undef, err
 			}
 
 			if pssb := cctx.String("pre-sealed-metadata"); pssb != "" {
 				pssb, err := homedir.Expand(pssb)
 				if err != nil {
-					return err
+					return address.Undef, err
 				}
 
 				log.Infof("Importing pre-sealed sector metadata for %s", a)
 
 				if err := migratePreSealMeta(ctx, api, pssb, a, metaDataService, sectorInfoService); err != nil {
-					return xerrors.Errorf("migrating presealed sector metadata: %w", err)
+					return address.Undef, xerrors.Errorf("migrating presealed sector metadata: %w", err)
 				}
 			}
 
-			return nil
+			return a, nil
 		}
 
 		if pssb := cctx.String("pre-sealed-metadata"); pssb != "" {
 			pssb, err := homedir.Expand(pssb)
 			if err != nil {
-				return err
+				return address.Undef, err
 			}
 
 			log.Infof("Importing pre-sealed sector metadata for %s", a)
 
 			if err := migratePreSealMeta(ctx, api, pssb, a, metaDataService, sectorInfoService); err != nil {
-				return xerrors.Errorf("migrating presealed sector metadata: %w", err)
+				return address.Undef, xerrors.Errorf("migrating presealed sector metadata: %w", err)
 			}
 		}
 
 		addr = a
 	} else {
-		a, err := createStorageMiner(ctx, api, messagerClient, peerid, gasPrice, cctx)
+		a, err := createStorageMiner(ctx, api, messagerClient, gasPrice, cctx)
 		if err != nil {
-			return xerrors.Errorf("creating miner failed: %w", err)
+			return address.Undef, xerrors.Errorf("creating miner failed: %w", err)
 		}
 
 		addr = a
@@ -445,13 +501,13 @@ func storageMinerInit(ctx context.Context, cctx *cli.Context, api api.FullNode, 
 	log.Infof("Created new miner: %s", addr)
 
 	if err := metaDataService.SaveMinerAddress(addr); err != nil {
-		return err
+		return address.Undef, err
 	}
 
-	return nil
+	return addr, nil
 }
 
-func createStorageMiner(ctx context.Context, nodeAPI api.FullNode, messagerClient api.IMessager, peerid peer.ID, gasPrice types.BigInt, cctx *cli.Context) (address.Address, error) {
+func createStorageMiner(ctx context.Context, nodeAPI api.FullNode, messagerClient api.IMessager, gasPrice types.BigInt, cctx *cli.Context) (address.Address, error) {
 	var err error
 	var owner address.Address
 	if cctx.String("owner") != "" {
@@ -476,11 +532,26 @@ func createStorageMiner(ctx context.Context, nodeAPI api.FullNode, messagerClien
 		}
 	}
 
+	sender := owner
+	if fromstr := cctx.String("from"); fromstr != "" {
+		faddr, err := address.NewFromString(fromstr)
+		if err != nil {
+			return address.Undef, fmt.Errorf("could not parse from address: %w", err)
+		}
+		sender = faddr
+	}
+
+	// make sure the sender account exists on chain
+	_, err = nodeAPI.StateLookupID(ctx, owner, types.EmptyTSK)
+	if err != nil {
+		return address.Undef, xerrors.Errorf("sender must exist on chain: %w", err)
+	}
+
 	// make sure the worker account exists on chain
 	_, err = nodeAPI.StateLookupID(ctx, worker, types.EmptyTSK)
 	if err != nil {
 		msgUid, err := messagerClient.PushMessage(ctx, &types.Message{
-			From:  owner,
+			From:  sender,
 			To:    worker,
 			Value: types.NewInt(0),
 		}, nil)
@@ -500,33 +571,43 @@ func createStorageMiner(ctx context.Context, nodeAPI api.FullNode, messagerClien
 		}
 	}
 
-	nv, err := nodeAPI.StateNetworkVersion(ctx, types.EmptyTSK)
+	// make sure the owner account exists on chain
+	_, err = nodeAPI.StateLookupID(ctx, owner, types.EmptyTSK)
 	if err != nil {
-		return address.Undef, xerrors.Errorf("getting network version: %w", err)
+		msgUid, err := messagerClient.PushMessage(ctx, &types.Message{
+			From:  sender,
+			To:    owner,
+			Value: types.NewInt(0),
+		}, nil)
+		if err != nil {
+			return address.Undef, xerrors.Errorf("push owner init: %w", err)
+		}
+
+		log.Infof("Initializing owner account %s, message: %s", worker, msgUid)
+		log.Infof("Waiting for confirmation")
+
+		mw, err := messagerClient.WaitMessage(ctx, msgUid, constants.MessageConfidence)
+		if err != nil {
+			return address.Undef, xerrors.Errorf("waiting for owner init: %w", err)
+		}
+		if mw.Receipt.ExitCode != 0 {
+			return address.Undef, xerrors.Errorf("initializing owner account failed: exit code %d", mw.Receipt.ExitCode)
+		}
 	}
 
-	spt, err := miner.SealProofTypeFromSectorSize(abi.SectorSize(ssize), nv)
+	// Note: the correct thing to do would be to call SealProofTypeFromSectorSize if actors version is v3 or later, but this still works
+	spt, err := miner.WindowPoStProofTypeFromSectorSize(abi.SectorSize(ssize))
 	if err != nil {
-		return address.Undef, xerrors.Errorf("getting seal proof type: %w", err)
+		return address.Undef, xerrors.Errorf("getting post proof type: %w", err)
 	}
 
-	params, err := actors.SerializeParams(&power2.CreateMinerParams{
-		Owner:         owner,
-		Worker:        worker,
-		SealProofType: spt,
-		Peer:          abi.PeerID(peerid),
+	params, err := actors.SerializeParams(&power6.CreateMinerParams{
+		Owner:               owner,
+		Worker:              worker,
+		WindowPoStProofType: spt,
 	})
 	if err != nil {
 		return address.Undef, err
-	}
-
-	sender := owner
-	if fromstr := cctx.String("from"); fromstr != "" {
-		faddr, err := address.NewFromString(fromstr)
-		if err != nil {
-			return address.Undef, fmt.Errorf("could not parse from address: %w", err)
-		}
-		sender = faddr
 	}
 
 	createStorageMinerMsg := &types.Message{
@@ -541,7 +622,7 @@ func createStorageMiner(ctx context.Context, nodeAPI api.FullNode, messagerClien
 		GasPremium: gasPrice,
 	}
 
-	msgUid, err := messagerClient.PushMessage(ctx, createStorageMinerMsg, &types3.MsgMeta{MaxFee: types.FromFil(1)})
+	msgUid, err := messagerClient.PushMessage(ctx, createStorageMinerMsg, &types3.SendSpec{MaxFee: types.FromFil(1)})
 	if err != nil {
 		return address.Undef, xerrors.Errorf("pushing createMiner message: %w", err)
 	}
@@ -559,7 +640,7 @@ func createStorageMiner(ctx context.Context, nodeAPI api.FullNode, messagerClien
 	}
 
 	var retval power2.CreateMinerReturn
-	if err := retval.UnmarshalCBOR(bytes.NewReader(mw.Receipt.ReturnValue)); err != nil {
+	if err := retval.UnmarshalCBOR(bytes.NewReader(mw.Receipt.Return)); err != nil {
 		return address.Undef, err
 	}
 
