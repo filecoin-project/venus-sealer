@@ -14,7 +14,6 @@ import (
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/tool/convert-with-lotus/types"
-	"github.com/ipfs/go-datastore"
 	"github.com/mitchellh/go-homedir"
 	"golang.org/x/xerrors"
 )
@@ -91,8 +90,8 @@ func ImportToLotusMiner(lmRepo, vsRepo string, sid abi.SectorNumber, taskType in
 	}
 
 	buf := make([]byte, binary.MaxVarintLen64)
-	size := binary.PutUvarint(buf, uint64(sid))
-	err = ds.Put(context.TODO(), datastore.NewKey("/storage/nextid"), buf[:size])
+	size := binary.PutUvarint(buf, uint64(maxSectorID))
+	err = ds.Put(context.TODO(), modules.MaxSIdKey, buf[:size])
 	if err != nil {
 		return xerrors.Errorf("fail to update latest sector id: %v", err)
 	}

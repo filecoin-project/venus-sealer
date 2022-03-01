@@ -19,6 +19,7 @@ const (
 )
 
 var SectorPrefixKey = datastore.NewKey(SectorStorePrefix)
+var MaxSIdKey = datastore.NewKey("/storage/nextid")
 
 func OpenLotusDatastore(repoPath string, readonly bool) (datastore.Batching, error) {
 	path := filepath.Join(repoPath, fsDatastore, "metadata")

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"encoding/binary"
 	"flag"
 	"fmt"
 	"github.com/filecoin-project/go-state-types/abi"
@@ -21,9 +23,15 @@ func ImportFromLotus(lmRepo, vsRepo string, sid abi.SectorNumber, taskType int) 
 	if err != nil {
 		return err
 	}
-	ds = namespace.Wrap(ds, modules.SectorPrefixKey)
-
 	defer ds.Close()
+
+	var maxSectorID uint64 = 0
+	buf, err := ds.Get(context.TODO(), modules.MaxSIdKey)
+	if err == nil && len(buf) > 0 {
+		maxSectorID, _ = binary.Uvarint(buf)
+	}
+
+	ds = namespace.Wrap(ds, modules.SectorPrefixKey)
 
 	// db for venus
 	path, err := homedir.Expand(filepath.Join(vsRepo, "sealer.db"))
@@ -36,8 +44,6 @@ func ImportFromLotus(lmRepo, vsRepo string, sid abi.SectorNumber, taskType int) 
 		return xerrors.Errorf("fail to connect sqlite: %v", err)
 	}
 
-	var maxSectorID abi.SectorNumber = 0
-
 	if err = modules.ForEachSector(ds, func(sector *types.SectorInfo) error {
 		if taskType > 0 {
 			vSector := sector.ToVenus()
@@ -45,8 +51,8 @@ func ImportFromLotus(lmRepo, vsRepo string, sid abi.SectorNumber, taskType int) 
 				fmt.Printf("put [%d] err: %s \n", vSector.SectorNumber, err.Error())
 			}
 		}
-		if maxSectorID < sector.SectorNumber {
-			maxSectorID = sector.SectorNumber
+		if maxSectorID < uint64(sector.SectorNumber) {
+			maxSectorID = uint64(sector.SectorNumber)
 		}
 		return nil
 	}); err != nil {
@@ -59,10 +65,10 @@ func ImportFromLotus(lmRepo, vsRepo string, sid abi.SectorNumber, taskType int) 
 
 	// update latest sector id
 	if sid > 0 {
-		maxSectorID = sid
+		maxSectorID = uint64(sid)
 	}
 
-	if err = db.MetaDataRepo().SetStorageCounter(uint64(maxSectorID)); err != nil {
+	if err = db.MetaDataRepo().SetStorageCounter(maxSectorID); err != nil {
 		return xerrors.Errorf("fail to update latest sector id: %v", err)
 	}
 	fmt.Printf("latest sector id: %d\n", maxSectorID)
