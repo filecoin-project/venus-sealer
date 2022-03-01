@@ -3,6 +3,7 @@ package impl
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/filecoin-project/venus/venus-shared/api/market"
 	mtypes "github.com/filecoin-project/venus/venus-shared/types/market"
 	"github.com/filecoin-project/venus/venus-shared/types/messager"
@@ -67,18 +68,29 @@ type StorageMinerAPI struct {
 	GetSealingConfigFunc types2.GetSealingConfigFunc
 }
 
+var errEmptyMarketClient = fmt.Errorf("MarketClient is empty,please check 'MarketNode' configurations")
+
 func (sm *StorageMinerAPI) GetDeals(ctx context.Context, pageIndex, pageSize int) ([]*mtypes.DealInfo, error) {
 	addr := sm.Miner.Address()
+	if sm.MarketClient == nil {
+		return nil, errEmptyMarketClient
+	}
 	deals, err := sm.MarketClient.GetDeals(ctx, addr, pageIndex, pageSize)
 	return deals, err
 }
 
 func (sm *StorageMinerAPI) MarkDealsAsPacking(ctx context.Context, deals []abi.DealID) error {
+	if sm.MarketClient == nil {
+		return errEmptyMarketClient
+	}
 	addr := sm.Miner.Address()
 	return sm.MarketClient.MarkDealsAsPacking(ctx, addr, deals)
 }
 
 func (sm *StorageMinerAPI) UpdateDealStatus(ctx context.Context, dealId abi.DealID, status string) error {
+	if sm.MarketClient == nil {
+		return errEmptyMarketClient
+	}
 	addr := sm.Miner.Address()
 	return sm.MarketClient.UpdateDealStatus(ctx, addr, dealId, status)
 }
