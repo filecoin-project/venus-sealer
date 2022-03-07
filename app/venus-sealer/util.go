@@ -146,6 +146,7 @@ var stateList = []stateMeta{
 	{col: color.FgRed, state: types2.SnapDealsDealsExpired},
 	{col: color.FgRed, state: types2.ReplicaUpdateFailed},
 	{col: color.FgRed, state: types2.ReleaseSectorKeyFailed},
+	{col: color.FgRed, state: types2.FinalizeReplicaUpdateFailed},
 }
 
 func getActorAddress(ctx context.Context, nodeAPI api.StorageMiner, overrideMaddr string) (maddr address.Address, err error) {
