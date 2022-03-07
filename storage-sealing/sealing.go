@@ -78,7 +78,7 @@ type SealingAPI interface {
 	MessagerSendMsg(ctx context.Context, from, to address.Address, method abi.MethodNum, value, maxFee abi.TokenAmount, params []byte) (string, error)
 
 	//for market
-	GetUnPackedDeals(ctx context.Context, miner address.Address, spec *market2.GetDealSpec) ([]*market2.DealInfoIncludePath, error)                   //perm:read
+	GetUnPackedDeals(ctx context.Context, miner address.Address, spec *market2.GetDealSpec) ([]*market2.DealInfoIncludePath, error)                 //perm:read
 	MarkDealsAsPacking(ctx context.Context, miner address.Address, deals []abi.DealID) error                                                        //perm:write
 	UpdateDealOnPacking(ctx context.Context, miner address.Address, dealId abi.DealID, sectorid abi.SectorNumber, offset abi.PaddedPieceSize) error //perm:write
 }
@@ -149,7 +149,16 @@ func (o *openSector) dealFitsInLifetime(dealEnd abi.ChainEpoch, expF func(sn abi
 	return expiration >= dealEnd, nil
 }
 
+type pieceAcceptResp struct {
+	sn     abi.SectorNumber
+	offset abi.UnpaddedPieceSize
+	err    error
+}
+
 type pendingPiece struct {
+	doneCh chan struct{}
+	resp   *pieceAcceptResp
+
 	size abi.UnpaddedPieceSize
 	deal types2.PieceDealInfo
 
@@ -157,6 +166,16 @@ type pendingPiece struct {
 
 	assigned bool // assigned to a sector?
 	accepted func(abi.SectorNumber, abi.UnpaddedPieceSize, error)
+}
+
+func (pp *pendingPiece) waitAddPieceResp(ctx context.Context) (*pieceAcceptResp, error) {
+	select {
+	case <-pp.doneCh:
+		res := pp.resp
+		return res, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 }
 
 func New(mctx context.Context, api SealingAPI, fc config.MinerFeeConfig, events Events, maddr address.Address, metaDataService *service.MetadataService, sectorInfoService *service.SectorInfoService, logService *service.LogService, sealer sectorstorage.SectorManager, sc types2.SectorIDCounter, verif ffiwrapper.Verifier, prov ffiwrapper.Prover, pcp PreCommitPolicy, gc types2.GetSealingConfigFunc, notifee SectorStateNotifee, as AddrSel, networkParams *config.NetParamsConfig, pieceStorage piecestorage.IPieceStorage) *Sealing {
