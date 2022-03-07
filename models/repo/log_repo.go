@@ -7,6 +7,7 @@ import (
 
 type LogRepo interface {
 	Count(sectorNumber abi.SectorNumber) (int64, error)
+	TruncateAppend (log *types.Log) error
 	Truncate(sectorNumber abi.SectorNumber) error
 	Append(log *types.Log) error
 	List(sectorNumber abi.SectorNumber) ([]*types.Log, error)
