@@ -183,6 +183,7 @@ var fsmPlanners = map[types.SectorState]func(events []statemachine.Event, state 
 	),
 	types.FinalizeReplicaUpdate: planOne(
 		on(SectorFinalized{}, types.UpdateActivating),
+		on(SectorFinalizeFailed{}, types.FinalizeReplicaUpdateFailed),
 	),
 	types.UpdateActivating: planOne(
 		on(SectorUpdateActive{}, types.ReleaseSectorKey),
@@ -275,7 +276,9 @@ var fsmPlanners = map[types.SectorState]func(events []statemachine.Event, state 
 	types.ReleaseSectorKeyFailed: planOne(
 		on(SectorUpdateActive{}, types.ReleaseSectorKey),
 	),
-
+	types.FinalizeReplicaUpdateFailed: planOne(
+		on(SectorRetryFinalize{}, types.FinalizeReplicaUpdate),
+	),
 	// Post-seal
 
 	types.Proving: planOne(
@@ -540,6 +543,8 @@ func (m *Sealing) plan(events []statemachine.Event, state *types.SectorInfo) (fu
 		return m.handleSubmitReplicaUpdateFailed, processed, nil
 	case types.ReleaseSectorKeyFailed:
 		return m.handleReleaseSectorKeyFailed, 0, err
+	case types.FinalizeReplicaUpdateFailed:
+		return m.handleFinalizeFailed, processed, nil
 	case types.AbortUpgrade:
 		return m.handleAbortUpgrade, processed, nil
 
