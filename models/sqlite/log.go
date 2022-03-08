@@ -5,6 +5,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/models/repo"
 	"github.com/filecoin-project/venus-sealer/types"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"sort"
 	"time"
 )
@@ -64,7 +65,7 @@ func (s *logRepo) Count(sectorNumber abi.SectorNumber) (int64, error) {
 
 func (s *logRepo) Truncate(sectorNumber abi.SectorNumber) error {
 	var ids []int64
-	err := s.DB.Raw("SELECT id FROM logs WHERE id =?", sectorNumber).Scan(&ids).Error
+	err := s.DB.Raw("SELECT id FROM logs WHERE sector_number =?", sectorNumber).Scan(&ids).Error
 	if err != nil {
 		return err
 	}
@@ -92,6 +93,40 @@ func (s *logRepo) Truncate(sectorNumber abi.SectorNumber) error {
 	}
 
 	return nil
+}
+
+func (s *logRepo) TruncateAppend(log *types.Log) error {
+	return s.DB.Transaction(func(tx *gorm.DB) error {
+		var err error
+		var ids []int64
+
+		if err = tx.Clauses(clause.Locking{Strength: "UPDATE"}).Order("id").
+			Raw("select id from logs where sector_number = ?", log.SectorNumber).Scan(&ids).Error; err != nil {
+			return err
+		}
+
+		if len(ids) > 8000 {
+			if err = tx.Save(&Log{Id: ids[2], SectorNumber: uint64(log.SectorNumber),
+				Timestamp: uint64(time.Now().Unix()),
+				Message:   "truncating log (above 8000 entries)",
+				Kind:      "truncate",
+			}).Error; err != nil {
+				return err
+			}
+
+			if err = tx.Exec("delete from logs where sector_number = ? and id>? and id<=?", log.SectorNumber, ids[2000], ids[6000]).Error; err != nil {
+				return err
+			}
+		}
+
+		return tx.Save(&Log{
+			SectorNumber: uint64(log.SectorNumber),
+			Timestamp:    uint64(time.Now().Unix()),
+			Trace:        log.Trace,
+			Message:      log.Message,
+			Kind:         log.Kind,
+		}).Error
+	})
 }
 
 func (s *logRepo) Append(log *types.Log) error {

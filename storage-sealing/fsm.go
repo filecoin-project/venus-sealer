@@ -21,7 +21,12 @@ import (
 func (m *Sealing) Plan(events []statemachine.Event, user interface{}) (interface{}, uint64, error) {
 	next, processed, err := m.plan(events, user.(*types.SectorInfo))
 	if err != nil || next == nil {
-		return nil, processed, err
+		_ = m.logService.TruncateAppend(&types.Log{
+			Timestamp: uint64(time.Now().Unix()),
+			Message:   fmt.Sprintf("state machine error: %s", err),
+			Kind:      fmt.Sprintf("error: %T", err),
+		})
+		return nil, processed, nil
 	}
 
 	return func(ctx statemachine.Context, si types.SectorInfo) error {
@@ -340,26 +345,7 @@ func (m *Sealing) logEvents(events []statemachine.Event, state *types.SectorInfo
 		if err, iserr := event.User.(xerrors.Formatter); iserr {
 			l.Trace = fmt.Sprintf("%+v", err)
 		}
-		count, err := m.logService.Count(state.SectorNumber)
-		if err != nil {
-			return xerrors.Errorf("get log count error %s, check db connection", err)
-		}
-
-		if count > 8000 {
-			log.Warnw("truncating sector log", "sector", state.SectorNumber)
-			/*	state.Log[2000] = types.Log{
-					Timestamp: uint64(time.Now().Unix()),
-					Message:   "truncating log (above 8000 entries)",
-					Kind:      "truncate",
-				}
-
-				state.Log = append(state.Log[:2000], state.Log[6000:]...)*/
-			err := m.logService.Truncate(state.SectorNumber)
-			if err != nil {
-				return xerrors.Errorf("fail to truncate log %w", err)
-			}
-		}
-		err = m.logService.Append(&l)
+		err = m.logService.TruncateAppend(&l)
 		if err != nil {
 			return xerrors.Errorf("fail to append log %w", err)
 		}
