@@ -3,9 +3,10 @@ package sealing
 import (
 	"bytes"
 	"context"
+	"time"
+
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/venus/venus-shared/actors/policy"
-	"time"
 
 	"golang.org/x/xerrors"
 
@@ -174,7 +175,7 @@ func (m *Sealing) handleSubmitReplicaUpdate(ctx statemachine.Context, sector typ
 		return ctx.Send(SectorSubmitReplicaUpdateFailed{})
 	}
 
-	mcid, err := m.api.MessagerSendMsg(ctx.Context(), from, m.maddr, miner.Methods.ProveReplicaUpdates, big.Zero(), big.Int(m.feeCfg.MaxCommitGasFee), enc.Bytes())
+	mcid, err := m.api.MessagerSendMsg(ctx.Context(), from, m.maddr, miner.Methods.ProveReplicaUpdates, collateral, big.Int(m.feeCfg.MaxCommitGasFee), enc.Bytes())
 	if err != nil {
 		log.Errorf("handleSubmitReplicaUpdate: error sending message: %+v", err)
 		return ctx.Send(SectorSubmitReplicaUpdateFailed{})
