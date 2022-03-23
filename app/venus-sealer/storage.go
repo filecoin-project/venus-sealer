@@ -264,13 +264,13 @@ var storageListCmd = &cli.Command{
 			{
 				usedPercent := (st.Capacity - st.FSAvailable) * 100 / st.Capacity
 
-			percCol := color.FgGreen
-			switch {
-			case usedPercent > 98:
-				percCol = color.FgRed
-			case usedPercent > 90:
-				percCol = color.FgYellow
-			}
+				percCol := color.FgGreen
+				switch {
+				case usedPercent > 98:
+					percCol = color.FgRed
+				case usedPercent > 90:
+					percCol = color.FgYellow
+				}
 
 				set := (st.Capacity - st.FSAvailable) * barCols / st.Capacity
 				used := (st.Capacity - (st.FSAvailable + st.Reserved)) * barCols / st.Capacity
@@ -554,7 +554,7 @@ var storageListSectorsCmd = &cli.Command{
 			ft      storiface.SectorFileType
 			urls    string
 
-			primary, seal, store bool
+			primary, copy, main, seal, store bool
 
 			state api.SectorState
 		}
@@ -582,8 +582,11 @@ var storageListSectorsCmd = &cli.Command{
 						urls:    strings.Join(info.URLs, ";"),
 
 						primary: info.Primary,
-						seal:    info.CanSeal,
-						store:   info.CanStore,
+						copy:    !info.Primary && len(si) > 1,
+						main:    !info.Primary && len(si) == 1, // only copy, but not primary
+
+						seal:  info.CanSeal,
+						store: info.CanStore,
 
 						state: st.State,
 					})
@@ -636,7 +639,7 @@ var storageListSectorsCmd = &cli.Command{
 				"Sector":   e.id,
 				"Type":     e.ft.String(),
 				"State":    color.New(stateOrder[types2.SectorState(e.state)].col).Sprint(e.state),
-				"Primary":  maybeStr(e.seal, color.FgGreen, "primary"),
+				"Primary":  maybeStr(e.primary, color.FgGreen, "primary") + maybeStr(e.copy, color.FgBlue, "copy") + maybeStr(e.main, color.FgRed, "main"),
 				"Path use": maybeStr(e.seal, color.FgMagenta, "seal ") + maybeStr(e.store, color.FgCyan, "store"),
 				"URLs":     e.urls,
 			}
