@@ -166,3 +166,25 @@ func toStatState(st SectorState, finEarly bool) StatSectorState {
 
 	return SstFailed
 }
+
+func IsUpgradeState(st SectorState) bool {
+	switch st {
+	case SnapDealsWaitDeals,
+		SnapDealsAddPiece,
+		SnapDealsPacking,
+		UpdateReplica,
+		ProveReplicaUpdate,
+		SubmitReplicaUpdate,
+
+		SnapDealsAddPieceFailed,
+		SnapDealsDealsExpired,
+		SnapDealsRecoverDealIDs,
+		AbortUpgrade,
+		ReplicaUpdateFailed,
+		ReleaseSectorKeyFailed,
+		FinalizeReplicaUpdateFailed:
+		return true
+	default:
+		return false
+	}
+}
