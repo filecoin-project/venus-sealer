@@ -15,13 +15,12 @@ import (
 
 type WorkerAPI interface {
 	Version(context.Context) (constants.Version, error)
-	// TODO: Info() (name, ...) ?
 
 	TaskTypes(context.Context) (map[types.TaskType]struct{}, error) // TaskType -> Weight
 	Paths(context.Context) ([]stores.StoragePath, error)
 	Info(context.Context) (storiface.WorkerInfo, error)
 
-	TaskNumbers(context.Context) (string, error)
+	TaskNumbers(context.Context) (*types.TaskNumber, error)
 
 	storiface.WorkerCalls
 

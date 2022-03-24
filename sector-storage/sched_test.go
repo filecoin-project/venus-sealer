@@ -145,8 +145,8 @@ func (s *schedTestWorker) TaskTypes(ctx context.Context) (map[types.TaskType]str
 	return s.taskTypes, nil
 }
 
-func (t *schedTestWorker) TaskNumbers(ctx context.Context) (string, error) {
-	return "0-0", nil
+func (t *schedTestWorker) TaskNumbers(ctx context.Context) (*types.TaskNumber, error) {
+	return &types.TaskNumber{}, nil
 }
 
 func (s *schedTestWorker) Paths(ctx context.Context) ([]stores.StoragePath, error) {

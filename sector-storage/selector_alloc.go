@@ -2,9 +2,6 @@ package sectorstorage
 
 import (
 	"context"
-	"strconv"
-	"strings"
-
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/go-state-types/abi"
@@ -44,14 +41,10 @@ func (s *allocSelector) Ok(ctx context.Context, task types.TaskType, spt abi.Reg
 		return false, xerrors.Errorf("getting supported worker task number: %w", err)
 	}
 
-	log.Debugf("tasks allocate: %s for %s", taskNum, whnd.info.Hostname)
-	nums := strings.Split(taskNum, "-")
-	if len(nums) == 2 {
-		curNum, _ := strconv.ParseInt(nums[0], 10, 64)
-		total, _ := strconv.ParseInt(nums[1], 10, 64)
-		if total > 0 && curNum >= total {
-			return false, nil
-		}
+	log.Debugf("tasks allocate for %s: cur %v, total: %v", whnd.info.Hostname, taskNum.Current, taskNum.Total)
+	if taskNum.Total > 0 && taskNum.Current >= taskNum.Total {
+		log.Warnf("The number of tasks for %s is full, cur %v, total: %v", whnd.info.Hostname, taskNum.Current, taskNum.Total)
+		return false, nil
 	}
 
 	paths, err := whnd.workerRpc.Paths(ctx)

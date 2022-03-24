@@ -36,7 +36,7 @@ type Worker interface {
 
 	TaskTypes(context.Context) (map[types.TaskType]struct{}, error)
 
-	TaskNumbers(context.Context) (string, error)
+	TaskNumbers(context.Context) (*types.TaskNumber, error)
 
 	// Returns paths accessible to the worker
 	Paths(context.Context) ([]stores.StoragePath, error)

@@ -2,9 +2,6 @@ package sectorstorage
 
 import (
 	"context"
-	"strconv"
-	"strings"
-
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/go-state-types/abi"
@@ -50,14 +47,10 @@ func (s *moveSelector) Ok(ctx context.Context, task types.TaskType, spt abi.Regi
 		return false, xerrors.Errorf("getting supported worker task number: %w", err)
 	}
 
-	log.Debugf("tasks allocate: %s for %s", taskNum, whnd.info.Hostname)
-	nums := strings.Split(taskNum, "-")
-	if len(nums) == 2 {
-		curNum, _ := strconv.ParseInt(nums[0], 10, 64)
-		total, _ := strconv.ParseInt(nums[1], 10, 64)
-		if total > 0 && curNum >= total {
-			return false, nil
-		}
+	log.Debugf("tasks allocate for %s: cur %v, total: %v", whnd.info.Hostname, taskNum.Current, taskNum.Total)
+	if taskNum.Total > 0 && taskNum.Current >= taskNum.Total {
+		log.Warnf("The number of tasks for %s is full, cur %v, total: %v", whnd.info.Hostname, taskNum.Current, taskNum.Total)
+		return false, nil
 	}
 
 	paths, err := whnd.workerRpc.Paths(ctx)
@@ -139,13 +132,30 @@ func (s *moveSelector) Cmp(ctx context.Context, task types.TaskType, a, b *worke
 		}
 	}
 
-	log.Debugf("%s %v, %s %v", a.info.Hostname, aExist, b.info.Hostname, bExist)
+	// log.Debugf("%s %v, %s %v", a.info.Hostname, aExist, b.info.Hostname, bExist)
 	if aExist && !bExist {
 		return true, nil
 	}
 
 	if !aExist && bExist {
 		return false, nil
+	}
+
+	// When there are multiple stores that meet the conditions, workers with fewer tasks are given priority
+	if aExist && bExist {
+		aTasks, err := a.workerRpc.TaskNumbers(ctx)
+		if err != nil {
+			return false, xerrors.Errorf("getting worker %s task number: %w", a.info.Hostname, err)
+		}
+
+		bTasks, err := b.workerRpc.TaskNumbers(ctx)
+		if err != nil {
+			return false, xerrors.Errorf("getting worker %s task number: %w", b.info.Hostname, err)
+		}
+
+		if aTasks.MoveStorage < bTasks.MoveStorage {
+			return true, nil
+		}
 	}
 
 	return a.utilization() < b.utilization(), nil

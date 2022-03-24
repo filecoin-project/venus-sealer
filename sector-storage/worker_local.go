@@ -3,7 +3,6 @@ package sectorstorage
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"reflect"
@@ -63,8 +62,8 @@ type LocalWorker struct {
 	acceptTasks map[types.TaskType]struct{}
 	running     sync.WaitGroup
 	taskLk      sync.Mutex
-	taskNumber  int64
-	taskTotal   int64
+
+	taskNumber types.TaskNumber
 
 	session     uuid.UUID
 	testDisable int64
@@ -87,7 +86,6 @@ func newLocalWorker(executor ExecutorFunc, wcfg WorkerConfig, envLookup EnvFunc,
 			st: cst,
 		},
 		acceptTasks:     acceptTasks,
-		taskTotal:       wcfg.TaskTotal,
 		executor:        executor,
 		noSwap:          wcfg.NoSwap,
 		envLookup:       envLookup,
@@ -95,6 +93,8 @@ func newLocalWorker(executor ExecutorFunc, wcfg WorkerConfig, envLookup EnvFunc,
 		session:         uuid.New(),
 		closing:         make(chan struct{}),
 	}
+
+	w.taskNumber.Total = wcfg.TaskTotal
 
 	if w.executor == nil {
 		w.executor = w.ffiExec
@@ -218,11 +218,16 @@ var returnFunc = map[types.ReturnType]func(context.Context, types.CallID, storif
 }
 
 func (l *LocalWorker) asyncCall(ctx context.Context, sector storage.SectorRef, rt types.ReturnType, work func(ctx context.Context, ci types.CallID) (interface{}, error)) (types.CallID, error) {
-	taskNumber := atomic.AddInt64(&l.taskNumber, 1)
-	if l.taskTotal >= 0 && taskNumber > l.taskTotal {
-		atomic.AddInt64(&l.taskNumber, -1)
-		log.Errorf("task number [%d-%d]", taskNumber-1, l.taskTotal)
-		return types.CallID{}, xerrors.Errorf("The number of tasks has reached the upper limit [%d-%d] ", taskNumber-1, l.taskTotal)
+	curNumber := atomic.AddInt64(&l.taskNumber.Current, 1)
+	if l.taskNumber.Total >= 0 && curNumber > l.taskNumber.Total {
+		atomic.AddInt64(&l.taskNumber.Current, -1)
+		return types.CallID{}, xerrors.Errorf("The number of tasks has reached the upper limit [%d-%d] ", curNumber-1, l.taskNumber.Total)
+	}
+	switch rt {
+	case types.ReturnMoveStorage:
+		l.taskNumber.MoveStorage++
+	default:
+
 	}
 
 	ci := types.CallID{
@@ -239,7 +244,13 @@ func (l *LocalWorker) asyncCall(ctx context.Context, sector storage.SectorRef, r
 	go func() {
 		defer func() {
 			log.Infof("task [%s] complete for sector %d", rt, sector.ID.Number)
-			atomic.AddInt64(&l.taskNumber, -1)
+			atomic.AddInt64(&l.taskNumber.Current, -1)
+			switch rt {
+			case types.ReturnMoveStorage:
+				l.taskNumber.MoveStorage--
+			default:
+
+			}
 			l.running.Done()
 		}()
 
@@ -554,9 +565,8 @@ func (l *LocalWorker) Paths(ctx context.Context) ([]stores.StoragePath, error) {
 	return l.localStore.Local(ctx)
 }
 
-func (l *LocalWorker) TaskNumbers(context.Context) (string, error) {
-	str := fmt.Sprintf("%d-%d", l.taskNumber, l.taskTotal)
-	return str, nil
+func (l *LocalWorker) TaskNumbers(context.Context) (*types.TaskNumber, error) {
+	return &(l.taskNumber), nil
 }
 
 func (l *LocalWorker) memInfo() (memPhysical, memUsed, memSwap, memSwapUsed uint64, err error) {

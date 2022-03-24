@@ -46,7 +46,7 @@ type WorkerStruct struct {
 		TaskDisable func(ctx context.Context, tt types.TaskType) error `perm:"admin"`
 		TaskEnable  func(ctx context.Context, tt types.TaskType) error `perm:"admin"`
 
-		TaskNumbers func(context.Context) (string, error) `perm:"admin"`
+		TaskNumbers func(context.Context) (*types.TaskNumber, error) `perm:"admin"`
 
 		Remove          func(ctx context.Context, sector abi.SectorID) error `perm:"admin"`
 		StorageAddLocal func(ctx context.Context, path string) error         `perm:"admin"`
@@ -154,7 +154,7 @@ func (w *WorkerStruct) TaskEnable(ctx context.Context, tt types.TaskType) error 
 	return w.Internal.TaskEnable(ctx, tt)
 }
 
-func (w *WorkerStruct) TaskNumbers(ctx context.Context) (string, error) {
+func (w *WorkerStruct) TaskNumbers(ctx context.Context) (*types.TaskNumber, error) {
 	return w.Internal.TaskNumbers(ctx)
 }
 

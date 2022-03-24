@@ -74,3 +74,11 @@ func (a TaskType) Short() string {
 
 	return n
 }
+
+type TaskNumber struct {
+	Total   int64
+	Current int64
+
+	// todo: Count the number of tasks of various types according to the needs
+	MoveStorage int64
+}

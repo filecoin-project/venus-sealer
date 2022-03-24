@@ -98,8 +98,8 @@ func (t *testWorker) TaskTypes(ctx context.Context) (map[types.TaskType]struct{}
 	return t.acceptTasks, nil
 }
 
-func (t *testWorker) TaskNumbers(ctx context.Context) (string, error) {
-	return "0-0", nil
+func (t *testWorker) TaskNumbers(ctx context.Context) (*types.TaskNumber, error) {
+	return &types.TaskNumber{}, nil
 }
 
 func (t *testWorker) Paths(ctx context.Context) ([]stores.StoragePath, error) {
