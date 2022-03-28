@@ -2,8 +2,9 @@ package sealing
 
 import (
 	"context"
-	"github.com/hashicorp/go-multierror"
 	"time"
+
+	"github.com/hashicorp/go-multierror"
 
 	"golang.org/x/xerrors"
 
@@ -190,14 +191,14 @@ func (m *Sealing) handleComputeProofFailed(ctx statemachine.Context, sector type
 }
 
 func (m *Sealing) handleSubmitReplicaUpdateFailed(ctx statemachine.Context, sector types.SectorInfo) error {
+	if err := m.failedCooldown(ctx, sector); err != nil {
+		return err
+	}
+
 	if len(sector.ReplicaUpdateMessage) > 0 {
 		mw, err := m.api.MessagerSearchMsg(ctx.Context(), sector.ReplicaUpdateMessage)
 		if err != nil {
 			// API error
-			if err := m.failedCooldown(ctx, sector); err != nil {
-				return err
-			}
-
 			return ctx.Send(SectorRetrySubmitReplicaUpdateWait{})
 		}
 
@@ -252,10 +253,6 @@ func (m *Sealing) handleSubmitReplicaUpdateFailed(ctx statemachine.Context, sect
 	if !active {
 		log.Errorf("sector marked for upgrade %d no longer active, aborting upgrade", sector.SectorNumber)
 		return ctx.Send(SectorAbortUpgrade{})
-	}
-
-	if err := m.failedCooldown(ctx, sector); err != nil {
-		return err
 	}
 
 	return ctx.Send(SectorRetrySubmitReplicaUpdate{})
