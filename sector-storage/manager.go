@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"sync"
 
+	"go.uber.org/multierr"
+
 	"github.com/google/uuid"
 	"github.com/hashicorp/go-multierror"
 	"github.com/ipfs/go-cid"
@@ -604,7 +606,7 @@ func (m *Manager) FinalizeReplicaUpdate(ctx context.Context, sector storage.Sect
 		return xerrors.Errorf("acquiring sector lock: %w", err)
 	}
 
-	fts := storiface.FTUnsealed
+	moveUnsealed := storiface.FTUnsealed
 	{
 		unsealedStores, err := m.index.StorageFindSector(ctx, sector.ID, storiface.FTUnsealed, 0, false)
 		if err != nil {
@@ -612,7 +614,7 @@ func (m *Manager) FinalizeReplicaUpdate(ctx context.Context, sector storage.Sect
 		}
 
 		if len(unsealedStores) == 0 { // Is some edge-cases unsealed sector may not exist already, that's fine
-			fts = storiface.FTNone
+			moveUnsealed = storiface.FTNone
 		}
 	}
 
@@ -631,10 +633,10 @@ func (m *Manager) FinalizeReplicaUpdate(ctx context.Context, sector storage.Sect
 		}
 	}
 
-	selector := newExistingSelector(m.index, sector.ID, storiface.FTCache|storiface.FTSealed|storiface.FTUpdate|storiface.FTUpdateCache, false)
+	selector := newExistingSelector(m.index, sector.ID, storiface.FTCache|storiface.FTUpdateCache, false)
 
 	err := m.sched.Schedule(ctx, sector, types.TTFinalizeReplicaUpdate, selector,
-		m.schedFetch(sector, storiface.FTCache|storiface.FTSealed|storiface.FTUpdate|storiface.FTUpdateCache|fts, pathType, storiface.AcquireMove),
+		m.schedFetch(sector, storiface.FTCache|storiface.FTUpdateCache|moveUnsealed, pathType, storiface.AcquireMove),
 		func(ctx context.Context, w Worker) error {
 			_, err := m.waitSimpleCall(ctx)(w.FinalizeReplicaUpdate(ctx, sector, keepUnsealed))
 			return err
@@ -643,20 +645,31 @@ func (m *Manager) FinalizeReplicaUpdate(ctx context.Context, sector storage.Sect
 		return err
 	}
 
-	fetchSel := newAllocSelector(m.index, storiface.FTCache|storiface.FTSealed|storiface.FTUpdate|storiface.FTUpdateCache, storiface.PathStorage)
-	moveUnsealed := fts
-	{
-		if len(keepUnsealed) == 0 {
-			moveUnsealed = storiface.FTNone
+	move := func(stypes storiface.SectorFileType) error {
+		fetchSel := newAllocSelector(m.index, stypes, storiface.PathStorage)
+		{
+			if len(keepUnsealed) == 0 {
+				moveUnsealed = storiface.FTNone
+			}
 		}
+
+		err = m.sched.Schedule(ctx, sector, types.TTFetch, fetchSel,
+			m.schedFetch(sector, stypes, storiface.PathStorage, storiface.AcquireMove),
+			func(ctx context.Context, w Worker) error {
+				_, err := m.waitSimpleCall(ctx)(w.MoveStorage(ctx, sector, stypes))
+				return err
+			})
+		if err != nil {
+			return xerrors.Errorf("moving sector to storage: %w", err)
+		}
+		return nil
 	}
 
-	err = m.sched.Schedule(ctx, sector, types.TTFetch, fetchSel,
-		m.schedFetch(sector, storiface.FTCache|storiface.FTSealed|storiface.FTUpdate|storiface.FTUpdateCache|moveUnsealed, storiface.PathStorage, storiface.AcquireMove),
-		func(ctx context.Context, w Worker) error {
-			_, err := m.waitSimpleCall(ctx)(w.MoveStorage(ctx, sector, storiface.FTCache|storiface.FTSealed|storiface.FTUpdate|storiface.FTUpdateCache|moveUnsealed))
-			return err
-		})
+	err = multierr.Append(move(storiface.FTUpdate|storiface.FTUpdateCache), move(storiface.FTCache))
+	err = multierr.Append(err, move(storiface.FTSealed)) // Sealed separate from cache just in case ReleaseSectorKey was already called
+	if moveUnsealed != storiface.FTNone {
+		err = multierr.Append(err, move(moveUnsealed))
+	}
 	if err != nil {
 		return xerrors.Errorf("moving sector to storage: %w", err)
 	}
