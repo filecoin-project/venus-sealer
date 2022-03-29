@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
-	"github.com/filecoin-project/go-bitfield"
-	"github.com/filecoin-project/venus/venus-shared/actors/builtin"
-	"github.com/filecoin-project/venus/venus-shared/api/market"
 	"math"
 	"math/rand"
 	"net/http"
 	"time"
+
+	"github.com/filecoin-project/go-bitfield"
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin"
+	"github.com/filecoin-project/venus/venus-shared/api/market"
 
 	"github.com/gbrlsnchs/jwt/v3"
 	"github.com/ipfs/go-datastore"
@@ -412,6 +413,8 @@ func NewSetSealConfigFunc(r *config.StorageMiner) (types2.SetSealingConfigFunc, 
 				MaxWaitDealsSectors:       cfg.MaxWaitDealsSectors,
 				MaxSealingSectors:         cfg.MaxSealingSectors,
 				MaxSealingSectorsForDeals: cfg.MaxSealingSectorsForDeals,
+				PreferNewSectorsForDeals:  cfg.PreferNewSectorsForDeals,
+				MaxUpgradingSectors:       cfg.MaxUpgradingSectors,
 				WaitDealsDelay:            config.Duration(cfg.WaitDealsDelay),
 				AlwaysKeepUnsealedCopy:    cfg.AlwaysKeepUnsealedCopy,
 				FinalizeEarly:             cfg.FinalizeEarly,
@@ -450,6 +453,8 @@ func NewGetSealConfigFunc(r *config.StorageMiner) (types2.GetSealingConfigFunc, 
 				MaxWaitDealsSectors:             cfg.Sealing.MaxWaitDealsSectors,
 				MaxSealingSectors:               cfg.Sealing.MaxSealingSectors,
 				MaxSealingSectorsForDeals:       cfg.Sealing.MaxSealingSectorsForDeals,
+				PreferNewSectorsForDeals:        cfg.Sealing.PreferNewSectorsForDeals,
+				MaxUpgradingSectors:             cfg.Sealing.MaxUpgradingSectors,
 				WaitDealsDelay:                  time.Duration(cfg.Sealing.WaitDealsDelay),
 				CommittedCapacitySectorLifetime: time.Duration(cfg.Sealing.CommittedCapacitySectorLifetime),
 				AlwaysKeepUnsealedCopy:          cfg.Sealing.AlwaysKeepUnsealedCopy,
