@@ -48,3 +48,5 @@ func init() {
 }
 
 const BlockDelaySecs = uint64(builtin2.EpochDurationSeconds)
+
+const MinerFDLimit uint64 = 100_000
