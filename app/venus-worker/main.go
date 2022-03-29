@@ -25,6 +25,7 @@ import (
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/go-jsonrpc/auth"
 	paramfetch "github.com/filecoin-project/go-paramfetch"
+	"github.com/filecoin-project/venus-sealer/lib/ulimit"
 
 	sealer "github.com/filecoin-project/venus-sealer"
 	"github.com/filecoin-project/venus-sealer/api"
@@ -189,6 +190,18 @@ var runCmd = &cli.Command{
 		if !cctx.Bool("enable-gpu-proving") {
 			if err := os.Setenv("BELLMAN_NO_GPU", "true"); err != nil {
 				return xerrors.Errorf("could not set no-gpu env: %+v", err)
+			}
+		}
+
+		limit, _, err := ulimit.GetLimit()
+		switch {
+		case err == ulimit.ErrUnsupported:
+			log.Errorw("checking file descriptor limit failed", "error", err)
+		case err != nil:
+			return xerrors.Errorf("checking fd limit: %w", err)
+		default:
+			if limit < constants.MinerFDLimit {
+				return xerrors.Errorf("soft file descriptor limit (ulimit -n) too low, want %d, current %d", constants.MinerFDLimit, limit)
 			}
 		}
 

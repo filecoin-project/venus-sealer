@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"syscall"
 
+	"golang.org/x/xerrors"
+
 	logging "github.com/ipfs/go-log/v2"
 )
 
@@ -27,6 +29,16 @@ const minFds = 2048
 
 // default max file descriptor limit.
 const maxFds = 16 << 10
+
+var ErrUnsupported = xerrors.New("unsupported")
+
+func GetLimit() (uint64, uint64, error) {
+	if getLimit == nil {
+		return 0, 0, ErrUnsupported
+	}
+
+	return getLimit()
+}
 
 // userMaxFDs returns the value of LOTUS_FD_MAX
 func userMaxFDs() uint64 {
