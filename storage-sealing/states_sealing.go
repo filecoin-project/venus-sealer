@@ -914,6 +914,10 @@ func (m *Sealing) handleFinalizeSector(ctx statemachine.Context, sector types.Se
 		return ctx.Send(SectorFinalizeFailed{xerrors.Errorf("finalize sector: %w", err)})
 	}
 
+	if cfg.MakeCCSectorsAvailable && !sector.HasDeals() {
+		return ctx.Send(SectorFinalizedAvailable{})
+	}
+
 	return ctx.Send(SectorFinalized{})
 }
 

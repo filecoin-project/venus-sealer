@@ -3,8 +3,6 @@ package sealing
 import (
 	"context"
 
-	"github.com/filecoin-project/go-address"
-
 	market7 "github.com/filecoin-project/specs-actors/v7/actors/builtin/market"
 	"golang.org/x/xerrors"
 
@@ -50,19 +48,12 @@ func (m *Sealing) MarkForSnapUpgrade(ctx context.Context, id abi.SectorNumber) e
 		return xerrors.Errorf("failed to read sector on chain info: %w", err)
 	}
 
-	active, err := m.api.StateMinerActiveSectors(ctx, m.maddr, tok)
+	active, err := m.sectorActive(ctx, tok, id)
 	if err != nil {
 		return xerrors.Errorf("failed to check active sectors: %w", err)
 	}
-	// Ensure the upgraded sector is active
-	var found bool
-	for _, si := range active {
-		if si.SectorNumber == id {
-			found = true
-			break
-		}
-	}
-	if !found {
+
+	if !active {
 		return xerrors.Errorf("cannot mark inactive sector for upgrade")
 	}
 
@@ -71,22 +62,14 @@ func (m *Sealing) MarkForSnapUpgrade(ctx context.Context, id abi.SectorNumber) e
 			"Upgrade expiration before marking for upgrade", id, onChainInfo.Expiration)
 	}
 
-	return m.sectors.Send(uint64(id), SectorStartCCUpdate{})
+	return m.sectors.Send(uint64(id), SectorMarkForUpdate{})
 }
 
-func sectorActive(ctx context.Context, api SealingAPI, maddr address.Address, tok types.TipSetToken, sector abi.SectorNumber) (bool, error) {
-	active, err := api.StateMinerActiveSectors(ctx, maddr, tok)
+func (m *Sealing) sectorActive(ctx context.Context, tok types.TipSetToken, sector abi.SectorNumber) (bool, error) {
+	active, err := m.api.StateMinerActiveSectors(ctx, m.maddr, tok)
 	if err != nil {
 		return false, xerrors.Errorf("failed to check active sectors: %w", err)
 	}
 
-	// Ensure the upgraded sector is active
-	var found bool
-	for _, si := range active {
-		if si.SectorNumber == sector {
-			found = true
-			break
-		}
-	}
-	return found, nil
+	return active.IsSet(uint64(sector))
 }
