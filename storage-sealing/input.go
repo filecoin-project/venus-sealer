@@ -532,7 +532,7 @@ func (m *Sealing) calcTargetExpiration(ctx context.Context, ssize abi.SectorSize
 	return curEpoch + minDur, curEpoch + maxDur, nil
 }
 
-func (m *Sealing) tryGetUpgradeSector(ctx context.Context, sp abi.RegisteredSealProof, ef expFn) (bool, error) {
+func (m *Sealing) maybeUpgradeSector(ctx context.Context, sp abi.RegisteredSealProof, ef expFn) (bool, error) {
 	if len(m.available) == 0 {
 		return false, nil
 	}
@@ -613,38 +613,60 @@ func (m *Sealing) tryGetDealSector(ctx context.Context, sp abi.RegisteredSealPro
 		return xerrors.Errorf("getting storage config: %w", err)
 	}
 
-	if cfg.MaxSealingSectorsForDeals > 0 && m.stats.CurSealing() >= cfg.MaxSealingSectorsForDeals {
-		return nil
-	}
+	// if we're above WaitDeals limit, we don't want to add more staging sectors
 
 	if cfg.MaxWaitDealsSectors > 0 && m.stats.CurStaging() >= cfg.MaxWaitDealsSectors {
 		return nil
 	}
 
-	got, err := m.tryGetUpgradeSector(ctx, sp, ef)
-	if err != nil {
-		return err
-	}
-	if got {
-		return nil
+	maxUpgrading := cfg.MaxSealingSectorsForDeals
+	if cfg.MaxUpgradingSectors > 0 {
+		maxUpgrading = cfg.MaxUpgradingSectors
 	}
 
-	if !cfg.MakeNewSectorForDeals {
-		return nil
+	canCreate := cfg.MakeNewSectorForDeals && !(cfg.MaxSealingSectorsForDeals > 0 && m.stats.CurSealing() >= cfg.MaxSealingSectorsForDeals)
+	canUpgrade := !(maxUpgrading > 0 && m.stats.CurSealing() >= maxUpgrading)
+
+	// we want to try to upgrade when:
+	// - we can upgrade and prefer upgrades
+	// - we don't prefer upgrades, but can't create a new sector
+	shouldUpgrade := canUpgrade && (!cfg.PreferNewSectorsForDeals || !canCreate)
+
+	log.Infow("new deal sector decision",
+		"sealing", m.stats.CurSealing(),
+		"maxSeal", cfg.MaxSealingSectorsForDeals,
+		"maxUpgrade", maxUpgrading,
+		"preferNew", cfg.PreferNewSectorsForDeals,
+		"canCreate", canCreate,
+		"canUpgrade", canUpgrade,
+		"shouldUpgrade", shouldUpgrade)
+
+	if shouldUpgrade {
+		got, err := m.maybeUpgradeSector(ctx, sp, ef)
+		if err != nil {
+			return err
+		}
+		if got {
+			return nil
+		}
 	}
 
-	sid, err := m.createSector(ctx, cfg, sp)
-	if err != nil {
-		return err
+	if canCreate {
+		sid, err := m.createSector(ctx, cfg, sp)
+		if err != nil {
+			return err
+		}
+		m.nextDealSector = &sid
+
+		log.Infow("Creating sector", "number", sid, "type", "deal", "proofType", sp)
+		if err := m.sectors.Send(uint64(sid), SectorStart{
+			ID:         sid,
+			SectorType: sp,
+		}); err != nil {
+			return err
+		}
 	}
-
-	m.nextDealSector = &sid
-
-	log.Infow("Creating sector", "number", sid, "type", "deal", "proofType", sp)
-	return m.sectors.Send(uint64(sid), SectorStart{
-		ID:         sid,
-		SectorType: sp,
-	})
+	return nil
 }
 
 // call with m.inputLk
