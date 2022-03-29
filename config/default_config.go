@@ -513,6 +513,7 @@ var defSealing = SealingConfig{
 	WaitDealsDelay:            Duration(time.Hour * 6),
 	AlwaysKeepUnsealedCopy:    false, // todo
 	FinalizeEarly:             false,
+	MakeNewSectorForDeals:     true,
 
 	BatchPreCommits:    false,                              // todo
 	MaxPreCommitBatch:  miner5.PreCommitSectorBatchMaxSize, // up to 256 sectors

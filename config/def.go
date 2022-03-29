@@ -255,6 +255,11 @@ type SealingConfig struct {
 	// Run sector finalization before submitting sector proof to the chain
 	FinalizeEarly bool
 
+	// Whether new sectors are created to pack incoming deals
+	// When this is set to false no new sectors will be created for sealing incoming deals
+	// This is useful for forcing all deals to be assigned as snap deals to sectors marked for upgrade
+	MakeNewSectorForDeals bool
+
 	// enable / disable precommit batching (takes effect after nv13)
 	BatchPreCommits bool
 	// maximum precommit batch size - batches will be sent immediately above this size
