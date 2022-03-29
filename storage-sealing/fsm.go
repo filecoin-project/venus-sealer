@@ -113,6 +113,7 @@ var fsmPlanners = map[types.SectorState]func(events []statemachine.Event, state 
 	types.Committing: planCommitting,
 	types.CommitFinalize: planOne(
 		on(SectorFinalized{}, types.SubmitCommit),
+		on(SectorFinalizedAvailable{}, types.SubmitCommit),
 		on(SectorFinalizeFailed{}, types.CommitFinalizeFailed),
 	),
 	types.SubmitCommit: planOne(
@@ -138,6 +139,7 @@ var fsmPlanners = map[types.SectorState]func(events []statemachine.Event, state 
 
 	types.FinalizeSector: planOne(
 		on(SectorFinalized{}, types.Proving),
+		on(SectorFinalizedAvailable{}, types.Available),
 		on(SectorFinalizeFailed{}, types.FinalizeFailed),
 	),
 
@@ -285,6 +287,11 @@ var fsmPlanners = map[types.SectorState]func(events []statemachine.Event, state 
 		on(SectorFaultReported{}, types.FaultReported),
 		on(SectorFaulty{}, types.Faulty),
 		on(SectorStartCCUpdate{}, types.SnapDealsWaitDeals),
+		on(SectorMarkForUpdate{}, types.Available),
+	),
+	types.Available: planOne(
+		on(SectorStartCCUpdate{}, types.SnapDealsWaitDeals),
+		on(SectorAbortUpgrade{}, types.Proving),
 	),
 	types.Terminating: planOne(
 		on(SectorTerminating{}, types.TerminateWait),
@@ -551,6 +558,8 @@ func (m *Sealing) plan(events []statemachine.Event, state *types.SectorInfo) (fu
 	// Post-seal
 	case types.Proving:
 		return m.handleProvingSector, processed, nil
+	case types.Available:
+		return m.handleAvailableSector, processed, nil
 	case types.Terminating:
 		return m.handleTerminating, processed, nil
 	case types.TerminateWait:

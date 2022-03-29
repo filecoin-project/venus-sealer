@@ -461,7 +461,7 @@ var sectorsListCmd = &cli.Command{
 
 		if cctx.Bool("unproven") {
 			for state := range types2.ExistSectorStateList {
-				if state == types2.Proving {
+				if state == types2.Proving || state == types2.Available {
 					continue
 				}
 				ss = append(ss, api.SectorState(state))

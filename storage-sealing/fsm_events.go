@@ -288,6 +288,10 @@ type SectorFinalized struct{}
 
 func (evt SectorFinalized) apply(*types.SectorInfo) {}
 
+type SectorFinalizedAvailable struct{}
+
+func (evt SectorFinalizedAvailable) apply(*types.SectorInfo) {}
+
 type SectorRetryFinalize struct{}
 
 func (evt SectorRetryFinalize) apply(*types.SectorInfo) {}
@@ -298,6 +302,10 @@ func (evt SectorFinalizeFailed) FormatError(xerrors.Printer) (next error) { retu
 func (evt SectorFinalizeFailed) apply(*types.SectorInfo)                  {}
 
 // Snap deals // CC update path
+
+type SectorMarkForUpdate struct{}
+
+func (evt SectorMarkForUpdate) apply(state *types.SectorInfo) {}
 
 type SectorStartCCUpdate struct{}
 

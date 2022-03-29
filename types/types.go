@@ -171,6 +171,16 @@ func (t *SectorInfo) HasDeals() bool {
 	return false
 }
 
+func (t *SectorInfo) hasDeals() bool {
+	for _, piece := range t.Pieces {
+		if piece.DealInfo != nil {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (t *SectorInfo) SealingCtx(ctx context.Context) context.Context {
 	// TODO: can also take start epoch into account to give priority to sectors
 	//  we need sealed sooner
