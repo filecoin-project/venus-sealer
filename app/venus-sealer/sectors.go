@@ -24,7 +24,6 @@ import (
 
 	"github.com/filecoin-project/venus/venus-shared/actors"
 	"github.com/filecoin-project/venus/venus-shared/actors/adt"
-	"github.com/filecoin-project/venus/venus-shared/actors/builtin"
 	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
 	"github.com/filecoin-project/venus/venus-shared/actors/policy"
 	"github.com/filecoin-project/venus/venus-shared/types"
@@ -32,7 +31,6 @@ import (
 	miner5 "github.com/filecoin-project/specs-actors/v5/actors/builtin/miner"
 
 	"github.com/filecoin-project/venus-sealer/api"
-	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/lib/blockstore"
 	"github.com/filecoin-project/venus-sealer/lib/tablewriter"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
@@ -58,7 +56,6 @@ var sectorsCmd = &cli.Command{
 		sectorsRemoveCmd,
 		sectorsSnapUpCmd,
 		sectorsSnapAbortCmd,
-		sectorsMarkForUpgradeCmd,
 		sectorsStartSealCmd,
 		sectorsSealDelayCmd,
 		sectorsCapacityCollateralCmd,
@@ -1676,62 +1673,6 @@ var sectorsSnapAbortCmd = &cli.Command{
 		}
 
 		return nodeApi.SectorAbortUpgrade(ctx, abi.SectorNumber(id))
-	},
-}
-
-var sectorsMarkForUpgradeCmd = &cli.Command{
-	Name:      "mark-for-upgrade",
-	Usage:     "Mark a committed capacity sector for replacement by a sector with deals",
-	ArgsUsage: "<sectorNum>",
-	Action: func(cctx *cli.Context) error {
-		if cctx.Args().Len() != 1 {
-			return ShowHelp(cctx, xerrors.Errorf("must pass sector number"))
-		}
-
-		nodeApi, closer, err := api.GetStorageMinerAPI(cctx)
-		if err != nil {
-			return err
-		}
-		defer closer()
-		fullnodeAPI, nCloser, err := api.GetFullNodeAPIV2(cctx)
-		if err != nil {
-			return err
-		}
-		defer nCloser()
-		ctx := api.ReqContext(cctx)
-
-		nv, err := fullnodeAPI.StateNetworkVersion(ctx, types.EmptyTSK)
-		if err != nil {
-			return xerrors.Errorf("failed to get network version: %w", err)
-		}
-		if nv >= network.Version15 {
-			return xerrors.Errorf("classic cc upgrades disabled v15 and beyond, use `snap-up`")
-		}
-
-		// disable mark for upgrade two days before the ntwk v15 upgrade
-		// TODO: remove the following block in v1.15.1
-		head, err := fullnodeAPI.ChainHead(ctx)
-		if err != nil {
-			return xerrors.Errorf("failed to get chain head: %w", err)
-		}
-		twoDays := abi.ChainEpoch(2 * builtin.EpochsInDay)
-		repoPath := cctx.String("repo")
-		cfgPath := config.FsConfig(repoPath)
-		cfg, err := config.MinerFromFile(cfgPath)
-		if err != nil {
-			return err
-		}
-		if head.Height() > (abi.ChainEpoch(cfg.NetParams.UpgradeOhSnapHeight) - twoDays) {
-			return xerrors.Errorf("OhSnap is coming soon, " +
-				"please use `snap-up` to upgrade your cc sectors after the network v15 upgrade!")
-		}
-
-		id, err := strconv.ParseUint(cctx.Args().Get(0), 10, 64)
-		if err != nil {
-			return xerrors.Errorf("could not parse sector number: %w", err)
-		}
-
-		return nodeApi.SectorMarkForUpgrade(ctx, abi.SectorNumber(id), false)
 	},
 }
 

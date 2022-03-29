@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/filecoin-project/venus/venus-shared/api/market"
-	mtypes "github.com/filecoin-project/venus/venus-shared/types/market"
-	"github.com/filecoin-project/venus/venus-shared/types/messager"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/filecoin-project/venus/venus-shared/api/market"
+	mtypes "github.com/filecoin-project/venus/venus-shared/types/market"
+	"github.com/filecoin-project/venus/venus-shared/types/messager"
 
 	"github.com/google/uuid"
 	"github.com/ipfs/go-cid"
@@ -221,7 +222,7 @@ func (sm *StorageMinerAPI) SectorsStatus(ctx context.Context, sid abi.SectorNumb
 		PreCommitMsg: info.PreCommitMessage,
 		CommitMsg:    info.CommitMessage,
 		Retries:      info.InvalidProofs,
-		ToUpgrade:    sm.Miner.IsMarkedForUpgrade(sid),
+		ToUpgrade:    false,
 
 		CCUpdate:             info.CCUpdate,
 		UpdateSealed:         info.UpdateSealed,
@@ -373,7 +374,7 @@ func (sm *StorageMinerAPI) SectorsInfoListInStates(ctx context.Context, states [
 				PreCommitMsg: sector.PreCommitMessage,
 				CommitMsg:    sector.CommitMessage,
 				Retries:      sector.InvalidProofs,
-				ToUpgrade:    sm.Miner.IsMarkedForUpgrade(sector.SectorNumber),
+				ToUpgrade:    false,
 
 				LastErr: sector.LastErr,
 				Log:     log,

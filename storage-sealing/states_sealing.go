@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/ipfs/go-cid"
-	"golang.org/x/xerrors"
 	"io/ioutil"
 	"strings"
 	"time"
+
+	"github.com/ipfs/go-cid"
+	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/go-commp-utils/zerocomm"
 	"github.com/filecoin-project/go-state-types/abi"
@@ -90,7 +91,7 @@ func (m *Sealing) handlePacking(ctx statemachine.Context, sector types.SectorInf
 		}
 	}
 
-	fillerPieces, err := m.padSector(sector.SealingCtx(ctx.Context()), m.minerSector(sector.SectorType, sector.SectorNumber), deals>0, sector.ExistingPieceSizes(), fillerSizes...)
+	fillerPieces, err := m.padSector(sector.SealingCtx(ctx.Context()), m.minerSector(sector.SectorType, sector.SectorNumber), deals > 0, sector.ExistingPieceSizes(), fillerSizes...)
 	if err != nil {
 		return xerrors.Errorf("filling up the sector (%v): %w", fillerSizes, err)
 	}
@@ -378,14 +379,6 @@ func (m *Sealing) handlePreCommit2(ctx statemachine.Context, sector types.Sector
 	})
 }
 
-// TODO: We should probably invoke this method in most (if not all) state transition failures after handlePreCommitting
-func (m *Sealing) remarkForUpgrade(ctx context.Context, sid abi.SectorNumber) {
-	err := m.MarkForUpgrade(ctx, sid)
-	if err != nil {
-		log.Errorf("error re-marking sector %d as for upgrade: %+v", sid, err)
-	}
-}
-
 func (m *Sealing) preCommitParams(ctx statemachine.Context, sector types.SectorInfo) (*miner.SectorPreCommitInfo, big.Int, types.TipSetToken, error) {
 	tok, height, err := m.api.ChainHead(ctx.Context())
 	if err != nil {
@@ -459,16 +452,12 @@ func (m *Sealing) preCommitParams(ctx statemachine.Context, sector types.SectorI
 		DealIDs:       sector.DealIDs(),
 	}
 
-	depositMinimum := m.tryUpgradeSector(ctx.Context(), params)
-
 	collateral, err := m.api.StateMinerPreCommitDepositForPower(ctx.Context(), m.maddr, *params, tok)
 	if err != nil {
 		return nil, big.Zero(), nil, xerrors.Errorf("getting initial pledge collateral: %w", err)
 	}
 
-	deposit := big.Max(depositMinimum, collateral)
-
-	return params, deposit, tok, nil
+	return params, collateral, tok, nil
 }
 
 func (m *Sealing) handlePreCommitting(ctx statemachine.Context, sector types.SectorInfo) error {
@@ -522,9 +511,6 @@ func (m *Sealing) handlePreCommitting(ctx statemachine.Context, sector types.Sec
 	log.Infof("submitting precommit for sector %d (deposit: %s): ", sector.SectorNumber, deposit)
 	uid, err := m.api.MessagerSendMsg(ctx.Context(), from, m.maddr, miner.Methods.PreCommitSector, deposit, big.Int(m.feeCfg.MaxPreCommitGasFee), enc.Bytes())
 	if err != nil {
-		if params.ReplaceCapacity {
-			m.remarkForUpgrade(ctx.Context(), params.ReplaceSectorNumber)
-		}
 		return ctx.Send(SectorChainPreCommitFailed{xerrors.Errorf("pushing message to mpool: %w", err)})
 	}
 
@@ -883,8 +869,6 @@ func (m *Sealing) handleCommitWait(ctx statemachine.Context, sector types.Sector
 		log.Errorf("sector %d entered commit wait state without a message cid", sector.SectorNumber)
 		return ctx.Send(SectorCommitFailed{xerrors.Errorf("entered commit wait with no commit cid")})
 	}
-
-
 
 	mw, err := m.api.MessagerWaitMsg(ctx.Context(), sector.CommitMessage)
 	if err != nil {

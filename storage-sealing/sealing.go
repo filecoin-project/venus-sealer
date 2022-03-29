@@ -3,9 +3,10 @@ package sealing
 import (
 	"context"
 	"errors"
-	market2 "github.com/filecoin-project/venus/venus-shared/types/market"
 	"sync"
 	"time"
+
+	market2 "github.com/filecoin-project/venus/venus-shared/types/market"
 
 	"github.com/ipfs/go-cid"
 	logging "github.com/ipfs/go-log/v2"
@@ -111,9 +112,6 @@ type Sealing struct {
 	assignedPieces map[abi.SectorID][]cid.Cid
 	creating       *abi.SectorNumber // used to prevent a race where we could create a new sector more than once
 
-	upgradeLk sync.Mutex
-	toUpgrade map[abi.SectorNumber]struct{}
-
 	networkParams *config.NetParamsConfig
 	notifee       SectorStateNotifee
 	addrSel       AddrSel
@@ -198,7 +196,6 @@ func New(mctx context.Context, api SealingAPI, fc config.MinerFeeConfig, events 
 		sectorTimers:   map[abi.SectorID]*time.Timer{},
 		pendingPieces:  map[cid.Cid]*pendingPiece{},
 		assignedPieces: map[abi.SectorID][]cid.Cid{},
-		toUpgrade:      map[abi.SectorNumber]struct{}{},
 
 		notifee: notifee,
 		addrSel: as,
