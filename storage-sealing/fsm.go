@@ -315,7 +315,7 @@ var fsmPlanners = map[types.SectorState]func(events []statemachine.Event, state 
 	types.FaultReported: final, // not really supported right now
 
 	types.FaultedFinal: final,
-	types.Removed:      final,
+	types.Removed:      finalRemoved,
 
 	types.FailedUnrecoverable: final,
 }
@@ -688,6 +688,12 @@ func final(events []statemachine.Event, state *types.SectorInfo) (uint64, error)
 	}
 
 	return 0, xerrors.Errorf("didn't expect any events in state %s, got %+v", state.State, events)
+}
+
+// as sector has been removed, it's no needs to care about later events,
+// just returns length of events as `processed` is ok.
+func finalRemoved(events []statemachine.Event, _ *types.SectorInfo) (uint64, error) {
+	return uint64(len(events)), nil
 }
 
 func on(mut mutator, next types.SectorState) func() (mutator, func(*types.SectorInfo) (bool, error)) {
