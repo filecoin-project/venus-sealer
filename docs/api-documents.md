@@ -16,6 +16,7 @@
   * [CheckProvable](#CheckProvable)
 * [Compute](#Compute)
   * [ComputeProof](#ComputeProof)
+  * [ComputeWindowPoSt](#ComputeWindowPoSt)
 * [Create](#Create)
   * [CreateBackup](#CreateBackup)
 * [Current](#Current)
@@ -68,6 +69,7 @@
 * [Return](#Return)
   * [ReturnAddPiece](#ReturnAddPiece)
   * [ReturnFetch](#ReturnFetch)
+  * [ReturnFinalizeReplicaUpdate](#ReturnFinalizeReplicaUpdate)
   * [ReturnFinalizeSector](#ReturnFinalizeSector)
   * [ReturnGenerateSectorKeyFromData](#ReturnGenerateSectorKeyFromData)
   * [ReturnMoveStorage](#ReturnMoveStorage)
@@ -85,6 +87,7 @@
   * [SealingAbort](#SealingAbort)
   * [SealingSchedDiag](#SealingSchedDiag)
 * [Sector](#Sector)
+  * [SectorAbortUpgrade](#SectorAbortUpgrade)
   * [SectorCommitFlush](#SectorCommitFlush)
   * [SectorCommitPending](#SectorCommitPending)
   * [SectorGetExpectedSealDuration](#SectorGetExpectedSealDuration)
@@ -180,7 +183,7 @@ Response:
 ```json
 {
   "Version": "string value",
-  "APIVersion": 66304,
+  "APIVersion": 66816,
   "BlockDelay": 42
 }
 ```
@@ -341,6 +344,45 @@ Response:
   {
     "PoStProof": 8,
     "ProofBytes": "Ynl0ZSBhcnJheQ=="
+  }
+]
+```
+
+### ComputeWindowPoSt
+
+
+Perms: write
+
+Inputs:
+```json
+[
+  42,
+  []
+]
+```
+
+Response:
+```json
+[
+  {
+    "Deadline": 42,
+    "Partitions": [
+      {
+        "Index": 42,
+        "Skipped": [
+          5,
+          1
+        ]
+      }
+    ],
+    "Proofs": [
+      {
+        "PoStProof": 8,
+        "ProofBytes": "Ynl0ZSBhcnJheQ=="
+      }
+    ],
+    "ChainCommitEpoch": 10101,
+    "ChainCommitRand": "Bw=="
   }
 ]
 ```
@@ -781,9 +823,9 @@ Inputs:
 Response:
 ```json
 {
-  "CID": {
-    "/": "bafy2bzacebbpdegvr3i4cosewthysg5xkxpqfn2wfcz6mv2hmoktwbdxkax4s"
-  },
+  "ID": "string value",
+  "UnsignedCid": null,
+  "SignedCid": null,
   "Version": 42,
   "To": "t01234",
   "From": "t01234",
@@ -793,7 +835,30 @@ Response:
   "GasFeeCap": "0",
   "GasPremium": "0",
   "Method": 1,
-  "Params": "Ynl0ZSBhcnJheQ=="
+  "Params": "Ynl0ZSBhcnJheQ==",
+  "Signature": {
+    "Type": 2,
+    "Data": "Ynl0ZSBhcnJheQ=="
+  },
+  "Height": 9,
+  "Confidence": 9,
+  "Receipt": {
+    "ExitCode": 0,
+    "Return": "Ynl0ZSBhcnJheQ==",
+    "GasUsed": 9
+  },
+  "TipSetKey": [],
+  "Meta": {
+    "expireEpoch": 10101,
+    "gasOverEstimation": 12.3,
+    "maxFee": "0",
+    "maxFeeCap": "0"
+  },
+  "WalletName": "string value",
+  "FromUser": "string value",
+  "State": 0,
+  "CreatedAt": "0001-01-01T00:00:00Z",
+  "UpdatedAt": "0001-01-01T00:00:00Z"
 }
 ```
 
@@ -904,6 +969,7 @@ Response:
 ```json
 {
   "UpgradeIgnitionHeight": 10101,
+  "UpgradeOhSnapHeight": 9,
   "ForkLengthThreshold": 10101,
   "BlockDelaySecs": 42,
   "PreCommitChallengeDelay": 10101
@@ -1083,6 +1149,30 @@ Inputs:
 Response: `{}`
 
 ### ReturnFetch
+
+
+Perms: admin
+
+Inputs:
+```json
+[
+  {
+    "Sector": {
+      "Miner": 1000,
+      "Number": 9
+    },
+    "ID": "d5c7e3cb-f35a-4f98-b509-ca8ce5922fab"
+  },
+  {
+    "Code": 0,
+    "Message": "string value"
+  }
+]
+```
+
+Response: `{}`
+
+### ReturnFinalizeReplicaUpdate
 
 
 Perms: admin
@@ -1483,6 +1573,21 @@ Response: `{}`
 ## Sector
 
 
+### SectorAbortUpgrade
+SectorAbortUpgrade can be called on sectors that are in the process of being upgraded to abort it
+
+
+Perms: admin
+
+Inputs:
+```json
+[
+  9
+]
+```
+
+Response: `{}`
+
 ### SectorCommitFlush
 SectorCommitFlush immediately sends a Commit message with sectors aggregated for Commit.
 Returns null if message wasn't sent
@@ -1799,6 +1904,10 @@ Response:
     "CommitMsg": "string value",
     "Retries": 42,
     "ToUpgrade": true,
+    "CCUpdate": true,
+    "UpdateSealed": null,
+    "UpdateUnsealed": null,
+    "ReplicaUpdateMessage": "string value",
     "LastErr": "string value",
     "Log": [
       {
@@ -1950,6 +2059,10 @@ Response:
   "CommitMsg": "string value",
   "Retries": 42,
   "ToUpgrade": true,
+  "CCUpdate": true,
+  "UpdateSealed": null,
+  "UpdateUnsealed": null,
+  "ReplicaUpdateMessage": "string value",
   "LastErr": "string value",
   "Log": [
     {
