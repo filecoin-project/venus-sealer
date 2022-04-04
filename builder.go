@@ -2,6 +2,7 @@ package venus_sealer
 
 import (
 	"context"
+
 	"github.com/filecoin-project/venus/venus-shared/api/market"
 	logging "github.com/ipfs/go-log/v2"
 	metricsi "github.com/ipfs/go-metrics-interface"
@@ -23,7 +24,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/models"
 	"github.com/filecoin-project/venus-sealer/models/repo"
 	"github.com/filecoin-project/venus-sealer/proof_client"
-	"github.com/filecoin-project/venus-sealer/sector-storage"
+	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
 	"github.com/filecoin-project/venus-sealer/sector-storage/ffiwrapper"
 	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
@@ -151,6 +152,7 @@ func Online(cfg *config.StorageMiner) Option {
 		Override(new(types.GetSealingConfigFunc), NewGetSealConfigFunc),
 		Override(new(*sectorblocks.SectorBlocks), sectorblocks.NewSectorBlocks),
 		Override(new(*storage.Miner), StorageMiner(config.DefaultMainnetStorageMiner().Fees)),
+		Override(new(*storage.WindowPoStScheduler), WindowPostScheduler(cfg.Fees)),
 		// Override(new(*storage.AddressSelector), AddressSelector(nil)), // venus-sealer run: Call Repo before, Online after,will overwrite the original injection(MinerAddressConfig)
 		Override(new(types.NetworkName), StorageNetworkName),
 

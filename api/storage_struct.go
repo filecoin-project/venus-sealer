@@ -2,10 +2,12 @@ package api
 
 import (
 	"context"
+	"time"
+
+	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
 	mtypes "github.com/filecoin-project/venus/venus-shared/types/market"
 	"github.com/filecoin-project/venus/venus-shared/types/messager"
 	"golang.org/x/xerrors"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/ipfs/go-cid"
@@ -51,6 +53,8 @@ type StorageMiner interface {
 
 	ActorSectorSize(context.Context, address.Address) (abi.SectorSize, error)
 	ActorAddressConfig(ctx context.Context) (AddressConfig, error)
+
+	ComputeWindowPoSt(ctx context.Context, dlIdx uint64, tsk types2.TipSetKey) ([]miner.SubmitWindowedPoStParams, error) //perm:admin
 
 	// Temp api for testing
 	PledgeSector(context.Context) (abi.SectorID, error)
@@ -195,6 +199,8 @@ type StorageMinerStruct struct {
 		ActorAddressConfig func(ctx context.Context) (AddressConfig, error)               `perm:"read"`
 		NetParamsConfig    func(ctx context.Context) (*config.NetParamsConfig, error)     `perm:"read"`
 
+		ComputeWindowPoSt func(ctx context.Context, dlIdx uint64, tsk types2.TipSetKey) ([]miner.SubmitWindowedPoStParams, error) `perm:"write"`
+
 		PledgeSector func(context.Context) (abi.SectorID, error) `perm:"write"`
 
 		CurrentSectorID func(ctx context.Context) (abi.SectorNumber, error) `perm:"read"`
@@ -331,6 +337,10 @@ func (c *StorageMinerStruct) ActorSectorSize(ctx context.Context, addr address.A
 
 func (c *StorageMinerStruct) ActorAddressConfig(ctx context.Context) (AddressConfig, error) {
 	return c.Internal.ActorAddressConfig(ctx)
+}
+
+func (c *StorageMinerStruct) ComputeWindowPoSt(ctx context.Context, dlIdx uint64, tsk types2.TipSetKey) ([]miner.SubmitWindowedPoStParams, error) {
+	return c.Internal.ComputeWindowPoSt(ctx, dlIdx, tsk)
 }
 
 func (c *StorageMinerStruct) PledgeSector(ctx context.Context) (abi.SectorID, error) {

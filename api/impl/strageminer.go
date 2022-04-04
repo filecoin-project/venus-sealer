@@ -27,6 +27,7 @@ import (
 	sto "github.com/filecoin-project/specs-storage/storage"
 	multi "github.com/hashicorp/go-multierror"
 
+	"github.com/filecoin-project/specs-actors/actors/builtin/miner"
 	proof7 "github.com/filecoin-project/specs-actors/v7/actors/runtime/proof"
 
 	"github.com/filecoin-project/venus-sealer/api"
@@ -59,6 +60,8 @@ type StorageMinerAPI struct {
 	storiface.WorkerReturn
 
 	AddrSel *storage.AddressSelector
+
+	WdPoSt *storage.WindowPoStScheduler
 
 	Stor *stores.Remote
 
@@ -136,6 +139,21 @@ func (sm *StorageMinerAPI) ActorSectorSize(ctx context.Context, addr address.Add
 		return 0, err
 	}
 	return mi.SectorSize, nil
+}
+
+func (sm *StorageMinerAPI) ComputeWindowPoSt(ctx context.Context, dlIdx uint64, tsk types.TipSetKey) ([]miner.SubmitWindowedPoStParams, error) {
+	var ts *types.TipSet
+	var err error
+	if tsk == types.EmptyTSK {
+		ts, err = sm.Full.ChainHead(ctx)
+	} else {
+		ts, err = sm.Full.ChainGetTipSet(ctx, tsk)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return sm.WdPoSt.ComputePoSt(ctx, dlIdx, ts)
 }
 
 func (sm *StorageMinerAPI) PledgeSector(ctx context.Context) (abi.SectorID, error) {
