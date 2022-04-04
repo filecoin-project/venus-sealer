@@ -280,6 +280,7 @@ type StorageMinerParams struct {
 	AddrSel            *storage.AddressSelector
 	NetworkParams      *config.NetParamsConfig
 	PieceStorage       piecestorage.IPieceStorage `optional:"true"`
+	Maddr              types2.MinerAddress
 }
 
 func DoPoStWarmup(ctx MetricsCtx, api api.FullNode, metadataService *service.MetadataService, prover storage.WinningPoStProver) error {
@@ -375,12 +376,8 @@ func StorageMiner(fc config.MinerFeeConfig) func(params StorageMinerParams) (*st
 			as                = params.AddrSel
 			np                = params.NetworkParams
 			ps                = params.PieceStorage
+			maddr             = address.Address(params.Maddr)
 		)
-
-		maddr, err := metadataService.GetMinerAddress()
-		if err != nil {
-			return nil, err
-		}
 
 		ctx := LifecycleCtx(mctx, lc)
 
@@ -403,6 +400,39 @@ func StorageMiner(fc config.MinerFeeConfig) func(params StorageMinerParams) (*st
 		})
 
 		return sm, nil
+	}
+}
+
+func WindowPostScheduler(fc config.MinerFeeConfig) func(params StorageMinerParams) (*storage.WindowPoStScheduler, error) {
+	return func(params StorageMinerParams) (*storage.WindowPoStScheduler, error) {
+		var (
+			mctx     = params.MetricsCtx
+			lc       = params.Lifecycle
+			api      = params.API
+			messager = params.Messager
+			sealer   = params.Sealer
+			verif    = params.Verifier
+			j        = params.Journal
+			as       = params.AddrSel
+			np       = params.NetworkParams
+			maddr    = address.Address(params.Maddr)
+		)
+
+		ctx := LifecycleCtx(mctx, lc)
+
+		fps, err := storage.NewWindowedPoStScheduler(api, messager, fc, as, sealer, verif, sealer, j, maddr, np)
+		if err != nil {
+			return nil, err
+		}
+
+		lc.Append(fx.Hook{
+			OnStart: func(context.Context) error {
+				go fps.Run(ctx)
+				return nil
+			},
+		})
+
+		return fps, nil
 	}
 }
 

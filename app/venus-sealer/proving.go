@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	"text/tabwriter"
 
@@ -40,6 +42,7 @@ var provingCmd = &cli.Command{
 		provingFaultsCmd,
 		provingCheckProvableCmd,
 		provingMockWdPoStTaskCmd,
+		provingComputeCmd,
 	},
 }
 
@@ -706,6 +709,53 @@ var provingMockWdPoStTaskCmd = &cli.Command{
 		}
 
 		fmt.Printf("mock sectors %v wdpost start, please retrieve `mock generate window post` from the log to view execution information.\n", proofSectors)
+
+		return nil
+	},
+}
+
+var provingComputeCmd = &cli.Command{
+	Name: "compute",
+	Subcommands: []*cli.Command{
+		provingComputeWindowPoStCmd,
+	},
+}
+
+var provingComputeWindowPoStCmd = &cli.Command{
+	Name:  "window-post",
+	Usage: "Compute WindowPoSt for a specific deadline",
+	Description: `Note: This command is intended to be used to verify PoSt compute performance.
+It will not send any messages to the chain.`,
+	ArgsUsage: "[deadline index]",
+	Action: func(cctx *cli.Context) error {
+		if cctx.Args().Len() != 1 {
+			return xerrors.Errorf("must pass deadline index")
+		}
+
+		dlIdx, err := strconv.ParseUint(cctx.Args().Get(0), 10, 64)
+		if err != nil {
+			return xerrors.Errorf("could not parse deadline index: %w", err)
+		}
+
+		storageAPI, scloser, err := api.GetStorageMinerAPI(cctx)
+		if err != nil {
+			return err
+		}
+		defer scloser()
+
+		ctx := cctx.Context
+
+		start := time.Now()
+		res, err := storageAPI.ComputeWindowPoSt(ctx, dlIdx, types.EmptyTSK)
+		fmt.Printf("Took %s\n", time.Now().Sub(start))
+		if err != nil {
+			return err
+		}
+		jr, err := json.Marshal(res)
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(jr))
 
 		return nil
 	},
