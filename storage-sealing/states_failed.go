@@ -424,6 +424,16 @@ func (m *Sealing) handleAbortUpgrade(ctx statemachine.Context, sector types.Sect
 	if err := m.sealer.ReleaseReplicaUpgrade(ctx.Context(), m.minerSector(sector.SectorType, sector.SectorNumber)); err != nil {
 		return xerrors.Errorf("removing CC update files from sector storage")
 	}
+
+	cfg, err := m.getConfig()
+	if err != nil {
+		return xerrors.Errorf("getting sealing config: %w", err)
+	}
+
+	if err := m.sealer.ReleaseUnsealed(ctx.Context(), m.minerSector(sector.SectorType, sector.SectorNumber), sector.KeepUnsealedRanges(sector.CCPieces, true, cfg.AlwaysKeepUnsealedCopy)); err != nil {
+		log.Error(err)
+	}
+
 	return ctx.Send(SectorRevertUpgradeToProving{})
 }
 
