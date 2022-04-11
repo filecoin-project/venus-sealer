@@ -30,7 +30,7 @@ func newAllocSelector(index stores.SectorIndex, alloc storiface.SectorFileType, 
 }
 
 func (s *allocSelector) Ok(ctx context.Context, task types.TaskType, spt abi.RegisteredSealProof, sector storage.SectorRef, whnd *workerHandle) (bool, error) {
-	tasks, err := whnd.workerRpc.TaskTypes(ctx)
+	tasks, err := whnd.TaskTypes(ctx)
 	if err != nil {
 		return false, xerrors.Errorf("getting supported worker task types: %w", err)
 	}
