@@ -910,7 +910,7 @@ func (m *Sealing) handleFinalizeSector(ctx statemachine.Context, sector types.Se
 		return xerrors.Errorf("getting sealing config: %w", err)
 	}
 
-	if err := m.sealer.FinalizeSector(sector.SealingCtx(ctx.Context()), m.minerSector(sector.SectorType, sector.SectorNumber), sector.KeepUnsealedRanges(false, cfg.AlwaysKeepUnsealedCopy)); err != nil {
+	if err := m.sealer.FinalizeSector(sector.SealingCtx(ctx.Context()), m.minerSector(sector.SectorType, sector.SectorNumber), sector.KeepUnsealedRanges(sector.Pieces, false, cfg.AlwaysKeepUnsealedCopy)); err != nil {
 		return ctx.Send(SectorFinalizeFailed{xerrors.Errorf("finalize sector: %w", err)})
 	}
 
