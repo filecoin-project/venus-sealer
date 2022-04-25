@@ -14,7 +14,7 @@ import (
 	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
 	"github.com/filecoin-project/venus/venus-shared/actors/policy"
 
-	"github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
+	"github.com/filecoin-project/specs-actors/v8/actors/builtin/market"
 
 	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 )

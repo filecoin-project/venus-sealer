@@ -18,8 +18,8 @@ import (
 	"github.com/filecoin-project/go-state-types/network"
 
 	market0 "github.com/filecoin-project/specs-actors/actors/builtin/market"
-	market2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
 	tutils "github.com/filecoin-project/specs-actors/v2/support/testing"
+	market8 "github.com/filecoin-project/specs-actors/v8/actors/builtin/market"
 
 	"github.com/ipfs/go-cid"
 	"github.com/stretchr/testify/require"
@@ -34,6 +34,12 @@ import (
 var errNotFound = errors.New("Could not find")
 
 func TestGetCurrentDealInfo(t *testing.T) {
+	success, err := market8.NewLabelFromString("success")
+	require.NoError(t, err)
+
+	other, err := market8.NewLabelFromString("other")
+	require.NoError(t, err)
+
 	ctx := context.Background()
 	dummyCid, _ := cid.Parse("bafkqaaa")
 	dummyCid2, _ := cid.Parse("bafkqaab")
@@ -48,7 +54,7 @@ func TestGetCurrentDealInfo(t *testing.T) {
 		StoragePricePerEpoch: abi.NewTokenAmount(1),
 		ProviderCollateral:   abi.NewTokenAmount(1),
 		ClientCollateral:     abi.NewTokenAmount(1),
-		Label:                "success",
+		Label:                success,
 	}
 	otherProposal := market.DealProposal{
 		PieceCID:             dummyCid2,
@@ -58,7 +64,7 @@ func TestGetCurrentDealInfo(t *testing.T) {
 		StoragePricePerEpoch: abi.NewTokenAmount(1),
 		ProviderCollateral:   abi.NewTokenAmount(1),
 		ClientCollateral:     abi.NewTokenAmount(1),
-		Label:                "other",
+		Label:                other,
 	}
 	successDeal := &types.MarketDeal{
 		Proposal: proposal,
@@ -262,11 +268,11 @@ type CurrentDealInfoMockAPI struct {
 
 func (mapi *CurrentDealInfoMockAPI) ChainGetMessage(ctx context.Context, c cid.Cid) (*types.Message, error) {
 	var dealIDs []abi.DealID
-	var deals []market2.ClientDealProposal
+	var deals []market8.ClientDealProposal
 	for k, dl := range mapi.MarketDeals {
 		dealIDs = append(dealIDs, k.DealID)
-		deals = append(deals, market2.ClientDealProposal{
-			Proposal: market2.DealProposal(dl.Proposal),
+		deals = append(deals, market8.ClientDealProposal{
+			Proposal: market8.DealProposal(dl.Proposal),
 			ClientSignature: crypto.Signature{
 				Data: []byte("foo bar cat dog"),
 				Type: crypto.SigTypeBLS,
@@ -277,7 +283,7 @@ func (mapi *CurrentDealInfoMockAPI) ChainGetMessage(ctx context.Context, c cid.C
 		return dealIDs[i] < dealIDs[j]
 	})
 	buf := new(bytes.Buffer)
-	params := market2.PublishStorageDealsParams{Deals: deals}
+	params := market.PublishStorageDealsParams{Deals: deals}
 	err := params.MarshalCBOR(buf)
 	if err != nil {
 		panic(err)

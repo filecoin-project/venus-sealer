@@ -243,21 +243,8 @@ func AddressSelector(addrConf *config.MinerAddressConfig) func() (*storage.Addre
 	}
 }
 
-func NewPieceStorage(cfg *config2.PieceStorage, preSignOp piecestorage.IPreSignOp) (piecestorage.IPieceStorage, error) {
-	if cfg.PreSignS3.Enable {
-		piecestorage.RegisterPieceStorageCtor(piecestorage.PreSignS3,
-			func(cfg interface{}) (piecestorage.IPieceStorage, error) {
-				return piecestorage.NewPresignS3Storage(preSignOp), nil
-			})
-	}
-	if !cfg.S3.Enable && !cfg.Fs.Enable && !cfg.PreSignS3.Enable {
-		return nil, nil
-	}
-	return piecestorage.NewPieceStorage(cfg)
-}
-
-func NewPreSignS3Op(cfg *config2.PieceStorage, marketAPI market.IMarket) piecestorage.IPreSignOp {
-	return marketAPI
+func NewPieceStorageManager(cfg *config2.PieceStorage) (*piecestorage.PieceStorageManager, error) {
+	return piecestorage.NewPieceStorageManager(cfg)
 }
 
 type StorageMinerParams struct {
@@ -279,8 +266,10 @@ type StorageMinerParams struct {
 	Journal            journal.Journal
 	AddrSel            *storage.AddressSelector
 	NetworkParams      *config.NetParamsConfig
-	PieceStorage       piecestorage.IPieceStorage `optional:"true"`
+	PieceStorageMgr    *piecestorage.PieceStorageManager `optional:"true"`
 	Maddr              types2.MinerAddress
+
+	ManifestLoaded types2.BuiltinActorsLoaded
 }
 
 func DoPoStWarmup(ctx MetricsCtx, api api.FullNode, metadataService *service.MetadataService, prover storage.WinningPoStProver) error {
@@ -375,7 +364,7 @@ func StorageMiner(fc config.MinerFeeConfig) func(params StorageMinerParams) (*st
 			j                 = params.Journal
 			as                = params.AddrSel
 			np                = params.NetworkParams
-			ps                = params.PieceStorage
+			ps                = params.PieceStorageMgr
 			maddr             = address.Address(params.Maddr)
 		)
 

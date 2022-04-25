@@ -1,7 +1,7 @@
 package service
 
 import (
-	"github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
+	"github.com/filecoin-project/specs-actors/v8/actors/builtin/market"
 	"github.com/filecoin-project/venus-sealer/models/repo"
 	"github.com/filecoin-project/venus-sealer/types"
 )
