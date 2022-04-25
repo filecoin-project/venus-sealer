@@ -125,8 +125,8 @@ type Sealing struct {
 	precommiter *PreCommitBatcher
 	commiter    *CommitBatcher
 
-	getConfig    types2.GetSealingConfigFunc
-	pieceStorage piecestorage.IPieceStorage
+	getConfig       types2.GetSealingConfigFunc
+	pieceStorageMrg *piecestorage.PieceStorageManager
 	//service
 	logService *service.LogService
 }
@@ -179,21 +179,38 @@ func (pp *pendingPiece) waitAddPieceResp(ctx context.Context) (*pieceAcceptResp,
 	}
 }
 
-func New(mctx context.Context, api SealingAPI, fc config.MinerFeeConfig, events Events, maddr address.Address, metaDataService *service.MetadataService, sectorInfoService *service.SectorInfoService, logService *service.LogService, sealer sectorstorage.SectorManager, sc types2.SectorIDCounter, verif ffiwrapper.Verifier, prov ffiwrapper.Prover, pcp PreCommitPolicy, gc types2.GetSealingConfigFunc, notifee SectorStateNotifee, as AddrSel, networkParams *config.NetParamsConfig, pieceStorage piecestorage.IPieceStorage) *Sealing {
+func New(mctx context.Context,
+	api SealingAPI,
+	fc config.MinerFeeConfig,
+	events Events,
+	maddr address.Address,
+	metaDataService *service.MetadataService,
+	sectorInfoService *service.SectorInfoService,
+	logService *service.LogService,
+	sealer sectorstorage.SectorManager,
+	sc types2.SectorIDCounter,
+	verif ffiwrapper.Verifier,
+	prov ffiwrapper.Prover,
+	pcp PreCommitPolicy,
+	gc types2.GetSealingConfigFunc,
+	notifee SectorStateNotifee,
+	as AddrSel,
+	networkParams *config.NetParamsConfig,
+	pieceStorageMgr *piecestorage.PieceStorageManager) *Sealing {
 	s := &Sealing{
 		api:      api,
 		DealInfo: &CurrentDealInfoManager{api},
 		feeCfg:   fc,
 		events:   events,
 
-		pieceStorage:  pieceStorage,
-		networkParams: networkParams,
-		maddr:         maddr,
-		sealer:        sealer,
-		sc:            sc,
-		verif:         verif,
-		pcp:           pcp,
-		logService:    logService,
+		pieceStorageMrg: pieceStorageMgr,
+		networkParams:   networkParams,
+		maddr:           maddr,
+		sealer:          sealer,
+		sc:              sc,
+		verif:           verif,
+		pcp:             pcp,
+		logService:      logService,
 
 		openSectors:    map[abi.SectorID]*openSector{},
 		sectorTimers:   map[abi.SectorID]*time.Timer{},

@@ -8,7 +8,7 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/exitcode"
 	"github.com/filecoin-project/go-state-types/network"
-	market2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
+	market8 "github.com/filecoin-project/specs-actors/v8/actors/builtin/market"
 
 	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
@@ -123,7 +123,7 @@ func (mgr *CurrentDealInfoManager) dealIDFromPublishDealsMsg(ctx context.Context
 		return dealID, nil, xerrors.Errorf("getting publish deal message %s: %w", publishCid, err)
 	}
 
-	var pubDealsParams market2.PublishStorageDealsParams
+	var pubDealsParams market8.PublishStorageDealsParams
 	if err := pubDealsParams.UnmarshalCBOR(bytes.NewReader(pubmsg.Params)); err != nil {
 		return dealID, nil, xerrors.Errorf("unmarshalling publish deal message params for message %s: %w", publishCid, err)
 	}
@@ -146,13 +146,13 @@ func (mgr *CurrentDealInfoManager) dealIDFromPublishDealsMsg(ctx context.Context
 		return dealID, nil, xerrors.Errorf("could not find deal in publish deals message %s", publishCid)
 	}
 
-	if dealIdx >= len(dealIDs) {
+	if dealIdx >= len(pubDealsParams.Deals) {
 		return dealID, nil, xerrors.Errorf(
-			"deal index %d out of bounds of deals (len %d) in publish deals message %s",
+			"deal index %d out of bounds of deal proposals (len %d) in publish deals message %s",
 			dealIdx, len(dealIDs), publishCid)
 	}
 
-	valid, err := retval.IsDealValid(uint64(dealIdx))
+	valid, outIdx, err := retval.IsDealValid(uint64(dealIdx))
 	if err != nil {
 		return dealID, nil, xerrors.Errorf("determining deal validity: %w", err)
 	}
@@ -161,7 +161,12 @@ func (mgr *CurrentDealInfoManager) dealIDFromPublishDealsMsg(ctx context.Context
 		return dealID, nil, xerrors.New("deal was invalid at publication")
 	}
 
-	return dealIDs[dealIdx], lookup.TipSetTok, nil
+	// final check against for invalid return value output
+	// should not be reachable from onchain output, only pathological test cases
+	if outIdx >= len(dealIDs) {
+		return dealID, nil, xerrors.Errorf("invalid publish storage deals ret marking %d as valid while only returning %d valid deals in publish deal message %s", outIdx, len(dealIDs), publishCid)
+	}
+	return dealIDs[outIdx], lookup.TipSetTok, nil
 }
 
 func (mgr *CurrentDealInfoManager) CheckDealEquality(ctx context.Context, tok types2.TipSetToken, p1, p2 market.DealProposal) (bool, error) {
@@ -176,7 +181,7 @@ func (mgr *CurrentDealInfoManager) CheckDealEquality(ctx context.Context, tok ty
 	return p1.PieceCID.Equals(p2.PieceCID) &&
 		p1.PieceSize == p2.PieceSize &&
 		p1.VerifiedDeal == p2.VerifiedDeal &&
-		p1.Label == p2.Label &&
+		p1.Label.Equals(p2.Label) &&
 		p1.StartEpoch == p2.StartEpoch &&
 		p1.EndEpoch == p2.EndEpoch &&
 		p1.StoragePricePerEpoch.Equals(p2.StoragePricePerEpoch) &&

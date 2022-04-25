@@ -3,10 +3,11 @@ package market_client
 import (
 	"context"
 	"encoding/json"
+	"time"
+
 	gwapi0 "github.com/filecoin-project/venus/venus-shared/api/gateway/v0"
 	types3 "github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/filecoin-project/venus/venus-shared/types/gateway"
-	"time"
 
 	"github.com/modern-go/reflect2"
 	"golang.org/x/xerrors"
@@ -29,13 +30,13 @@ import (
 var log = logging.Logger("market_event")
 
 type MarketEvent struct {
-	client gwapi0.IMarketServiceProvider
-	mAddr  types2.MinerAddress
-	stor         *stores.Remote
-	sectorBlocks *sectorblocks.SectorBlocks
-	storageMgr   *sectorstorage.Manager
-	index        stores.SectorIndex
-	pieceStorage piecestorage.IPieceStorage
+	client          gwapi0.IMarketServiceProvider
+	mAddr           types2.MinerAddress
+	stor            *stores.Remote
+	sectorBlocks    *sectorblocks.SectorBlocks
+	storageMgr      *sectorstorage.Manager
+	index           stores.SectorIndex
+	pieceStorageMgr *piecestorage.PieceStorageManager
 }
 
 func (e *MarketEvent) listenMarketRequest(ctx context.Context) {
@@ -164,8 +165,13 @@ func (e *MarketEvent) processSectorUnsealed(ctx context.Context, reqId types3.UU
 		e.error(ctx, reqId, err)
 		return
 	}
+	pieceStorage, err := e.pieceStorageMgr.FindStorageForWrite(int64(req.Size))
+	if err != nil {
+		e.error(ctx, reqId, err)
+		return
+	}
 
-	_, err = e.pieceStorage.SaveTo(ctx, req.Dest, upr)
+	_, err = pieceStorage.SaveTo(ctx, req.Dest, upr)
 	if err != nil {
 		e.error(ctx, reqId, err)
 		return

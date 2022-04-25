@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/filecoin-project/venus-market/piecestorage"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -15,8 +14,8 @@ import (
 	paramfetch "github.com/filecoin-project/go-paramfetch"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
-	market2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
 	power2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/power"
+	market8 "github.com/filecoin-project/specs-actors/v8/actors/builtin/market"
 	"github.com/filecoin-project/venus/fixtures/asset"
 	"github.com/filecoin-project/venus/pkg/gen/genesis"
 
@@ -386,11 +385,12 @@ func parseServiceFlag(cfg *config.StorageMiner, cctx *cli.Context) error {
 		}
 	}
 
-	if cctx.IsSet("piecestorage") {
-		if err := piecestorage.ParserProtocol(cctx.String("piecestorage"), &cfg.PieceStorage); err != nil {
-			return err
-		}
-	}
+	//if cctx.IsSet("piecestorage") {
+	//	piecestorage.
+	//	if err := piecestorage.ParserProtocol(cctx.String("piecestorage"), &cfg.PieceStorage); err != nil {
+	//		return err
+	//	}
+	//}
 	return nil
 }
 
@@ -757,7 +757,7 @@ func migratePreSealMeta(ctx context.Context, api api.FullNode, metadata string, 
 	return metadataService.SetStorageCounter(uint64(maxSectorID))
 }
 
-func findMarketDealID(ctx context.Context, api api.FullNode, deal market2.DealProposal) (abi.DealID, error) {
+func findMarketDealID(ctx context.Context, api api.FullNode, deal market8.DealProposal) (abi.DealID, error) {
 	// TODO: find a better way
 	//  (this is only used by genesis miners)
 

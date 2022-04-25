@@ -2,15 +2,16 @@ package market_client
 
 import (
 	"context"
+
 	"github.com/filecoin-project/venus-market/piecestorage"
 	"github.com/filecoin-project/venus-sealer/proof_client"
+	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
 	gwapi0 "github.com/filecoin-project/venus/venus-shared/api/gateway/v0"
 	"github.com/filecoin-project/venus/venus-shared/api/market"
 	xerrors "github.com/pkg/errors"
 	"go.uber.org/fx"
 
 	"github.com/filecoin-project/venus-sealer/config"
-	"github.com/filecoin-project/venus-sealer/sector-storage"
 	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
 	"github.com/filecoin-project/venus-sealer/storage/sectorblocks"
 	"github.com/filecoin-project/venus-sealer/types"
@@ -53,7 +54,7 @@ func NewMarketEvents(gatewayEvents proof_client.GatewayClientSets,
 }
 
 func StartMarketEvent(lc fx.Lifecycle, stores *stores.Remote,
-	pieceStorage piecestorage.IPieceStorage, sectorBlocks *sectorblocks.SectorBlocks, storageMgr *sectorstorage.Manager,
+	pieceStorageMgr *piecestorage.PieceStorageManager, sectorBlocks *sectorblocks.SectorBlocks, storageMgr *sectorstorage.Manager,
 	index stores.SectorIndex, evtClients MarketEventClientSets, mAddr types.MinerAddress) error {
 	if len(evtClients) == 0 {
 		log.Warnf("register market config is empty ...")
@@ -62,13 +63,13 @@ func StartMarketEvent(lc fx.Lifecycle, stores *stores.Remote,
 
 	for _, evtClient := range evtClients {
 		marketEvent := MarketEvent{
-			client:       evtClient,
-			mAddr:        mAddr,
-			stor:         stores,
-			sectorBlocks: sectorBlocks,
-			storageMgr:   storageMgr,
-			index:        index,
-			pieceStorage: pieceStorage,
+			client:          evtClient,
+			mAddr:           mAddr,
+			stor:            stores,
+			sectorBlocks:    sectorBlocks,
+			storageMgr:      storageMgr,
+			index:           index,
+			pieceStorageMgr: pieceStorageMgr,
 		}
 		go marketEvent.listenMarketRequest(context.Background())
 	}

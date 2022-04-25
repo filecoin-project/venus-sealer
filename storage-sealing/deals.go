@@ -3,6 +3,7 @@ package sealing
 import (
 	"context"
 	"fmt"
+
 	"github.com/filecoin-project/go-padreader"
 	"github.com/filecoin-project/venus/venus-shared/types/market"
 
@@ -10,8 +11,8 @@ import (
 )
 
 func (m *Sealing) DealSector(ctx context.Context) ([]types.DealAssign, error) {
-	if m.pieceStorage == nil {
-		return nil, fmt.Errorf("Havn't configured piece storage")
+	if m.pieceStorageMrg == nil {
+		return nil, fmt.Errorf("havn't configured piece storage")
 	}
 	m.startupWait.Wait()
 
@@ -24,7 +25,12 @@ func (m *Sealing) DealSector(ctx context.Context) ([]types.DealAssign, error) {
 
 	var assigned []types.DealAssign
 	for _, deal := range deals {
-		r, err := m.pieceStorage.Read(ctx, deal.PieceCID.String())
+		pieceStorage, err := m.pieceStorageMrg.FindStorageForRead(ctx, deal.PieceCID.String())
+		if err != nil {
+			log.Errorf("failed to found piece storage %v", err)
+			continue
+		}
+		r, err := pieceStorage.GetReaderCloser(ctx, deal.PieceCID.String())
 		if err != nil {
 			log.Errorf("read piece from piece storage %v", err)
 			continue
@@ -36,8 +42,8 @@ func (m *Sealing) DealSector(ctx context.Context) ([]types.DealAssign, error) {
 		}
 
 		so, err := m.SectorAddPieceToAny(ctx, deal.Length.Unpadded(), padR, types.PieceDealInfo{
-			PublishCid: &deal.PublishCid,
-			DealID:     deal.DealID,
+			PublishCid:   &deal.PublishCid,
+			DealID:       deal.DealID,
 			DealProposal: &deal.DealProposal,
 			DealSchedule: types.DealSchedule{StartEpoch: deal.StartEpoch, EndEpoch: deal.EndEpoch},
 			KeepUnsealed: deal.FastRetrieval,

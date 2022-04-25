@@ -32,6 +32,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/storage"
 	"github.com/filecoin-project/venus-sealer/storage/sectorblocks"
 	"github.com/filecoin-project/venus-sealer/types"
+	builtinactors "github.com/filecoin-project/venus/builtin-actors"
 )
 
 var log = logging.Logger("modules")
@@ -155,6 +156,7 @@ func Online(cfg *config.StorageMiner) Option {
 		Override(new(*storage.WindowPoStScheduler), WindowPostScheduler(cfg.Fees)),
 		// Override(new(*storage.AddressSelector), AddressSelector(nil)), // venus-sealer run: Call Repo before, Online after,will overwrite the original injection(MinerAddressConfig)
 		Override(new(types.NetworkName), StorageNetworkName),
+		Override(new(types.BuiltinActorsLoaded), builtinactors.LoadBuiltinActors),
 
 		Override(new(proof_client.GatewayClientSets), proof_client.NewGatewayFullnodes),
 		Override(new(market_client.MarketEventClientSets), market_client.NewMarketEvents),
@@ -187,8 +189,7 @@ func Repo(cfg *config.StorageMiner) Option {
 			ConfigAPI(cfg),
 			Override(new(api.IMessager), api.NewMessageRPC),
 			Override(new(market.IMarket), api.NewMarketNodeRPCAPIV0),
-			Override(new(piecestorage.IPreSignOp), NewPreSignS3Op),
-			Override(new(piecestorage.IPieceStorage), NewPieceStorage),
+			Override(new(*piecestorage.PieceStorageManager), NewPieceStorageManager),
 			Override(new(repo.Repo), models.SetDataBase),
 			Providers(
 				service.NewDealRefServiceService,

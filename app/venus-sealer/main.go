@@ -4,6 +4,12 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus-sealer/lib/blockstore"
+	"github.com/filecoin-project/venus-sealer/types"
+	builtin_actors "github.com/filecoin-project/venus/builtin-actors"
+	"github.com/filecoin-project/venus/venus-shared/actors"
+
 	"github.com/filecoin-project/go-address"
 
 	logging "github.com/ipfs/go-log/v2"
@@ -15,7 +21,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus-sealer/lib/tracing"
 
-	"github.com/filecoin-project/venus-sealer/app/panic-reporter"
+	panicreporter "github.com/filecoin-project/venus-sealer/app/panic-reporter"
 )
 
 var log = logging.Logger("main")
@@ -42,6 +48,34 @@ func main() {
 
 			if originBefore != nil {
 				return originBefore(cctx)
+			}
+
+			networkName := types.NetworkName(cctx.String("network"))
+			if cctx.Command.Name != "init" {
+				nodeApi, ncloser, err := api.GetFullNodeAPIV2(cctx)
+				if err != nil {
+					return xerrors.Errorf("getting full node api: %w", err)
+				}
+				defer ncloser()
+
+				networkName, err = nodeApi.StateNetworkName(cctx.Context)
+				if err != nil {
+					return err
+				}
+			}
+
+			if err := builtin_actors.LoadActorsFromCar(convertNetworkNameToNetworkType(string(networkName))); err != nil {
+				return err
+			}
+
+			// preload manifest so that we have the correct code CID inventory for cli since that doesn't
+			// go through CI
+			if len(builtin_actors.BuiltinActorsV8Bundle()) > 0 {
+				bs := blockstore.NewMemory()
+
+				if err := actors.LoadManifestFromBundle(cctx.Context, bs, actors.Version8, builtin_actors.BuiltinActorsV8Bundle()); err != nil {
+					panic(fmt.Errorf("error loading actor manifest: %w", err))
+				}
 			}
 			return nil
 		}
