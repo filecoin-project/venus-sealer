@@ -96,7 +96,7 @@ func (sm *StorageMinerAPI) UpdateDealStatus(ctx context.Context, dealId abi.Deal
 		return errEmptyMarketClient
 	}
 	addr := sm.Miner.Address()
-	return sm.MarketClient.UpdateDealStatus(ctx, addr, dealId, status)
+	return sm.MarketClient.UpdateDealStatus(ctx, addr, dealId, mtypes.PieceStatus(status))
 }
 
 func (sm *StorageMinerAPI) IsUnsealed(ctx context.Context, sector sto.SectorRef, offset storiface.UnpaddedByteIndex, size abi.UnpaddedPieceSize) (bool, error) {

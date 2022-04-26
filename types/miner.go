@@ -4,7 +4,6 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
-	builtinactors "github.com/filecoin-project/venus/builtin-actors"
 	"github.com/gbrlsnchs/jwt/v3"
 	"github.com/multiformats/go-multiaddr"
 )
@@ -22,5 +21,3 @@ type APIToken []byte
 
 // SetSealingDelay sets how long a sector waits for more deals before sealing begins.
 type SetSealingConfigFunc func(sealiface.Config) error
-
-type BuiltinActorsLoaded = builtinactors.BuiltinActorsLoaded
