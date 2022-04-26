@@ -7,8 +7,6 @@ import (
 	"path"
 	"regexp"
 
-	"github.com/filecoin-project/venus/pkg/constants"
-
 	"github.com/mitchellh/go-homedir"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/urfave/cli/v2"
@@ -150,19 +148,4 @@ var runCmd = &cli.Command{
 		<-finishCh
 		return nil
 	},
-}
-
-// todo: need a better way
-func convertNetworkNameToNetworkType(name string) constants.NetworkType {
-	switch name {
-	case "butterflynet", "butterfly":
-		return constants.NetworkButterfly
-	case "calibrationnet", "calibration":
-		return constants.NetworkCalibnet
-	case "mainnet":
-		return constants.NetworkMainnet
-	default:
-		// include 2k force
-		return constants.Network2k
-	}
 }

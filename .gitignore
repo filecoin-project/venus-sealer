@@ -16,6 +16,9 @@ lotus-fix
 .idea
 .vscode
 
+builtin-actors/v7/*
+builtin-actors/v8/*
+
 *.coverprofile
 *.out
 *.so

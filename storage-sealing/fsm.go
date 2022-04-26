@@ -168,24 +168,24 @@ var fsmPlanners = map[types.SectorState]func(events []statemachine.Event, state 
 		on(SectorAbortUpgrade{}, types.AbortUpgrade),
 	),
 	types.ProveReplicaUpdate: planOne(
-		on(SectorProveReplicaUpdate{}, types.SubmitReplicaUpdate),
+		on(SectorProveReplicaUpdate{}, types.FinalizeReplicaUpdate),
 		on(SectorProveReplicaUpdateFailed{}, types.ReplicaUpdateFailed),
 		on(SectorDealsExpired{}, types.SnapDealsDealsExpired),
 		on(SectorInvalidDealIDs{}, types.SnapDealsRecoverDealIDs),
 		on(SectorAbortUpgrade{}, types.AbortUpgrade),
+	),
+	types.FinalizeReplicaUpdate: planOne(
+		on(SectorFinalized{}, types.SubmitReplicaUpdate),
+		on(SectorFinalizeFailed{}, types.FinalizeReplicaUpdateFailed),
 	),
 	types.SubmitReplicaUpdate: planOne(
 		on(SectorReplicaUpdateSubmitted{}, types.ReplicaUpdateWait),
 		on(SectorSubmitReplicaUpdateFailed{}, types.ReplicaUpdateFailed),
 	),
 	types.ReplicaUpdateWait: planOne(
-		on(SectorReplicaUpdateLanded{}, types.FinalizeReplicaUpdate),
+		on(SectorReplicaUpdateLanded{}, types.UpdateActivating),
 		on(SectorSubmitReplicaUpdateFailed{}, types.ReplicaUpdateFailed),
 		on(SectorAbortUpgrade{}, types.AbortUpgrade),
-	),
-	types.FinalizeReplicaUpdate: planOne(
-		on(SectorFinalized{}, types.UpdateActivating),
-		on(SectorFinalizeFailed{}, types.FinalizeReplicaUpdateFailed),
 	),
 	types.UpdateActivating: planOne(
 		on(SectorUpdateActive{}, types.ReleaseSectorKey),
