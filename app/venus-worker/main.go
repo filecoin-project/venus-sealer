@@ -308,7 +308,7 @@ var runCmd = &cli.Command{
 			return err
 		}
 
-		if cctx.Bool("commit") {
+		if cctx.Bool("commit") || cctx.Bool("prove-replica-update2") {
 			ps, err := asset.Asset("fixtures/_assets/proof-params/parameters.json")
 			if err != nil {
 				return err
