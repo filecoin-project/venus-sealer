@@ -19,7 +19,6 @@ import (
 	"github.com/filecoin-project/venus-sealer/api/impl"
 	"github.com/filecoin-project/venus-sealer/config"
 	"github.com/filecoin-project/venus-sealer/journal"
-	"github.com/filecoin-project/venus-sealer/lib/blockstore"
 	"github.com/filecoin-project/venus-sealer/market_client"
 	"github.com/filecoin-project/venus-sealer/models"
 	"github.com/filecoin-project/venus-sealer/models/repo"
@@ -33,7 +32,6 @@ import (
 	"github.com/filecoin-project/venus-sealer/storage/sectorblocks"
 	"github.com/filecoin-project/venus-sealer/types"
 	"github.com/filecoin-project/venus/venus-shared/api/market"
-	builtinactors "github.com/filecoin-project/venus/venus-shared/builtin-actors"
 )
 
 var log = logging.Logger("modules")
@@ -157,11 +155,6 @@ func Online(cfg *config.StorageMiner) Option {
 		Override(new(*storage.WindowPoStScheduler), WindowPostScheduler(cfg.Fees)),
 		// Override(new(*storage.AddressSelector), AddressSelector(nil)), // venus-sealer run: Call Repo before, Online after,will overwrite the original injection(MinerAddressConfig)
 		Override(new(types.NetworkName), StorageNetworkName),
-		Override(new(builtinactors.BuiltinActorsLoaded), func(mctx MetricsCtx, lc fx.Lifecycle) (builtinactors.BuiltinActorsLoaded, error) {
-			ctx := LifecycleCtx(mctx, lc)
-			bs := blockstore.NewMemory()
-			return builtinactors.LoadBuiltinActors(ctx, bs)
-		}),
 
 		Override(new(proof_client.GatewayClientSets), proof_client.NewGatewayFullnodes),
 		Override(new(market_client.MarketEventClientSets), market_client.NewMarketEvents),

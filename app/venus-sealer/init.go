@@ -238,12 +238,9 @@ var initCmd = &cli.Command{
 				return err
 			}
 
-			if len(builtinactors.BuiltinActorsV8Bundle()) > 0 {
-				bs := blockstore.NewMemory()
-
-				if err := actors.LoadManifestFromBundle(context.TODO(), bs, actors.Version8, builtinactors.BuiltinActorsV8Bundle()); err != nil {
-					return xerrors.Errorf("error loading actor manifest: %w", err)
-				}
+			bs := blockstore.NewMemory()
+			if err := builtinactors.FetchAndLoadBundles(cctx.Context, bs, builtinactors.BuiltinActorReleases); err != nil {
+				return xerrors.Errorf("error loading actor manifest: %w", err)
 			}
 
 			var localPaths []stores.LocalPath

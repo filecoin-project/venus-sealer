@@ -44,7 +44,6 @@ import (
 	"github.com/filecoin-project/venus/fixtures/asset"
 	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
 	"github.com/filecoin-project/venus/venus-shared/actors/policy"
-	builtinactors "github.com/filecoin-project/venus/venus-shared/builtin-actors"
 	"github.com/filecoin-project/venus/venus-shared/types"
 )
 
@@ -269,8 +268,6 @@ type StorageMinerParams struct {
 	NetworkParams      *config.NetParamsConfig
 	PieceStorageMgr    *piecestorage.PieceStorageManager `optional:"true"`
 	Maddr              types2.MinerAddress
-
-	ManifestLoaded builtinactors.BuiltinActorsLoaded
 }
 
 func DoPoStWarmup(ctx MetricsCtx, api api.FullNode, metadataService *service.MetadataService, prover storage.WinningPoStProver) error {
