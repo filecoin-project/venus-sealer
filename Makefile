@@ -16,7 +16,7 @@ FFI_PATH:=extern/filecoin-ffi/
 
 CLEAN+=build/.filecoin-install
 
-build: builtin-actor-bundles
+build:
 	go build $(GOFLAGS) -o venus-sealer ./app/venus-sealer
 	go build $(GOFLAGS) -o venus-worker ./app/venus-worker
 	BINS+=venus-sealer
@@ -25,10 +25,6 @@ build: builtin-actor-bundles
 deps:
 	git submodule update --init
 	./extern/filecoin-ffi/install-filcrypto
-
-# builtin actor bundles
-builtin-actor-bundles:
-	./builtin-actors/fetch-bundles.sh
 
 # TOOLS
 

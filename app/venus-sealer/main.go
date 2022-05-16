@@ -13,12 +13,10 @@ import (
 	sealer "github.com/filecoin-project/venus-sealer"
 	"github.com/filecoin-project/venus-sealer/api"
 	panicreporter "github.com/filecoin-project/venus-sealer/app/panic-reporter"
-	builtiin_actors "github.com/filecoin-project/venus-sealer/builtin-actors"
 	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus-sealer/lib/blockstore"
 	"github.com/filecoin-project/venus-sealer/lib/tracing"
 	"github.com/filecoin-project/venus-sealer/types"
-	"github.com/filecoin-project/venus/venus-shared/actors"
 	builtinactors "github.com/filecoin-project/venus/venus-shared/builtin-actors"
 	vtypes "github.com/filecoin-project/venus/venus-shared/types"
 )
@@ -151,19 +149,16 @@ var loadActorsWithCmdBefore = func(cctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-
-	if err := builtinactors.SetActorsBundle(builtiin_actors.Actorsv7FS, builtiin_actors.Actorsv8FS, nt); err != nil {
-		return err
+	builtinactors.SetNetworkBundle(nt)
+	if err := os.Setenv(builtinactors.RepoPath, cctx.String("repo")); err != nil {
+		return xerrors.Errorf("")
 	}
-	// preload manifest so that we have the correct code CID inventory for cli since that doesn't
-	// go through CI
-	if len(builtinactors.BuiltinActorsV8Bundle()) > 0 {
-		bs := blockstore.NewMemory()
 
-		if err := actors.LoadManifestFromBundle(cctx.Context, bs, actors.Version8, builtinactors.BuiltinActorsV8Bundle()); err != nil {
-			panic(fmt.Errorf("error loading actor manifest: %w", err))
-		}
+	bs := blockstore.NewMemory()
+	if err := builtinactors.FetchAndLoadBundles(cctx.Context, bs, builtinactors.BuiltinActorReleases); err != nil {
+		panic(fmt.Errorf("error loading actor manifest: %w", err))
 	}
+
 	return nil
 }
 
