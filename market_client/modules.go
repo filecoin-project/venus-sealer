@@ -3,7 +3,7 @@ package market_client
 import (
 	"context"
 
-	"github.com/filecoin-project/venus-market/piecestorage"
+	"github.com/filecoin-project/venus-market/v2/piecestorage"
 	"github.com/filecoin-project/venus-sealer/proof_client"
 	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
 	gwapi0 "github.com/filecoin-project/venus/venus-shared/api/gateway/v0"

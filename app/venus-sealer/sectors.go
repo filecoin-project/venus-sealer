@@ -22,13 +22,13 @@ import (
 	"github.com/filecoin-project/go-state-types/big"
 	"github.com/filecoin-project/go-state-types/network"
 
+	"github.com/filecoin-project/go-state-types/builtin"
+	"github.com/filecoin-project/go-state-types/builtin/v8/miner"
 	"github.com/filecoin-project/venus/venus-shared/actors"
 	"github.com/filecoin-project/venus/venus-shared/actors/adt"
-	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	lminer "github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
 	"github.com/filecoin-project/venus/venus-shared/actors/policy"
 	"github.com/filecoin-project/venus/venus-shared/types"
-
-	miner5 "github.com/filecoin-project/specs-actors/v5/actors/builtin/miner"
 
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/lib/blockstore"
@@ -294,14 +294,14 @@ var sectorsStatusCmd = &cli.Command{
 			}
 
 			tbs := blockstore.NewTieredBstore(api.NewAPIBlockstore(fullApi), blockstore.NewMemory())
-			mas, err := miner.Load(adt.WrapStore(ctx, cbor.NewCborStore(tbs)), mact)
+			mas, err := lminer.Load(adt.WrapStore(ctx, cbor.NewCborStore(tbs)), mact)
 			if err != nil {
 				return err
 			}
 
 			errFound := errors.New("found")
-			if err := mas.ForEachDeadline(func(dlIdx uint64, dl miner.Deadline) error {
-				return dl.ForEachPartition(func(partIdx uint64, part miner.Partition) error {
+			if err := mas.ForEachDeadline(func(dlIdx uint64, dl lminer.Deadline) error {
+				return dl.ForEachPartition(func(partIdx uint64, part lminer.Partition) error {
 					pas, err := part.AllSectors()
 					if err != nil {
 						return err
@@ -800,7 +800,7 @@ type PseudoExtendSectorExpirationParams struct {
 	Extensions []PseudoExpirationExtension
 }
 
-func NewPseudoExtendParams(p *miner5.ExtendSectorExpirationParams) (*PseudoExtendSectorExpirationParams, error) {
+func NewPseudoExtendParams(p *miner.ExtendSectorExpirationParams) (*PseudoExtendSectorExpirationParams, error) {
 	res := PseudoExtendSectorExpirationParams{}
 	for _, ext := range p.Extensions {
 		scount, err := ext.Sectors.Count()
@@ -967,7 +967,7 @@ var sectorsRenewCmd = &cli.Command{
 			return err
 		}
 
-		activeSectorsInfo := make(map[abi.SectorNumber]*miner.SectorOnChainInfo, len(activeSet))
+		activeSectorsInfo := make(map[abi.SectorNumber]*lminer.SectorOnChainInfo, len(activeSet))
 		for _, info := range activeSet {
 			activeSectorsInfo[info.SectorNumber] = info
 		}
@@ -978,22 +978,22 @@ var sectorsRenewCmd = &cli.Command{
 		}
 
 		tbs := blockstore.NewTieredBstore(api.NewAPIBlockstore(fullApi), blockstore.NewMemory())
-		mas, err := miner.Load(adt.WrapStore(ctx, cbor.NewCborStore(tbs)), mact)
+		mas, err := lminer.Load(adt.WrapStore(ctx, cbor.NewCborStore(tbs)), mact)
 		if err != nil {
 			return err
 		}
 
-		activeSectorsLocation := make(map[abi.SectorNumber]*miner.SectorLocation, len(activeSet))
+		activeSectorsLocation := make(map[abi.SectorNumber]*lminer.SectorLocation, len(activeSet))
 
-		if err := mas.ForEachDeadline(func(dlIdx uint64, dl miner.Deadline) error {
-			return dl.ForEachPartition(func(partIdx uint64, part miner.Partition) error {
+		if err := mas.ForEachDeadline(func(dlIdx uint64, dl lminer.Deadline) error {
+			return dl.ForEachPartition(func(partIdx uint64, part lminer.Partition) error {
 				pas, err := part.ActiveSectors()
 				if err != nil {
 					return err
 				}
 
 				return pas.ForEach(func(i uint64) error {
-					activeSectorsLocation[abi.SectorNumber(i)] = &miner.SectorLocation{
+					activeSectorsLocation[abi.SectorNumber(i)] = &lminer.SectorLocation{
 						Deadline:  dlIdx,
 						Partition: partIdx,
 					}
@@ -1017,7 +1017,7 @@ var sectorsRenewCmd = &cli.Command{
 			}
 		}
 
-		var sis []*miner.SectorOnChainInfo
+		var sis []*lminer.SectorOnChainInfo
 
 		if cctx.IsSet("sector-file") {
 			sectors, err := getSectorsFromFile(cctx.String("sector-file"))
@@ -1058,7 +1058,7 @@ var sectorsRenewCmd = &cli.Command{
 			}
 		}
 
-		extensions := map[miner.SectorLocation]map[abi.ChainEpoch][]uint64{}
+		extensions := map[lminer.SectorLocation]map[abi.ChainEpoch][]uint64{}
 
 		withinTolerance := func(a, b abi.ChainEpoch) bool {
 			diff := a - b
@@ -1117,9 +1117,9 @@ var sectorsRenewCmd = &cli.Command{
 			}
 		}
 
-		var params []miner5.ExtendSectorExpirationParams
+		var params []miner.ExtendSectorExpirationParams
 
-		p := miner5.ExtendSectorExpirationParams{}
+		p := miner.ExtendSectorExpirationParams{}
 		scount := 0
 
 		for l, exts := range extensions {
@@ -1135,11 +1135,11 @@ var sectorsRenewCmd = &cli.Command{
 				}
 				if scount > addrSectors || len(p.Extensions) == declMax {
 					params = append(params, p)
-					p = miner5.ExtendSectorExpirationParams{}
+					p = miner.ExtendSectorExpirationParams{}
 					scount = len(numbers)
 				}
 
-				p.Extensions = append(p.Extensions, miner5.ExpirationExtension{
+				p.Extensions = append(p.Extensions, miner.ExpirationExtension{
 					Deadline:      l.Deadline,
 					Partition:     l.Partition,
 					Sectors:       bitfield.NewFromSet(numbers),
@@ -1201,7 +1201,7 @@ var sectorsRenewCmd = &cli.Command{
 			smsg, err := fullApi.MpoolPushMessage(ctx, &types.Message{
 				From:   mi.Worker,
 				To:     maddr,
-				Method: miner.Methods.ExtendSectorExpiration,
+				Method: builtin.MethodsMiner.ExtendSectorExpiration,
 				Value:  big.Zero(),
 				Params: sp,
 			}, spec)
@@ -1271,7 +1271,7 @@ var sectorsExtendCmd = &cli.Command{
 			return err
 		}
 
-		var params []miner5.ExtendSectorExpirationParams
+		var params []miner.ExtendSectorExpirationParams
 
 		if cctx.Bool("v1-sectors") {
 
@@ -1285,7 +1285,7 @@ var sectorsExtendCmd = &cli.Command{
 				return err
 			}
 
-			extensions := map[miner.SectorLocation]map[abi.ChainEpoch][]uint64{}
+			extensions := map[lminer.SectorLocation]map[abi.ChainEpoch][]uint64{}
 
 			// are given durations within tolerance epochs
 			withinTolerance := func(a, b abi.ChainEpoch) bool {
@@ -1324,7 +1324,7 @@ var sectorsExtendCmd = &cli.Command{
 				}
 
 				// Set the new expiration to 48 hours less than the theoretical maximum lifetime
-				newExp := ml - (miner5.WPoStProvingPeriod * 2) + si.Activation
+				newExp := ml - (miner.WPoStProvingPeriod * 2) + si.Activation
 				if withinTolerance(si.Expiration, newExp) || si.Expiration >= newExp {
 					continue
 				}
@@ -1359,7 +1359,7 @@ var sectorsExtendCmd = &cli.Command{
 				}
 			}
 
-			p := miner5.ExtendSectorExpirationParams{}
+			p := miner.ExtendSectorExpirationParams{}
 			scount := 0
 
 			for l, exts := range extensions {
@@ -1375,11 +1375,11 @@ var sectorsExtendCmd = &cli.Command{
 					}
 					if scount > addressedMax || len(p.Extensions) == declMax {
 						params = append(params, p)
-						p = miner5.ExtendSectorExpirationParams{}
+						p = miner.ExtendSectorExpirationParams{}
 						scount = len(numbers)
 					}
 
-					p.Extensions = append(p.Extensions, miner5.ExpirationExtension{
+					p.Extensions = append(p.Extensions, miner.ExpirationExtension{
 						Deadline:      l.Deadline,
 						Partition:     l.Partition,
 						Sectors:       bitfield.NewFromSet(numbers),
@@ -1397,7 +1397,7 @@ var sectorsExtendCmd = &cli.Command{
 			if !cctx.Args().Present() || !cctx.IsSet("new-expiration") {
 				return xerrors.Errorf("must pass at least one sector number and new expiration")
 			}
-			sectors := map[miner.SectorLocation][]uint64{}
+			sectors := map[lminer.SectorLocation][]uint64{}
 
 			for i, s := range cctx.Args().Slice() {
 				id, err := strconv.ParseUint(s, 10, 64)
@@ -1417,11 +1417,11 @@ var sectorsExtendCmd = &cli.Command{
 				sectors[*p] = append(sectors[*p], id)
 			}
 
-			p := miner5.ExtendSectorExpirationParams{}
+			p := miner.ExtendSectorExpirationParams{}
 			for l, numbers := range sectors {
 
 				// TODO: Dedup with above loop
-				p.Extensions = append(p.Extensions, miner5.ExpirationExtension{
+				p.Extensions = append(p.Extensions, miner.ExpirationExtension{
 					Deadline:      l.Deadline,
 					Partition:     l.Partition,
 					Sectors:       bitfield.NewFromSet(numbers),
@@ -1451,7 +1451,7 @@ var sectorsExtendCmd = &cli.Command{
 			uid, err := nodeApi.MessagerPushMessage(ctx, &types.Message{
 				From:   mi.Worker,
 				To:     maddr,
-				Method: miner.Methods.ExtendSectorExpiration,
+				Method: builtin.MethodsMiner.ExtendSectorExpiration,
 
 				Value:  big.Zero(),
 				Params: sp,
@@ -1765,7 +1765,7 @@ var sectorsCapacityCollateralCmd = &cli.Command{
 			return err
 		}
 
-		spt, err := miner.PreferredSealProofTypeFromWindowPoStType(nv, mi.WindowPoStProofType)
+		spt, err := lminer.PreferredSealProofTypeFromWindowPoStType(nv, mi.WindowPoStProofType)
 		if err != nil {
 			return err
 		}
@@ -1934,7 +1934,7 @@ var sectorsExpiredCmd = &cli.Command{
 		}
 
 		tbs := blockstore.NewTieredBstore(api.NewAPIBlockstore(fullApi), blockstore.NewMemory())
-		mas, err := miner.Load(adt.WrapStore(ctx, cbor.NewCborStore(tbs)), mact)
+		mas, err := lminer.Load(adt.WrapStore(ctx, cbor.NewCborStore(tbs)), mact)
 		if err != nil {
 			return err
 		}
@@ -1950,8 +1950,8 @@ var sectorsExpiredCmd = &cli.Command{
 			return xerrors.Errorf("intersecting bitfields: %w", err)
 		}
 
-		if err := mas.ForEachDeadline(func(dlIdx uint64, dl miner.Deadline) error {
-			return dl.ForEachPartition(func(partIdx uint64, part miner.Partition) error {
+		if err := mas.ForEachDeadline(func(dlIdx uint64, dl lminer.Deadline) error {
+			return dl.ForEachPartition(func(partIdx uint64, part lminer.Partition) error {
 				live, err := part.LiveSectors()
 				if err != nil {
 					return err

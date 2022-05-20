@@ -136,7 +136,7 @@ func (b *Blockstore) Close() error {
 
 // View implements blockstore.Viewer, which leverages zero-copy read-only
 // access to values.
-func (b *Blockstore) View(cid cid.Cid, fn func([]byte) error) error {
+func (b *Blockstore) View(ctx context.Context, cid cid.Cid, fn func([]byte) error) error {
 	if atomic.LoadInt64(&b.state) != stateOpen {
 		return ErrBlockstoreClosed
 	}
@@ -159,7 +159,7 @@ func (b *Blockstore) View(cid cid.Cid, fn func([]byte) error) error {
 }
 
 // Has implements Blockstore.Has.
-func (b *Blockstore) Has(cid cid.Cid) (bool, error) {
+func (b *Blockstore) Has(ctx context.Context, cid cid.Cid) (bool, error) {
 	if atomic.LoadInt64(&b.state) != stateOpen {
 		return false, ErrBlockstoreClosed
 	}
@@ -185,7 +185,7 @@ func (b *Blockstore) Has(cid cid.Cid) (bool, error) {
 }
 
 // Get implements Blockstore.Get.
-func (b *Blockstore) Get(cid cid.Cid) (blocks.Block, error) {
+func (b *Blockstore) Get(ctx context.Context, cid cid.Cid) (blocks.Block, error) {
 	if !cid.Defined() {
 		return nil, blockstore.ErrNotFound
 	}
@@ -218,7 +218,7 @@ func (b *Blockstore) Get(cid cid.Cid) (blocks.Block, error) {
 }
 
 // GetSize implements Blockstore.GetSize.
-func (b *Blockstore) GetSize(cid cid.Cid) (int, error) {
+func (b *Blockstore) GetSize(ctx context.Context, cid cid.Cid) (int, error) {
 	if atomic.LoadInt64(&b.state) != stateOpen {
 		return -1, ErrBlockstoreClosed
 	}
@@ -247,7 +247,7 @@ func (b *Blockstore) GetSize(cid cid.Cid) (int, error) {
 }
 
 // Put implements Blockstore.Put.
-func (b *Blockstore) Put(block blocks.Block) error {
+func (b *Blockstore) Put(ctx context.Context, block blocks.Block) error {
 	if atomic.LoadInt64(&b.state) != stateOpen {
 		return ErrBlockstoreClosed
 	}
@@ -267,7 +267,7 @@ func (b *Blockstore) Put(block blocks.Block) error {
 }
 
 // PutMany implements Blockstore.PutMany.
-func (b *Blockstore) PutMany(blocks []blocks.Block) error {
+func (b *Blockstore) PutMany(ctx context.Context, blocks []blocks.Block) error {
 	if atomic.LoadInt64(&b.state) != stateOpen {
 		return ErrBlockstoreClosed
 	}
@@ -305,8 +305,47 @@ func (b *Blockstore) PutMany(blocks []blocks.Block) error {
 	return err
 }
 
+// DeleteMany implements Blockstore.DeleteMany.
+func (b *Blockstore) DeleteMany(_ context.Context, cids []cid.Cid) error {
+	if atomic.LoadInt64(&b.state) != stateOpen {
+		return ErrBlockstoreClosed
+	}
+
+	// toReturn tracks the byte slices to return to the pool, if we're using key
+	// prefixing. we can't return each slice to the pool after each Set, because
+	// badger holds on to the slice.
+	var toReturn [][]byte
+	if b.prefixing {
+		toReturn = make([][]byte, 0, len(cids))
+		defer func() {
+			for _, b := range toReturn {
+				KeyPool.Put(b)
+			}
+		}()
+	}
+
+	batch := b.DB.NewWriteBatch()
+	defer batch.Cancel()
+
+	for _, cid := range cids {
+		k, pooled := b.PooledStorageKey(cid)
+		if pooled {
+			toReturn = append(toReturn, k)
+		}
+		if err := batch.Delete(k); err != nil {
+			return err
+		}
+	}
+
+	err := batch.Flush()
+	if err != nil {
+		err = fmt.Errorf("failed to delete blocks from badger blockstore: %w", err)
+	}
+	return err
+}
+
 // DeleteBlock implements Blockstore.DeleteBlock.
-func (b *Blockstore) DeleteBlock(cid cid.Cid) error {
+func (b *Blockstore) DeleteBlock(_ context.Context, cid cid.Cid) error {
 	if atomic.LoadInt64(&b.state) != stateOpen {
 		return ErrBlockstoreClosed
 	}

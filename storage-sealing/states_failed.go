@@ -10,8 +10,8 @@ import (
 
 	"github.com/filecoin-project/go-address"
 
+	"github.com/filecoin-project/go-state-types/builtin/v8/miner"
 	"github.com/filecoin-project/venus/venus-shared/actors/builtin/market"
-	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
 
 	"github.com/filecoin-project/go-commp-utils/zerocomm"
 	"github.com/filecoin-project/go-state-types/abi"

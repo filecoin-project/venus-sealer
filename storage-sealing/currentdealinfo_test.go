@@ -19,13 +19,12 @@ import (
 
 	market0 "github.com/filecoin-project/specs-actors/actors/builtin/market"
 	tutils "github.com/filecoin-project/specs-actors/v2/support/testing"
-	market8 "github.com/filecoin-project/specs-actors/v8/actors/builtin/market"
 
 	"github.com/ipfs/go-cid"
 	"github.com/stretchr/testify/require"
 
+	"github.com/filecoin-project/go-state-types/builtin/v8/market"
 	evtmock "github.com/filecoin-project/venus/pkg/events/state/mock"
-	"github.com/filecoin-project/venus/venus-shared/actors/builtin/market"
 	"github.com/filecoin-project/venus/venus-shared/types"
 
 	types2 "github.com/filecoin-project/venus-sealer/types"
@@ -34,10 +33,10 @@ import (
 var errNotFound = errors.New("Could not find")
 
 func TestGetCurrentDealInfo(t *testing.T) {
-	success, err := market8.NewLabelFromString("success")
+	success, err := market.NewLabelFromString("success")
 	require.NoError(t, err)
 
-	other, err := market8.NewLabelFromString("other")
+	other, err := market.NewLabelFromString("other")
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -268,11 +267,11 @@ type CurrentDealInfoMockAPI struct {
 
 func (mapi *CurrentDealInfoMockAPI) ChainGetMessage(ctx context.Context, c cid.Cid) (*types.Message, error) {
 	var dealIDs []abi.DealID
-	var deals []market8.ClientDealProposal
+	var deals []market.ClientDealProposal
 	for k, dl := range mapi.MarketDeals {
 		dealIDs = append(dealIDs, k.DealID)
-		deals = append(deals, market8.ClientDealProposal{
-			Proposal: market8.DealProposal(dl.Proposal),
+		deals = append(deals, market.ClientDealProposal{
+			Proposal: dl.Proposal,
 			ClientSignature: crypto.Signature{
 				Data: []byte("foo bar cat dog"),
 				Type: crypto.SigTypeBLS,

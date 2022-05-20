@@ -31,8 +31,9 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/specs-storage/storage"
 
+	"github.com/filecoin-project/filecoin-ffi/cgo"
+
 	ffi "github.com/filecoin-project/filecoin-ffi"
-	"github.com/filecoin-project/filecoin-ffi/generated"
 
 	"github.com/filecoin-project/venus/venus-shared/actors/policy"
 
@@ -882,14 +883,8 @@ func setupLogger(t *testing.T) *bytes.Buffer {
 		runtime.KeepAlive(w)
 	}()
 
-	resp := generated.FilInitLogFd(int32(w.Fd()))
-	resp.Deref()
-
-	defer generated.FilDestroyInitLogFdResponse(resp)
-
-	if resp.StatusCode != generated.FCPResponseStatusFCPNoError {
-		t.Fatal(generated.RawString(resp.ErrorMsg).Copy())
-	}
+	err = cgo.InitLogFd(int32(w.Fd()))
+	require.NoError(t, err)
 
 	return &bb
 }

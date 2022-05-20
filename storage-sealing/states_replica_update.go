@@ -16,7 +16,8 @@ import (
 
 	"github.com/filecoin-project/venus-sealer/api"
 
-	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	"github.com/filecoin-project/go-state-types/builtin"
+	"github.com/filecoin-project/go-state-types/builtin/v8/miner"
 
 	"github.com/filecoin-project/venus-sealer/types"
 )
@@ -175,7 +176,7 @@ func (m *Sealing) handleSubmitReplicaUpdate(ctx statemachine.Context, sector typ
 		return ctx.Send(SectorSubmitReplicaUpdateFailed{})
 	}
 
-	mcid, err := m.api.MessagerSendMsg(ctx.Context(), from, m.maddr, miner.Methods.ProveReplicaUpdates, collateral, big.Int(m.feeCfg.MaxCommitGasFee), enc.Bytes())
+	mcid, err := m.api.MessagerSendMsg(ctx.Context(), from, m.maddr, builtin.MethodsMiner.ProveReplicaUpdates, collateral, big.Int(m.feeCfg.MaxCommitGasFee), enc.Bytes())
 	if err != nil {
 		log.Errorf("handleSubmitReplicaUpdate: error sending message: %+v", err)
 		return ctx.Send(SectorSubmitReplicaUpdateFailed{})

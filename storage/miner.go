@@ -19,11 +19,12 @@ import (
 	"github.com/filecoin-project/go-state-types/network"
 	"github.com/filecoin-project/specs-storage/storage"
 
-	"github.com/filecoin-project/venus-market/piecestorage"
+	"github.com/filecoin-project/venus-market/v2/piecestorage"
 
+	"github.com/filecoin-project/go-state-types/builtin/v8/miner"
 	"github.com/filecoin-project/venus/pkg/events"
 	"github.com/filecoin-project/venus/venus-shared/actors/builtin"
-	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	lminer "github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
 	"github.com/filecoin-project/venus/venus-shared/actors/policy"
 	"github.com/filecoin-project/venus/venus-shared/types"
 
@@ -93,8 +94,8 @@ type fullNodeFilteredAPI interface {
 	StateMinerSectors(context.Context, address.Address, *bitfield.BitField, types.TipSetKey) ([]*miner.SectorOnChainInfo, error)
 	StateSectorPreCommitInfo(context.Context, address.Address, abi.SectorNumber, types.TipSetKey) (miner.SectorPreCommitOnChainInfo, error)
 	StateSectorGetInfo(context.Context, address.Address, abi.SectorNumber, types.TipSetKey) (*miner.SectorOnChainInfo, error)
-	StateSectorPartition(ctx context.Context, maddr address.Address, sectorNumber abi.SectorNumber, tok types.TipSetKey) (*miner.SectorLocation, error)
-	StateMinerInfo(context.Context, address.Address, types.TipSetKey) (miner.MinerInfo, error)
+	StateSectorPartition(ctx context.Context, maddr address.Address, sectorNumber abi.SectorNumber, tok types.TipSetKey) (*lminer.SectorLocation, error)
+	StateMinerInfo(context.Context, address.Address, types.TipSetKey) (types.MinerInfo, error)
 	StateMinerAvailableBalance(context.Context, address.Address, types.TipSetKey) (types.BigInt, error)
 	StateMinerActiveSectors(context.Context, address.Address, types.TipSetKey) ([]*miner.SectorOnChainInfo, error)
 	StateMinerDeadlines(context.Context, address.Address, types.TipSetKey) ([]types.Deadline, error)
@@ -210,7 +211,7 @@ func (m *Miner) Run(ctx context.Context) error {
 	pcp := sealing.NewBasicPreCommitPolicy(adaptedAPI, cfg, provingBuffer)
 
 	// address selector.
-	as := func(ctx context.Context, mi miner.MinerInfo, use api.AddrUse, goodFunds, minFunds abi.TokenAmount) (address.Address, abi.TokenAmount, error) {
+	as := func(ctx context.Context, mi types.MinerInfo, use api.AddrUse, goodFunds, minFunds abi.TokenAmount) (address.Address, abi.TokenAmount, error) {
 		return m.addrSel.AddressFor(ctx, m.api, m.messager, mi, use, goodFunds, minFunds)
 	}
 

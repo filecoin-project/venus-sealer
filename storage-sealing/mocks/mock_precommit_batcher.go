@@ -13,7 +13,7 @@ import (
 	big "github.com/filecoin-project/go-state-types/big"
 	network "github.com/filecoin-project/go-state-types/network"
 	types "github.com/filecoin-project/venus-sealer/types"
-	miner "github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	types2 "github.com/filecoin-project/venus/venus-shared/types"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -102,10 +102,10 @@ func (mr *MockPreCommitBatcherApiMockRecorder) StateMinerAvailableBalance(arg0, 
 }
 
 // StateMinerInfo mocks base method.
-func (m *MockPreCommitBatcherApi) StateMinerInfo(arg0 context.Context, arg1 address.Address, arg2 types.TipSetToken) (miner.MinerInfo, error) {
+func (m *MockPreCommitBatcherApi) StateMinerInfo(arg0 context.Context, arg1 address.Address, arg2 types.TipSetToken) (types2.MinerInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StateMinerInfo", arg0, arg1, arg2)
-	ret0, _ := ret[0].(miner.MinerInfo)
+	ret0, _ := ret[0].(types2.MinerInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

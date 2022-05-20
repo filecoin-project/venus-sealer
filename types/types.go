@@ -11,10 +11,10 @@ import (
 	"github.com/filecoin-project/go-state-types/exitcode"
 	"github.com/filecoin-project/specs-storage/storage"
 
-	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	minertypes "github.com/filecoin-project/go-state-types/builtin/v8/miner"
 	"github.com/filecoin-project/venus/venus-shared/actors/policy"
 
-	"github.com/filecoin-project/specs-actors/v8/actors/builtin/market"
+	"github.com/filecoin-project/go-state-types/builtin/v8/market"
 
 	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 )
@@ -97,7 +97,7 @@ type SectorInfo struct {
 	CommR *cid.Cid // SectorKey
 	Proof []byte
 
-	PreCommitInfo    *miner.SectorPreCommitInfo
+	PreCommitInfo    *minertypes.SectorPreCommitInfo
 	PreCommitDeposit big.Int
 	PreCommitMessage string
 	PreCommitTipSet  TipSetToken

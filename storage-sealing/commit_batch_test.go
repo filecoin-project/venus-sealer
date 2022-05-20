@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	"github.com/filecoin-project/go-state-types/builtin/v8/miner"
 	"github.com/filecoin-project/venus/venus-shared/actors/policy"
 
 	"github.com/golang/mock/gomock"
@@ -38,7 +38,7 @@ func TestCommitBatcher(t *testing.T) {
 
 	ctx := context.Background()
 
-	as := func(ctx context.Context, mi miner.MinerInfo, use api.AddrUse, goodFunds, minFunds abi.TokenAmount) (address.Address, abi.TokenAmount, error) {
+	as := func(ctx context.Context, mi types.MinerInfo, use api.AddrUse, goodFunds, minFunds abi.TokenAmount) (address.Address, abi.TokenAmount, error) {
 		return t0123, big.Zero(), nil
 	}
 
@@ -214,6 +214,7 @@ func TestCommitBatcher(t *testing.T) {
 				}
 				return true
 			})).Times(ti)
+
 			return nil
 		}
 	}

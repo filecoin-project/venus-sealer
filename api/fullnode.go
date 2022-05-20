@@ -2,14 +2,16 @@ package api
 
 import (
 	"context"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-bitfield"
 	"github.com/filecoin-project/go-jsonrpc/auth"
 	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/go-state-types/builtin/v8/miner"
 	"github.com/filecoin-project/go-state-types/crypto"
 	"github.com/filecoin-project/go-state-types/dline"
 	stnetwork "github.com/filecoin-project/go-state-types/network"
-	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	lminer "github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
 	"github.com/filecoin-project/venus/venus-shared/types"
 	"github.com/google/uuid"
 	"github.com/ipfs/go-cid"
@@ -287,7 +289,7 @@ type FullNode interface {
 	// StateMinerPower returns the power of the indicated miner
 	StateMinerPower(context.Context, address.Address, types.TipSetKey) (*types.MinerPower, error)
 	// StateMinerInfo returns info about the indicated miner
-	StateMinerInfo(context.Context, address.Address, types.TipSetKey) (miner.MinerInfo, error)
+	StateMinerInfo(context.Context, address.Address, types.TipSetKey) (types.MinerInfo, error)
 	// StateMinerDeadlines returns all the proving deadlines for the given miner
 	StateMinerDeadlines(context.Context, address.Address, types.TipSetKey) ([]types.Deadline, error)
 	// StateMinerPartitions returns all partitions in the specified deadline
@@ -313,9 +315,9 @@ type FullNode interface {
 	// expiration epoch
 	StateSectorGetInfo(context.Context, address.Address, abi.SectorNumber, types.TipSetKey) (*miner.SectorOnChainInfo, error)
 	// StateSectorExpiration returns epoch at which given sector will expire
-	StateSectorExpiration(context.Context, address.Address, abi.SectorNumber, types.TipSetKey) (*miner.SectorExpiration, error)
+	StateSectorExpiration(context.Context, address.Address, abi.SectorNumber, types.TipSetKey) (*lminer.SectorExpiration, error)
 	// StateSectorPartition finds deadline/partition with the specified sector
-	StateSectorPartition(ctx context.Context, maddr address.Address, sectorNumber abi.SectorNumber, tok types.TipSetKey) (*miner.SectorLocation, error)
+	StateSectorPartition(ctx context.Context, maddr address.Address, sectorNumber abi.SectorNumber, tok types.TipSetKey) (*lminer.SectorLocation, error)
 	// StateSearchMsg searches for a message in the chain, and returns its receipt and the tipset where it was executed
 	StateSearchMsg(ctx context.Context, from types.TipSetKey, msg cid.Cid, limit abi.ChainEpoch, allowReplaced bool) (*types.MsgLookup, error)
 	// StateSearchMsgLimited looks back up to limit epochs in the chain for a message, and returns its receipt and the tipset where it was executed
@@ -577,7 +579,7 @@ type FullNodeStruct struct {
 		StateMinerActiveSectors            func(context.Context, address.Address, types.TipSetKey) ([]*miner.SectorOnChainInfo, error)                         `perm:"read"`
 		StateMinerProvingDeadline          func(context.Context, address.Address, types.TipSetKey) (*dline.Info, error)                                        `perm:"read"`
 		StateMinerPower                    func(context.Context, address.Address, types.TipSetKey) (*types.MinerPower, error)                                  `perm:"read"`
-		StateMinerInfo                     func(context.Context, address.Address, types.TipSetKey) (miner.MinerInfo, error)                                    `perm:"read"`
+		StateMinerInfo                     func(context.Context, address.Address, types.TipSetKey) (types.MinerInfo, error)                                    `perm:"read"`
 		StateMinerDeadlines                func(context.Context, address.Address, types.TipSetKey) ([]types.Deadline, error)                                   `perm:"read"`
 		StateMinerPartitions               func(ctx context.Context, m address.Address, dlIdx uint64, tsk types.TipSetKey) ([]types.Partition, error)          `perm:"read"`
 		StateMinerFaults                   func(context.Context, address.Address, types.TipSetKey) (bitfield.BitField, error)                                  `perm:"read"`
@@ -589,8 +591,8 @@ type FullNodeStruct struct {
 		StateMinerSectorAllocated          func(context.Context, address.Address, abi.SectorNumber, types.TipSetKey) (bool, error)                             `perm:"read"`
 		StateSectorPreCommitInfo           func(context.Context, address.Address, abi.SectorNumber, types.TipSetKey) (miner.SectorPreCommitOnChainInfo, error) `perm:"read"`
 		StateSectorGetInfo                 func(context.Context, address.Address, abi.SectorNumber, types.TipSetKey) (*miner.SectorOnChainInfo, error)         `perm:"read"`
-		StateSectorExpiration              func(context.Context, address.Address, abi.SectorNumber, types.TipSetKey) (*miner.SectorExpiration, error)          `perm:"read"`
-		StateSectorPartition               func(context.Context, address.Address, abi.SectorNumber, types.TipSetKey) (*miner.SectorLocation, error)            `perm:"read"`
+		StateSectorExpiration              func(context.Context, address.Address, abi.SectorNumber, types.TipSetKey) (*lminer.SectorExpiration, error)         `perm:"read"`
+		StateSectorPartition               func(context.Context, address.Address, abi.SectorNumber, types.TipSetKey) (*lminer.SectorLocation, error)           `perm:"read"`
 		StateCall                          func(context.Context, *types.Message, types.TipSetKey) (*types.InvocResult, error)                                  `perm:"read"`
 		StateReplay                        func(context.Context, types.TipSetKey, cid.Cid) (*types.InvocResult, error)                                         `perm:"read"`
 		StateGetActor                      func(context.Context, address.Address, types.TipSetKey) (*types.Actor, error)                                       `perm:"read"`
@@ -1023,7 +1025,7 @@ func (c *FullNodeStruct) StateMinerPower(ctx context.Context, a address.Address,
 	return c.Internal.StateMinerPower(ctx, a, tsk)
 }
 
-func (c *FullNodeStruct) StateMinerInfo(ctx context.Context, actor address.Address, tsk types.TipSetKey) (miner.MinerInfo, error) {
+func (c *FullNodeStruct) StateMinerInfo(ctx context.Context, actor address.Address, tsk types.TipSetKey) (types.MinerInfo, error) {
 	return c.Internal.StateMinerInfo(ctx, actor, tsk)
 }
 
@@ -1071,11 +1073,11 @@ func (c *FullNodeStruct) StateSectorGetInfo(ctx context.Context, maddr address.A
 	return c.Internal.StateSectorGetInfo(ctx, maddr, n, tsk)
 }
 
-func (c *FullNodeStruct) StateSectorExpiration(ctx context.Context, maddr address.Address, n abi.SectorNumber, tsk types.TipSetKey) (*miner.SectorExpiration, error) {
+func (c *FullNodeStruct) StateSectorExpiration(ctx context.Context, maddr address.Address, n abi.SectorNumber, tsk types.TipSetKey) (*lminer.SectorExpiration, error) {
 	return c.Internal.StateSectorExpiration(ctx, maddr, n, tsk)
 }
 
-func (c *FullNodeStruct) StateSectorPartition(ctx context.Context, maddr address.Address, sectorNumber abi.SectorNumber, tok types.TipSetKey) (*miner.SectorLocation, error) {
+func (c *FullNodeStruct) StateSectorPartition(ctx context.Context, maddr address.Address, sectorNumber abi.SectorNumber, tok types.TipSetKey) (*lminer.SectorLocation, error) {
 	return c.Internal.StateSectorPartition(ctx, maddr, sectorNumber, tok)
 }
 
