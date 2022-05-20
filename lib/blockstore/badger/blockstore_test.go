@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
+	blockstore "github.com/filecoin-project/venus-sealer/lib/blockstore"
 	blocks "github.com/ipfs/go-block-format"
-	blockstore "github.com/ipfs/go-ipfs-blockstore"
 	"github.com/stretchr/testify/require"
 )
 

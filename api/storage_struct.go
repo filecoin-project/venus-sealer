@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	"github.com/filecoin-project/go-state-types/builtin/v8/miner"
 	mtypes "github.com/filecoin-project/venus/venus-shared/types/market"
 	"github.com/filecoin-project/venus/venus-shared/types/messager"
 	"golang.org/x/xerrors"

@@ -27,7 +27,7 @@ import (
 	sto "github.com/filecoin-project/specs-storage/storage"
 	multi "github.com/hashicorp/go-multierror"
 
-	"github.com/filecoin-project/specs-actors/actors/builtin/miner"
+	"github.com/filecoin-project/go-state-types/builtin/v8/miner"
 	proof7 "github.com/filecoin-project/specs-actors/v7/actors/runtime/proof"
 
 	"github.com/filecoin-project/venus-sealer/api"

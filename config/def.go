@@ -14,7 +14,7 @@ import (
 
 	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
 
-	"github.com/filecoin-project/venus-market/config"
+	"github.com/filecoin-project/venus-market/v2/config"
 
 	"github.com/filecoin-project/venus/venus-shared/types"
 )

@@ -12,8 +12,8 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	storage2 "github.com/filecoin-project/specs-storage/storage"
 
-	config3 "github.com/filecoin-project/venus-market/config"
-	"github.com/filecoin-project/venus-market/piecestorage"
+	config3 "github.com/filecoin-project/venus-market/v2/config"
+	"github.com/filecoin-project/venus-market/v2/piecestorage"
 
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/api/impl"

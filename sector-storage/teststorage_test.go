@@ -106,4 +106,11 @@ func (t *testExec) ReadPiece(ctx context.Context, writer io.Writer, sector stora
 	panic("implement me")
 }
 
+func (t *testExec) GenerateWinningPoStWithVanilla(ctx context.Context, proofType abi.RegisteredPoStProof, minerID abi.ActorID, randomness abi.PoStRandomness, proofs [][]byte) ([]proof.PoStProof, error) {
+	panic("implement me")
+}
+func (t *testExec) GenerateWindowPoStWithVanilla(ctx context.Context, proofType abi.RegisteredPoStProof, minerID abi.ActorID, randomness abi.PoStRandomness, proofs [][]byte, partitionIdx int) (proof.PoStProof, error) {
+	panic("implement me")
+}
+
 var _ ffiwrapper.Storage = &testExec{}

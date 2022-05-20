@@ -22,8 +22,9 @@ import (
 	"github.com/filecoin-project/go-statemachine"
 	"github.com/filecoin-project/specs-storage/storage"
 
+	"github.com/filecoin-project/go-state-types/builtin/v8/miner"
 	"github.com/filecoin-project/venus/venus-shared/actors/builtin/market"
-	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	lminer "github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
 	"github.com/filecoin-project/venus/venus-shared/types"
 
 	"github.com/filecoin-project/venus-sealer/api"
@@ -34,12 +35,12 @@ import (
 	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 	types2 "github.com/filecoin-project/venus-sealer/types"
 
-	"github.com/filecoin-project/venus-market/piecestorage"
+	"github.com/filecoin-project/venus-market/v2/piecestorage"
 )
 
 var log = logging.Logger("sectors")
 
-type SectorLocation = miner.SectorLocation
+type SectorLocation = lminer.SectorLocation
 
 var ErrSectorAllocated = errors.New("sectorNumber is allocated, but PreCommit info wasn't found on chain")
 
@@ -57,7 +58,7 @@ type SealingAPI interface {
 	StateMinerWorkerAddress(ctx context.Context, maddr address.Address, tok types2.TipSetToken) (address.Address, error)
 	StateMinerPreCommitDepositForPower(context.Context, address.Address, miner.SectorPreCommitInfo, types2.TipSetToken) (big.Int, error)
 	StateMinerInitialPledgeCollateral(context.Context, address.Address, miner.SectorPreCommitInfo, types2.TipSetToken) (big.Int, error)
-	StateMinerInfo(context.Context, address.Address, types2.TipSetToken) (miner.MinerInfo, error)
+	StateMinerInfo(context.Context, address.Address, types2.TipSetToken) (types.MinerInfo, error)
 	StateMinerAvailableBalance(context.Context, address.Address, types2.TipSetToken) (big.Int, error)
 	StateMinerSectorAllocated(context.Context, address.Address, abi.SectorNumber, types2.TipSetToken) (bool, error)
 	StateMinerActiveSectors(context.Context, address.Address, types2.TipSetToken) (bitfield.BitField, error)
@@ -87,7 +88,7 @@ type SealingAPI interface {
 
 type SectorStateNotifee func(before, after types2.SectorInfo)
 
-type AddrSel func(ctx context.Context, mi miner.MinerInfo, use api.AddrUse, goodFunds, minFunds abi.TokenAmount) (address.Address, abi.TokenAmount, error)
+type AddrSel func(ctx context.Context, mi types.MinerInfo, use api.AddrUse, goodFunds, minFunds abi.TokenAmount) (address.Address, abi.TokenAmount, error)
 
 type Sealing struct {
 	api      SealingAPI
@@ -307,7 +308,7 @@ func (m *Sealing) currentSealProof(ctx context.Context) (abi.RegisteredSealProof
 		return 0, err
 	}
 
-	return miner.PreferredSealProofTypeFromWindowPoStType(ver, mi.WindowPoStProofType)
+	return lminer.PreferredSealProofTypeFromWindowPoStType(ver, mi.WindowPoStProofType)
 }
 
 func (m *Sealing) minerSector(spt abi.RegisteredSealProof, num abi.SectorNumber) storage.SectorRef {

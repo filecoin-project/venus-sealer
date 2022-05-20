@@ -2,15 +2,16 @@ package sqlite
 
 import (
 	"encoding/json"
+	"sync"
+
 	"github.com/filecoin-project/go-state-types/abi"
 	fbig "github.com/filecoin-project/go-state-types/big"
-	"github.com/filecoin-project/specs-actors/actors/builtin/miner"
+	"github.com/filecoin-project/go-state-types/builtin/v8/miner"
 	"github.com/filecoin-project/venus-sealer/models/repo"
 	"github.com/filecoin-project/venus-sealer/types"
 	"github.com/google/uuid"
 	"github.com/ipfs/go-cid"
 	"gorm.io/gorm"
-	"sync"
 )
 
 type sectorInfo struct {

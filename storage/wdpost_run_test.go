@@ -3,11 +3,13 @@ package storage
 import (
 	"bytes"
 	"context"
-	"github.com/google/uuid"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+
 	proof7 "github.com/filecoin-project/specs-actors/v7/actors/runtime/proof"
+	"github.com/filecoin-project/specs-actors/v8/actors/builtin"
 
 	builtin5 "github.com/filecoin-project/specs-actors/v5/actors/builtin"
 	miner5 "github.com/filecoin-project/specs-actors/v5/actors/builtin/miner"
@@ -33,7 +35,8 @@ import (
 
 	type2 "github.com/filecoin-project/venus/venus-shared/types/messager"
 
-	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	"github.com/filecoin-project/go-state-types/builtin/v8/miner"
+	lminer "github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
 	"github.com/filecoin-project/venus/venus-shared/actors/policy"
 	"github.com/filecoin-project/venus/venus-shared/types"
 
@@ -42,7 +45,6 @@ import (
 	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus-sealer/journal"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
-	types3 "github.com/filecoin-project/venus-sealer/types"
 )
 
 type mockStorageMinerAPI struct {
@@ -57,8 +59,8 @@ func newMockStorageMinerAPI() *mockStorageMinerAPI {
 	}
 }
 
-func (m *mockStorageMinerAPI) StateMinerInfo(ctx context.Context, a address.Address, key types.TipSetKey) (miner.MinerInfo, error) {
-	return miner.MinerInfo{
+func (m *mockStorageMinerAPI) StateMinerInfo(ctx context.Context, a address.Address, key types.TipSetKey) (types.MinerInfo, error) {
+	return types.MinerInfo{
 		Worker: tutils.NewIDAddr(nil, 101),
 		Owner:  tutils.NewIDAddr(nil, 101),
 	}, nil
@@ -68,11 +70,11 @@ func (m *mockStorageMinerAPI) StateNetworkVersion(ctx context.Context, key types
 	return constants.NewestNetworkVersion, nil
 }
 
-func (m *mockStorageMinerAPI) StateGetRandomnessFromTickets(ctx context.Context, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte, tok types3.TipSetToken) (abi.Randomness, error) {
+func (m *mockStorageMinerAPI) StateGetRandomnessFromTickets(ctx context.Context, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte, tok types.TipSetKey) (abi.Randomness, error) {
 	return abi.Randomness("ticket rand"), nil
 }
 
-func (m *mockStorageMinerAPI) StateGetRandomnessFromBeacon(ctx context.Context, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte, tok types3.TipSetToken) (abi.Randomness, error) {
+func (m *mockStorageMinerAPI) StateGetRandomnessFromBeacon(ctx context.Context, personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte, tok types.TipSetKey) (abi.Randomness, error) {
 	return abi.Randomness("beacon rand"), nil
 }
 
@@ -122,6 +124,13 @@ func (m *mockStorageMinerAPI) GasEstimateFeeCap(context.Context, *types.Message,
 }
 
 type mockProver struct {
+}
+
+func (m *mockProver) GenerateWinningPoStWithVanilla(ctx context.Context, proofType abi.RegisteredPoStProof, minerID abi.ActorID, randomness abi.PoStRandomness, proofs [][]byte) ([]proof2.PoStProof, error) {
+	panic("implement me")
+}
+func (m *mockProver) GenerateWindowPoStWithVanilla(ctx context.Context, proofType abi.RegisteredPoStProof, minerID abi.ActorID, randomness abi.PoStRandomness, proofs [][]byte, partitionIdx int) (proof2.PoStProof, error) {
+	panic("implement me")
 }
 
 func (m *mockProver) GenerateWinningPoSt(context.Context, abi.ActorID, []proof7.ExtendedSectorInfo, abi.PoStRandomness) ([]proof2.PoStProof, error) {
@@ -259,7 +268,7 @@ func TestWDPostDoPost(t *testing.T) {
 	// Read the window PoST messages
 	for i := 0; i < expectedMsgCount; i++ {
 		msg := <-mockStgMinerAPI.pushedMessages
-		require.Equal(t, miner.Methods.SubmitWindowedPoSt, msg.Method)
+		require.Equal(t, builtin.MethodsMiner.SubmitWindowedPoSt, msg.Method)
 		var params miner.SubmitWindowedPoStParams
 		err := params.UnmarshalCBOR(bytes.NewReader(msg.Params))
 		require.NoError(t, err)
@@ -317,7 +326,7 @@ type InvocResult struct {
 	Duration       time.Duration
 }
 
-func (m *mockStorageMinerAPI) StateCall(ctx context.Context, message *types.Message, key types.TipSetKey) (*InvocResult, error) {
+func (m *mockStorageMinerAPI) StateCall(ctx context.Context, message *types.Message, key types.TipSetKey) (*types.InvocResult, error) {
 	panic("implement me")
 }
 
@@ -333,7 +342,7 @@ func (m *mockStorageMinerAPI) StateSectorGetInfo(ctx context.Context, address ad
 	panic("implement me")
 }
 
-func (m *mockStorageMinerAPI) StateSectorPartition(ctx context.Context, maddr address.Address, sectorNumber abi.SectorNumber, tok types.TipSetKey) (*miner.SectorLocation, error) {
+func (m *mockStorageMinerAPI) StateSectorPartition(ctx context.Context, maddr address.Address, sectorNumber abi.SectorNumber, tok types.TipSetKey) (*lminer.SectorLocation, error) {
 	panic("implement me")
 }
 

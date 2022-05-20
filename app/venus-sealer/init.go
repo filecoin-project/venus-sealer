@@ -17,8 +17,8 @@ import (
 	paramfetch "github.com/filecoin-project/go-paramfetch"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
+	market8 "github.com/filecoin-project/go-state-types/builtin/v8/market"
 	power2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/power"
-	market8 "github.com/filecoin-project/specs-actors/v8/actors/builtin/market"
 	"github.com/filecoin-project/venus/fixtures/asset"
 	"github.com/filecoin-project/venus/pkg/gen/genesis"
 

@@ -38,8 +38,8 @@ import (
 	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 	types2 "github.com/filecoin-project/venus-sealer/types"
 
-	config2 "github.com/filecoin-project/venus-market/config"
-	"github.com/filecoin-project/venus-market/piecestorage"
+	config2 "github.com/filecoin-project/venus-market/v2/config"
+	"github.com/filecoin-project/venus-market/v2/piecestorage"
 
 	"github.com/filecoin-project/venus/fixtures/asset"
 	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"

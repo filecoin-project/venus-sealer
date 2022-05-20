@@ -25,9 +25,10 @@ import (
 
 	types3 "github.com/filecoin-project/venus/venus-shared/types/messager"
 
+	"github.com/filecoin-project/go-state-types/builtin"
+	"github.com/filecoin-project/go-state-types/builtin/v8/miner"
 	"github.com/filecoin-project/venus/pkg/messagepool"
 	"github.com/filecoin-project/venus/venus-shared/actors"
-	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
 	"github.com/filecoin-project/venus/venus-shared/actors/policy"
 	"github.com/filecoin-project/venus/venus-shared/types"
 )
@@ -317,7 +318,7 @@ func (s *WindowPoStScheduler) declareRecoveries(ctx context.Context, dlIdx uint6
 
 	msg := &types.Message{
 		To:     s.actor,
-		Method: miner.Methods.DeclareFaultsRecovered,
+		Method: builtin.MethodsMiner.DeclareFaultsRecovered,
 		Params: enc,
 		Value:  types.NewInt(0),
 	}
@@ -419,7 +420,7 @@ func (s *WindowPoStScheduler) declareFaults(ctx context.Context, dlIdx uint64, p
 
 	msg := &types.Message{
 		To:     s.actor,
-		Method: miner.Methods.DeclareFaults,
+		Method: builtin.MethodsMiner.DeclareFaults,
 		Params: enc,
 		Value:  types.NewInt(0), // TODO: Is there a fee?
 	}
@@ -853,7 +854,7 @@ func (s *WindowPoStScheduler) submitPoStMessage(ctx context.Context, proof *mine
 
 	msg := &types.Message{
 		To:     s.actor,
-		Method: miner.Methods.SubmitWindowedPoSt,
+		Method: builtin.MethodsMiner.SubmitWindowedPoSt,
 		Params: enc,
 		Value:  types.NewInt(0),
 	}
