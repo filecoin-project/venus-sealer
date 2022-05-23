@@ -133,7 +133,7 @@ func RunApp(app *cli.App) {
 
 var loadActorsWithCmdBefore = func(cctx *cli.Context) error {
 	networkName := types.NetworkName(cctx.String("network"))
-	if len(networkName) == 0 && cctx.Command.Name != "init" {
+	if cctx.Command.Name != "init" {
 		nodeApi, ncloser, err := api.GetFullNodeAPIV2(cctx)
 		if err != nil {
 			return xerrors.Errorf("getting full node api: %w", err)
@@ -151,7 +151,7 @@ var loadActorsWithCmdBefore = func(cctx *cli.Context) error {
 	}
 	builtinactors.SetNetworkBundle(nt)
 	if err := os.Setenv(builtinactors.RepoPath, cctx.String("repo")); err != nil {
-		return xerrors.Errorf("")
+		return xerrors.Errorf("failed to set env %s", builtinactors.RepoPath)
 	}
 
 	bs := blockstore.NewMemory()
