@@ -20,6 +20,7 @@ import (
 
 	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
 	"github.com/filecoin-project/venus-sealer/sector-storage/ffiwrapper"
+	"github.com/filecoin-project/venus-sealer/storage-sealing/lib/nullreader"
 	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 	"github.com/filecoin-project/venus-sealer/types"
 
@@ -205,7 +206,7 @@ func (m *Sealing) handleAddPiece(ctx statemachine.Context, sector types.SectorIn
 				m.minerSector(sector.SectorType, sector.SectorNumber),
 				pieceSizes,
 				p.Unpadded(),
-				NewNullReader(p.Unpadded()))
+				nullreader.NewNullReader(p.Unpadded()))
 			if err != nil {
 				err = xerrors.Errorf("writing padding piece: %w", err)
 				deal.accepted(sector.SectorNumber, offset, err)
