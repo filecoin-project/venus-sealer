@@ -57,6 +57,7 @@ type scheduler struct {
 	workersLk sync.RWMutex
 	workers   map[storiface.WorkerID]*workerHandle
 
+	// todo 没有用到?
 	tasksCache  map[types.TaskType]struct{}
 	tasksUpdate time.Time
 	tasksLk     sync.Mutex

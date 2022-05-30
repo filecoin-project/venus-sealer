@@ -286,7 +286,6 @@ var fsmPlanners = map[types.SectorState]func(events []statemachine.Event, state 
 	types.Proving: planOne(
 		on(SectorFaultReported{}, types.FaultReported),
 		on(SectorFaulty{}, types.Faulty),
-		on(SectorStartCCUpdate{}, types.SnapDealsWaitDeals),
 		on(SectorMarkForUpdate{}, types.Available),
 	),
 	types.Available: planOne(
