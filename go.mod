@@ -59,7 +59,6 @@ require (
 	github.com/ipfs/go-ipld-cbor v0.0.6
 	github.com/ipfs/go-log/v2 v2.5.0
 	github.com/ipfs/go-metrics-interface v0.0.1
-	github.com/ipld/go-codec-dagpb v1.3.2 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/libp2p/go-buffer-pool v0.0.2
 	github.com/libp2p/go-libp2p-core v0.14.0
