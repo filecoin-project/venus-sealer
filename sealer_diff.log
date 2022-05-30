@@ -1,0 +1,169 @@
+diff --git a/app/venus-sealer/util.go b/app/venus-sealer/util.go
+index 0ef9de0..8fb0488 100644
+--- a/app/venus-sealer/util.go
++++ b/app/venus-sealer/util.go
+@@ -85,6 +85,7 @@ var stateOrder = map[types2.SectorState]stateMeta{}
+ var stateList = []stateMeta{
+ 	{col: 39, state: "Total"},
+ 	{col: color.FgGreen, state: types2.Proving},
++	{col: color.FgGreen, state: types2.Available},
+ 	{col: color.FgGreen, state: types2.UpdateActivating},
+ 
+ 	{col: color.FgBlue, state: types2.Empty},
+diff --git a/modules.go b/modules.go
+index 39fa2a4..c3c01ce 100644
+--- a/modules.go
++++ b/modules.go
+@@ -475,6 +475,7 @@ func NewGetSealConfigFunc(r *config.StorageMiner) (types2.GetSealingConfigFunc,
+ 				MaxUpgradingSectors:             cfg.Sealing.MaxUpgradingSectors,
+ 				WaitDealsDelay:                  time.Duration(cfg.Sealing.WaitDealsDelay),
+ 				MakeNewSectorForDeals:           cfg.Sealing.MakeNewSectorForDeals,
++				MakeCCSectorsAvailable:          false,
+ 				CommittedCapacitySectorLifetime: time.Duration(cfg.Sealing.CommittedCapacitySectorLifetime),
+ 				AlwaysKeepUnsealedCopy:          cfg.Sealing.AlwaysKeepUnsealedCopy,
+ 				FinalizeEarly:                   cfg.Sealing.FinalizeEarly,
+diff --git a/sector-storage/fsutil/filesize_unix.go b/sector-storage/fsutil/filesize_unix.go
+index 7df8dae..9c7f04a 100644
+--- a/sector-storage/fsutil/filesize_unix.go
++++ b/sector-storage/fsutil/filesize_unix.go
+@@ -4,6 +4,7 @@ import (
+ 	"os"
+ 	"path/filepath"
+ 	"syscall"
++	"time"
+ 
+ 	"golang.org/x/xerrors"
+ )
+@@ -15,6 +16,8 @@ type SizeInfo struct {
+ // FileSize returns bytes used by a file or directory on disk
+ // NOTE: We care about the allocated bytes, not file or directory size
+ func FileSize(path string) (SizeInfo, error) {
++	start := time.Now()
++
+ 	var size int64
+ 	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
+ 		if err != nil {
+@@ -32,6 +35,11 @@ func FileSize(path string) (SizeInfo, error) {
+ 		}
+ 		return err
+ 	})
++
++	if time.Now().Sub(start) >= 3*time.Second {
++		log.Warnw("very slow file size check", "took", time.Now().Sub(start), "path", path)
++	}
++
+ 	if err != nil {
+ 		if os.IsNotExist(err) {
+ 			return SizeInfo{}, os.ErrNotExist
+diff --git a/sector-storage/sched.go b/sector-storage/sched.go
+index 5992324..043b6d2 100644
+--- a/sector-storage/sched.go
++++ b/sector-storage/sched.go
+@@ -57,6 +57,7 @@ type scheduler struct {
+ 	workersLk sync.RWMutex
+ 	workers   map[storiface.WorkerID]*workerHandle
+ 
++	// todo 没有用到?
+ 	tasksCache  map[types.TaskType]struct{}
+ 	tasksUpdate time.Time
+ 	tasksLk     sync.Mutex
+diff --git a/sector-storage/selector_move.go b/sector-storage/selector_move.go
+index 40e95e5..88a862d 100644
+--- a/sector-storage/selector_move.go
++++ b/sector-storage/selector_move.go
+@@ -36,7 +36,7 @@ func newMoveSelector(index stores.SectorIndex, sector abi.SectorID, spt abi.Regi
+ }
+ 
+ func (s *moveSelector) Ok(ctx context.Context, task types.TaskType, spt abi.RegisteredSealProof, sector storage.SectorRef, whnd *workerHandle) (bool, error) {
+-	tasks, err := whnd.workerRpc.TaskTypes(ctx)
++	tasks, err := whnd.TaskTypes(ctx)
+ 	if err != nil {
+ 		return false, xerrors.Errorf("getting supported worker task types: %w", err)
+ 	}
+diff --git a/sector-storage/stores/local.go b/sector-storage/stores/local.go
+index 1e9d9ea..093082e 100644
+--- a/sector-storage/stores/local.go
++++ b/sector-storage/stores/local.go
+@@ -96,6 +96,8 @@ type path struct {
+ }
+ 
+ func (p *path) stat(ls LocalStorage) (fsutil.FsStat, error) {
++	start := time.Now()
++
+ 	stat, err := ls.Stat(p.local)
+ 	if err != nil {
+ 		return fsutil.FsStat{}, xerrors.Errorf("stat %s: %w", p.local, err)
+@@ -163,6 +165,8 @@ func (p *path) stat(ls LocalStorage) (fsutil.FsStat, error) {
+ 		}
+ 	}
+ 
++	log.Infow("storage stat", "took", time.Now().Sub(start), "reservations", len(p.reservations))
++
+ 	return stat, err
+ }
+ 
+@@ -172,7 +176,7 @@ func (p *path) sectorPath(sid abi.SectorID, fileType storiface.SectorFileType) s
+ 
+ func NewLocal(ctx context.Context, ls LocalStorage, index SectorIndex, urls []string) (*Local, error) {
+ 	l := &Local{
+-		localStorage: ls,
++		localStorage: newCachedLocalStorage(ls),
+ 		index:        index,
+ 		urls:         urls,
+ 
+diff --git a/sector-storage/stores/remote.go b/sector-storage/stores/remote.go
+index bcc8145..fe369c8 100644
+--- a/sector-storage/stores/remote.go
++++ b/sector-storage/stores/remote.go
+@@ -94,6 +94,8 @@ func (r *Remote) AcquireSector(ctx context.Context, s storage.SectorRef, existin
+ 		return storiface.SectorPaths{}, storiface.SectorPaths{}, xerrors.New("can't both find and allocate a sector")
+ 	}
+ 
++	// First make sure that no other goroutines are trying to fetch this sector;
++	// wait if there are any.
+ 	for {
+ 		r.fetchLk.Lock()
+ 
+@@ -121,6 +123,7 @@ func (r *Remote) AcquireSector(ctx context.Context, s storage.SectorRef, existin
+ 		r.fetchLk.Unlock()
+ 	}()
+ 
++	// Try to get the sector from local storage
+ 	paths, stores, err := r.local.AcquireSector(ctx, s, existing, allocate, pathType, op)
+ 	if err != nil {
+ 		return storiface.SectorPaths{}, storiface.SectorPaths{}, xerrors.Errorf("local acquire error: %w", err)
+@@ -147,6 +150,9 @@ func (r *Remote) AcquireSector(ctx context.Context, s storage.SectorRef, existin
+ 		odt = storiface.FsOverheadFinalized
+ 	}
+ 
++	// If any path types weren't found in local storage, try fetching them
++
++	// First reserve storage
+ 	releaseStorage, err := r.local.Reserve(ctx, s, toFetch, ids, odt)
+ 	if err != nil {
+ 		return storiface.SectorPaths{}, storiface.SectorPaths{}, xerrors.Errorf("reserving storage space: %w", err)
+diff --git a/storage-sealing/fsm.go b/storage-sealing/fsm.go
+index e267e91..e771bc4 100644
+--- a/storage-sealing/fsm.go
++++ b/storage-sealing/fsm.go
+@@ -286,7 +286,6 @@ var fsmPlanners = map[types.SectorState]func(events []statemachine.Event, state
+ 	types.Proving: planOne(
+ 		on(SectorFaultReported{}, types.FaultReported),
+ 		on(SectorFaulty{}, types.Faulty),
+-		on(SectorStartCCUpdate{}, types.SnapDealsWaitDeals),
+ 		on(SectorMarkForUpdate{}, types.Available),
+ 	),
+ 	types.Available: planOne(
+diff --git a/storage-sealing/input.go b/storage-sealing/input.go
+index 1e838a6..4ccc854 100755
+--- a/storage-sealing/input.go
++++ b/storage-sealing/input.go
+@@ -422,7 +422,7 @@ func (m *Sealing) updateInput(ctx context.Context, sp abi.RegisteredSealProof) e
+ 			}
+ 			if !ok {
+ 				exp, _, _ := expF(sector.number)
+-				log.Infof("CC update sector %d cannot fit deal, expiration %d before deal end epoch %d", id, exp, piece.deal.DealProposal.EndEpoch)
++				log.Debug("CC update sector %d cannot fit deal, expiration %d before deal end epoch %d", id, exp, piece.deal.DealProposal.EndEpoch)
+ 				continue
+ 			}
+ 
