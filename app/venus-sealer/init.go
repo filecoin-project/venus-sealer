@@ -19,7 +19,7 @@ import (
 	"github.com/filecoin-project/go-state-types/big"
 	market8 "github.com/filecoin-project/go-state-types/builtin/v8/market"
 	power2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/power"
-	"github.com/filecoin-project/venus/fixtures/asset"
+	"github.com/filecoin-project/venus/fixtures/assets"
 	"github.com/filecoin-project/venus/pkg/gen/genesis"
 
 	power6 "github.com/filecoin-project/specs-actors/v6/actors/builtin/power"
@@ -194,11 +194,11 @@ var initCmd = &cli.Command{
 
 		log.Info("Checking proof parameters")
 
-		ps, err := asset.Asset("fixtures/_assets/proof-params/parameters.json")
+		ps, err := assets.GetProofParams()
 		if err != nil {
 			return err
 		}
-		srs, err := asset.Asset("fixtures/_assets/proof-params/srs-inner-product.json")
+		srs, err := assets.GetSrs()
 		if err != nil {
 			return err
 		}
