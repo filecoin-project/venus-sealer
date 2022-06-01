@@ -39,7 +39,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
 	"github.com/filecoin-project/venus-sealer/service"
 	"github.com/filecoin-project/venus-sealer/types"
-	"github.com/filecoin-project/venus/fixtures/asset"
+	"github.com/filecoin-project/venus/fixtures/assets"
 )
 
 var log = logging.Logger("main")
@@ -309,12 +309,12 @@ var runCmd = &cli.Command{
 		}
 
 		if cctx.Bool("commit") || cctx.Bool("prove-replica-update2") {
-			ps, err := asset.Asset("fixtures/_assets/proof-params/parameters.json")
+			ps, err := assets.GetProofParams()
 			if err != nil {
 				return err
 			}
 
-			srs, err := asset.Asset("fixtures/_assets/proof-params/srs-inner-product.json")
+			srs, err := assets.GetSrs()
 			if err != nil {
 				return err
 			}

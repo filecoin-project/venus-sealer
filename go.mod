@@ -37,8 +37,8 @@ require (
 	github.com/filecoin-project/specs-actors/v7 v7.0.1-0.20220511223846-637436c27154
 	github.com/filecoin-project/specs-actors/v8 v8.0.0-20220422153930-0afe155bfffa
 	github.com/filecoin-project/specs-storage v0.4.0
-	github.com/filecoin-project/venus v1.3.0-rc2.0.20220520092758-8b56b8eb856d
-	github.com/filecoin-project/venus-market/v2 v2.0.0-20220520093638-850a8fa04d89
+	github.com/filecoin-project/venus v1.3.0-rc2.0.20220601065317-c19927a1ef20
+	github.com/filecoin-project/venus-market/v2 v2.0.0-20220531021644-e303ad8b959c
 	github.com/gbrlsnchs/jwt/v3 v3.0.1
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.3.0
@@ -95,5 +95,4 @@ replace (
 	github.com/filecoin-project/go-jsonrpc => github.com/ipfs-force-community/go-jsonrpc v0.1.4-0.20210721095535-a67dff16de21
 	github.com/filecoin-project/go-statemachine => github.com/hunjixin/go-statemachine v0.0.0-20220110084945-5867c28ba08a
 	github.com/filecoin-project/go-statestore => github.com/hunjixin/go-statestore v0.1.1-0.20211229093043-b4de7dc02a01
-	github.com/ipfs/go-ipfs-cmds => github.com/ipfs-force-community/go-ipfs-cmds v0.6.1-0.20210521090123-4587df7fa0ab
 )

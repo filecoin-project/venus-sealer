@@ -4,7 +4,7 @@ import (
 	"github.com/docker/go-units"
 	paramfetch "github.com/filecoin-project/go-paramfetch"
 	"github.com/filecoin-project/venus-sealer/api"
-	"github.com/filecoin-project/venus/fixtures/asset"
+	"github.com/filecoin-project/venus/fixtures/assets"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 )
@@ -23,11 +23,11 @@ var fetchParamCmd = &cli.Command{
 		}
 		sectorSize := uint64(sectorSizeInt)
 
-		ps, err := asset.Asset("fixtures/_assets/proof-params/parameters.json")
+		ps, err := assets.GetProofParams()
 		if err != nil {
 			return err
 		}
-		srs, err := asset.Asset("fixtures/_assets/proof-params/srs-inner-product.json")
+		srs, err := assets.GetSrs()
 		if err != nil {
 			return err
 		}

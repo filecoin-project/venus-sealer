@@ -41,7 +41,7 @@ import (
 	config2 "github.com/filecoin-project/venus-market/v2/config"
 	"github.com/filecoin-project/venus-market/v2/piecestorage"
 
-	"github.com/filecoin-project/venus/fixtures/asset"
+	"github.com/filecoin-project/venus/fixtures/assets"
 	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
 	"github.com/filecoin-project/venus/venus-shared/actors/policy"
 	"github.com/filecoin-project/venus/venus-shared/types"
@@ -188,12 +188,12 @@ func GetParams(mctx MetricsCtx, spt abi.RegisteredSealProof) error {
 		return err
 	}
 
-	ps, err := asset.Asset("fixtures/_assets/proof-params/parameters.json")
+	ps, err := assets.GetProofParams()
 	if err != nil {
 		return err
 	}
 
-	srs, err := asset.Asset("fixtures/_assets/proof-params/srs-inner-product.json")
+	srs, err := assets.GetSrs()
 	if err != nil {
 		return err
 	}
