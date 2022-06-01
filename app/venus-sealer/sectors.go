@@ -246,23 +246,6 @@ var sectorsStatusCmd = &cli.Command{
 			fmt.Printf("Last Error:\t\t%s\n", status.LastErr)
 		}
 
-		fmt.Printf("CCUpdate:\t%v\n", status.CCUpdate)
-
-		if status.CCUpdate {
-			var updateSealed, updateUnsealed string
-
-			if status.UpdateSealed != nil {
-				updateSealed = status.UpdateSealed.String()
-			}
-			if status.UpdateUnsealed != nil {
-				updateUnsealed = status.UpdateUnsealed.String()
-			}
-
-			fmt.Printf("UpdateSealed:\t%s\n", updateSealed)
-			fmt.Printf("UpdateUnsealed:\t%s\n", updateUnsealed)
-			fmt.Printf("ReplicaUpdateMessage:%s\n", status.ReplicaUpdateMessage)
-		}
-
 		if onChainInfo {
 			fmt.Printf("\nSector On Chain Info\n")
 			fmt.Printf("SealProof:\t\t%x\n", status.SealProof)
@@ -403,8 +386,14 @@ var sectorsListCmd = &cli.Command{
 			Aliases: []string{"e"},
 		},
 		&cli.BoolFlag{
-			Name:  "seal-time",
-			Usage: "display how long it took for the sector to be sealed",
+			Name:    "initial-pledge",
+			Usage:   "display initial pledge",
+			Aliases: []string{"p"},
+		},
+		&cli.BoolFlag{
+			Name:    "seal-time",
+			Usage:   "display how long it took for the sector to be sealed",
+			Aliases: []string{"t"},
 		},
 		&cli.StringFlag{
 			Name:  "states",
@@ -522,6 +511,7 @@ var sectorsListCmd = &cli.Command{
 			tablewriter.Col("Deals"),
 			tablewriter.Col("DealWeight"),
 			tablewriter.Col("VerifiedPower"),
+			tablewriter.Col("Pledge"),
 			tablewriter.NewLineCol("Error"),
 			tablewriter.NewLineCol("RecoveryTimeout"))
 
@@ -535,136 +525,137 @@ var sectorsListCmd = &cli.Command{
 			//	continue
 			//}
 
-			if showRemoved || st.State != api.SectorState(types2.Removed) {
-				_, inSSet := commitedIDs[st.SectorID]
-				_, inASet := activeIDs[st.SectorID]
-
-				const verifiedPowerGainMul = 9
-
-				dw, vp := .0, .0
-				estimate := (st.Expiration-st.Activation <= 0) || types2.IsUpgradeState(types2.SectorState(st.State))
-				if !estimate {
-					rdw := big.Add(st.DealWeight, st.VerifiedDealWeight)
-					dw = float64(big.Div(rdw, big.NewInt(int64(st.Expiration-st.Activation))).Uint64())
-					vp = float64(big.Div(big.Mul(st.VerifiedDealWeight, big.NewInt(verifiedPowerGainMul)), big.NewInt(int64(st.Expiration-st.Activation))).Uint64())
-				} else {
-					for _, piece := range st.Pieces {
-						if piece.DealInfo != nil {
-							dw += float64(piece.Piece.Size)
-							if piece.DealInfo.DealProposal != nil && piece.DealInfo.DealProposal.VerifiedDeal {
-								vp += float64(piece.Piece.Size) * verifiedPowerGainMul
-							}
-						}
-					}
-				}
-
-				var deals int
-				for _, deal := range st.Deals {
-					if deal != 0 {
-						deals++
-					}
-				}
-
-				exp := st.Expiration
-				if st.OnTime > 0 && st.OnTime < exp {
-					exp = st.OnTime // Can be different when the sector was CC upgraded
-				}
-
-				m := map[string]interface{}{
-					"ID":      st.SectorID,
-					"State":   color.New(stateOrder[types2.SectorState(st.State)].col).Sprint(st.State),
-					"OnChain": yesno(inSSet),
-					"Active":  yesno(inASet),
-				}
-
-				if deals > 0 {
-					m["Deals"] = color.GreenString("%d", deals)
-				} else {
-					m["Deals"] = color.BlueString("CC")
-					if st.ToUpgrade {
-						m["Deals"] = color.CyanString("CC(upgrade)")
-					}
-				}
-
-				if !fast {
-					if !inSSet {
-						m["Expiration"] = "n/a"
-					} else {
-						m["Expiration"] = EpochTime(head.Height(), exp, networkParams.BlockDelaySecs)
-
-						if !fast && deals > 0 {
-							m["DealWeight"] = units.BytesSize(dw)
-						}
-
-						if st.Early > 0 {
-							m["RecoveryTimeout"] = color.YellowString(EpochTime(head.Height(), st.Early, networkParams.BlockDelaySecs))
-						}
-					}
-				}
-
-				if !fast && deals > 0 {
-					estWrap := func(s string) string {
-						if !estimate {
-							return s
-						}
-						return fmt.Sprintf("[%s]", s)
-					}
-
-					m["DealWeight"] = estWrap(units.BytesSize(dw))
-					if vp > 0 {
-						m["VerifiedPower"] = estWrap(color.GreenString(units.BytesSize(vp)))
-					}
-				}
-
-				if cctx.Bool("events") {
-					var events int
-					for _, sectorLog := range st.Log {
-						if !strings.HasPrefix(sectorLog.Kind, "event") {
-							continue
-						}
-						if sectorLog.Kind == "event;sealing.SectorRestart" {
-							continue
-						}
-						events++
-					}
-
-					pieces := len(st.Deals)
-
-					switch {
-					case events < 12+pieces:
-						m["Events"] = color.GreenString("%d", events)
-					case events < 20+pieces:
-						m["Events"] = color.YellowString("%d", events)
-					default:
-						m["Events"] = color.RedString("%d", events)
-					}
-				}
-
-				if cctx.Bool("seal-time") && len(st.Log) > 1 {
-					start := time.Unix(int64(st.Log[0].Timestamp), 0)
-
-					for _, sectorLog := range st.Log {
-						if sectorLog.Kind == "event;sealing.SectorProving" { // todo: figure out a good way to not hardcode
-							end := time.Unix(int64(sectorLog.Timestamp), 0)
-							dur := end.Sub(start)
-
-							switch {
-							case dur < 12*time.Hour:
-								m["SealTime"] = color.GreenString("%s", dur)
-							case dur < 24*time.Hour:
-								m["SealTime"] = color.YellowString("%s", dur)
-							default:
-								m["SealTime"] = color.RedString("%s", dur)
-							}
-
-							break
-						}
-					}
-				}
-
-				tw.Write(m)
+			if !showRemoved && st.State == api.SectorState(types2.Removed) {
+				continue
 			}
+
+			_, inSSet := commitedIDs[st.SectorID]
+			_, inASet := activeIDs[st.SectorID]
+
+			const verifiedPowerGainMul = 9
+
+			dw, vp := .0, .0
+			estimate := (st.Expiration-st.Activation <= 0) || types2.IsUpgradeState(types2.SectorState(st.State))
+			if !estimate {
+				rdw := big.Add(st.DealWeight, st.VerifiedDealWeight)
+				dw = float64(big.Div(rdw, big.NewInt(int64(st.Expiration-st.Activation))).Uint64())
+				vp = float64(big.Div(big.Mul(st.VerifiedDealWeight, big.NewInt(verifiedPowerGainMul)), big.NewInt(int64(st.Expiration-st.Activation))).Uint64())
+			} else {
+				for _, piece := range st.Pieces {
+					if piece.DealInfo != nil {
+						dw += float64(piece.Piece.Size)
+						if piece.DealInfo.DealProposal != nil && piece.DealInfo.DealProposal.VerifiedDeal {
+							vp += float64(piece.Piece.Size) * verifiedPowerGainMul
+						}
+					}
+				}
+			}
+
+			var deals int
+			for _, deal := range st.Deals {
+				if deal != 0 {
+					deals++
+				}
+			}
+
+			exp := st.Expiration
+			if st.OnTime > 0 && st.OnTime < exp {
+				exp = st.OnTime // Can be different when the sector was CC upgraded
+			}
+
+			m := map[string]interface{}{
+				"ID":      st.SectorID,
+				"State":   color.New(stateOrder[types2.SectorState(st.State)].col).Sprint(st.State),
+				"OnChain": yesno(inSSet),
+				"Active":  yesno(inASet),
+			}
+
+			if deals > 0 {
+				m["Deals"] = color.GreenString("%d", deals)
+			} else {
+				m["Deals"] = color.BlueString("CC")
+				if st.ToUpgrade {
+					m["Deals"] = color.CyanString("CC(upgrade)")
+				}
+			}
+
+			if !fast {
+				if !inSSet {
+					m["Expiration"] = "n/a"
+				} else {
+					m["Expiration"] = EpochTime(head.Height(), exp, networkParams.BlockDelaySecs)
+					if st.Early > 0 {
+						m["RecoveryTimeout"] = color.YellowString(EpochTime(head.Height(), st.Early, networkParams.BlockDelaySecs))
+					}
+				}
+				if inSSet && cctx.Bool("initial-pledge") {
+					m["Pledge"] = types.FIL(st.InitialPledge).Short()
+				}
+			}
+
+			if !fast && deals > 0 {
+				estWrap := func(s string) string {
+					if !estimate {
+						return s
+					}
+					return fmt.Sprintf("[%s]", s)
+				}
+
+				m["DealWeight"] = estWrap(units.BytesSize(dw))
+				if vp > 0 {
+					m["VerifiedPower"] = estWrap(color.GreenString(units.BytesSize(vp)))
+				}
+			}
+
+			if cctx.Bool("events") {
+				var events int
+				for _, sectorLog := range st.Log {
+					if !strings.HasPrefix(sectorLog.Kind, "event") {
+						continue
+					}
+					if sectorLog.Kind == "event;sealing.SectorRestart" {
+						continue
+					}
+					events++
+				}
+
+				pieces := len(st.Deals)
+
+				switch {
+				case events < 12+pieces:
+					m["Events"] = color.GreenString("%d", events)
+				case events < 20+pieces:
+					m["Events"] = color.YellowString("%d", events)
+				default:
+					m["Events"] = color.RedString("%d", events)
+				}
+			}
+
+			if cctx.Bool("seal-time") && len(st.Log) > 1 {
+				start := time.Unix(int64(st.Log[0].Timestamp), 0)
+
+				for _, sectorLog := range st.Log {
+					if sectorLog.Kind == "event;sealing.SectorProving" { // todo: figure out a good way to not hardcode
+						end := time.Unix(int64(sectorLog.Timestamp), 0)
+						dur := end.Sub(start)
+
+						switch {
+						case dur < 12*time.Hour:
+							m["SealTime"] = color.GreenString("%s", dur)
+						case dur < 24*time.Hour:
+							m["SealTime"] = color.YellowString("%s", dur)
+						default:
+							m["SealTime"] = color.RedString("%s", dur)
+						}
+
+						break
+					}
+				}
+			}
+
+			tw.Write(m)
 		}
+
 		return tw.Flush(os.Stdout)
 	},
 }
@@ -1655,9 +1646,21 @@ var sectorsSnapAbortCmd = &cli.Command{
 	Name:      "abort-upgrade",
 	Usage:     "Abort the attempted (SnapDeals) upgrade of a CC sector, reverting it to as before",
 	ArgsUsage: "<sectorNum>",
+	Flags: []cli.Flag{
+		&cli.BoolFlag{
+			Name:  "really-do-it",
+			Usage: "pass this flag if you know what you are doing",
+		},
+	},
 	Action: func(cctx *cli.Context) error {
 		if cctx.Args().Len() != 1 {
 			return ShowHelp(cctx, xerrors.Errorf("must pass sector number"))
+		}
+
+		really := cctx.Bool("really-do-it")
+		if !really {
+			//nolint:golint
+			return fmt.Errorf("--really-do-it must be specified for this action to have an effect; you have been warned")
 		}
 
 		nodeApi, closer, err := api.GetStorageMinerAPI(cctx)
