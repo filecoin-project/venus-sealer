@@ -6,6 +6,7 @@ import (
 
 	"github.com/filecoin-project/go-address"
 	logging "github.com/ipfs/go-log/v2"
+	"github.com/mitchellh/go-homedir"
 	"github.com/urfave/cli/v2"
 	"go.opencensus.io/trace"
 	"golang.org/x/xerrors"
@@ -149,8 +150,12 @@ var loadActorsWithCmdBefore = func(cctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	repoPath, err := homedir.Expand(cctx.String("repo"))
+	if err != nil {
+		return err
+	}
 	builtinactors.SetNetworkBundle(nt)
-	if err := os.Setenv(builtinactors.RepoPath, cctx.String("repo")); err != nil {
+	if err := os.Setenv(builtinactors.RepoPath, repoPath); err != nil {
 		return xerrors.Errorf("failed to set env %s", builtinactors.RepoPath)
 	}
 
