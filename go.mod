@@ -231,4 +231,5 @@ replace (
 	github.com/filecoin-project/go-jsonrpc => github.com/ipfs-force-community/go-jsonrpc v0.1.4-0.20210721095535-a67dff16de21
 	github.com/filecoin-project/go-statemachine => github.com/hunjixin/go-statemachine v0.0.0-20220110084945-5867c28ba08a
 	github.com/filecoin-project/go-statestore => github.com/hunjixin/go-statestore v0.1.1-0.20211229093043-b4de7dc02a01
+	github.com/filecoin-project/specs-storage => github.com/filecoin-project/specs-storage v0.4.0
 )
