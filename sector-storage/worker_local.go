@@ -206,6 +206,7 @@ func rfunc(in interface{}) func(context.Context, types.CallID, storiface.WorkerR
 }
 
 var returnFunc = map[types.ReturnType]func(context.Context, types.CallID, storiface.WorkerReturn, interface{}, *storiface.CallError) error{
+	types.ReturnDataCid:               rfunc(storiface.WorkerReturn.ReturnDataCid),
 	types.ReturnAddPiece:              rfunc(storiface.WorkerReturn.ReturnAddPiece),
 	types.ReturnSealPreCommit1:        rfunc(storiface.WorkerReturn.ReturnSealPreCommit1),
 	types.ReturnSealPreCommit2:        rfunc(storiface.WorkerReturn.ReturnSealPreCommit2),
@@ -325,6 +326,18 @@ func (l *LocalWorker) NewSector(ctx context.Context, sector storage.SectorRef) e
 
 	return sb.NewSector(ctx, sector)
 }
+
+func (l *LocalWorker) DataCid(ctx context.Context, pieceSize abi.UnpaddedPieceSize, pieceData storage.Data) (types.CallID, error) {
+	sb, err := l.executor()
+	if err != nil {
+		return types.UndefCall, err
+	}
+
+	return l.asyncCall(ctx, storage.NoSectorRef, types.ReturnDataCid, func(ctx context.Context, ci types.CallID) (interface{}, error) {
+		return sb.DataCid(ctx, pieceSize, pieceData)
+	})
+}
+
 
 func (l *LocalWorker) AddPiece(ctx context.Context, sector storage.SectorRef, epcs []abi.UnpaddedPieceSize, sz abi.UnpaddedPieceSize, r io.Reader) (types.CallID, error) {
 	sb, err := l.executor()

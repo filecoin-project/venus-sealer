@@ -327,7 +327,7 @@ var runCmd = &cli.Command{
 		var taskTypes []types.TaskType
 		taskTypes = append(taskTypes, types.TTFetch, types.TTCommit1, types.TTFinalize)
 		if cctx.Bool("addpiece") {
-			taskTypes = append(taskTypes, types.TTAddPiece)
+			taskTypes = append(taskTypes, types.TTAddPiece, types.TTDataCid)
 		}
 		if cctx.Bool("precommit1") {
 			taskTypes = append(taskTypes, types.TTPreCommit1)

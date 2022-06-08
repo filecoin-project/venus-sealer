@@ -15,6 +15,7 @@
 * [Check](#Check)
   * [CheckProvable](#CheckProvable)
 * [Compute](#Compute)
+  * [ComputeDataCid](#ComputeDataCid)
   * [ComputeProof](#ComputeProof)
   * [ComputeWindowPoSt](#ComputeWindowPoSt)
 * [Create](#Create)
@@ -68,6 +69,7 @@
   * [RedoSector](#RedoSector)
 * [Return](#Return)
   * [ReturnAddPiece](#ReturnAddPiece)
+  * [ReturnDataCid](#ReturnDataCid)
   * [ReturnFetch](#ReturnFetch)
   * [ReturnFinalizeReplicaUpdate](#ReturnFinalizeReplicaUpdate)
   * [ReturnFinalizeSector](#ReturnFinalizeSector)
@@ -182,7 +184,7 @@ Inputs: `null`
 Response:
 ```json
 {
-  "Version": "3e10eb70-4979-494d-b857-2729f71fd737",
+  "Version": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
   "APIVersion": 66816,
   "BlockDelay": 42
 }
@@ -253,7 +255,7 @@ Inputs:
 ```json
 [
   [
-    "3e10eb70-4979-494d-b857-2729f71fd737"
+    "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   ]
 ]
 ```
@@ -268,14 +270,14 @@ Perms: read
 Inputs:
 ```json
 [
-  "3e10eb70-4979-494d-b857-2729f71fd737"
+  "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
 ]
 ```
 
 Response:
 ```json
 [
-  "3e10eb70-4979-494d-b857-2729f71fd737"
+  "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
 ]
 ```
 
@@ -314,6 +316,29 @@ Response:
 ## Compute
 
 
+### ComputeDataCid
+There are not yet any comments for this method.
+
+Perms: admin
+
+Inputs:
+```json
+[
+  1024,
+  {}
+]
+```
+
+Response:
+```json
+{
+  "Size": 1032,
+  "PieceCID": {
+    "/": "bafy2bzacea3wsdh6y3a36tb3skempjoxqpuyompjbmfeyf34fi3uy6uue42v4"
+  }
+}
+```
+
 ### ComputeProof
 There are not yet any comments for this method.
 
@@ -349,9 +374,9 @@ Response:
 ```
 
 ### ComputeWindowPoSt
+There are not yet any comments for this method.
 
-
-Perms: write
+Perms: admin
 
 Inputs:
 ```json
@@ -402,7 +427,7 @@ Perms: admin
 Inputs:
 ```json
 [
-  "3e10eb70-4979-494d-b857-2729f71fd737"
+  "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
 ]
 ```
 
@@ -513,7 +538,7 @@ Inputs:
   {
     "/": "bafy2bzacea3wsdh6y3a36tb3skempjoxqpuyompjbmfeyf34fi3uy6uue42v4"
   },
-  "3e10eb70-4979-494d-b857-2729f71fd737"
+  "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
 ]
 ```
 
@@ -716,7 +741,7 @@ Response:
       "Type": 2,
       "Data": "Ynl0ZSBhcnJheQ=="
     },
-    "TransferType": "3e10eb70-4979-494d-b857-2729f71fd737",
+    "TransferType": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
     "Root": {
       "/": "bafy2bzacea3wsdh6y3a36tb3skempjoxqpuyompjbmfeyf34fi3uy6uue42v4"
     },
@@ -767,7 +792,7 @@ Inputs: `null`
 Response:
 ```json
 [
-  "3e10eb70-4979-494d-b857-2729f71fd737"
+  "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
 ]
 ```
 
@@ -779,8 +804,8 @@ Perms: write
 Inputs:
 ```json
 [
-  "3e10eb70-4979-494d-b857-2729f71fd737",
-  "3e10eb70-4979-494d-b857-2729f71fd737"
+  "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
+  "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
 ]
 ```
 
@@ -816,14 +841,14 @@ Perms: write
 Inputs:
 ```json
 [
-  "3e10eb70-4979-494d-b857-2729f71fd737"
+  "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
 ]
 ```
 
 Response:
 ```json
 {
-  "ID": "3e10eb70-4979-494d-b857-2729f71fd737",
+  "ID": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
   "UnsignedCid": null,
   "SignedCid": null,
   "Version": 42,
@@ -854,8 +879,8 @@ Response:
     "maxFee": "0",
     "maxFeeCap": "0"
   },
-  "WalletName": "3e10eb70-4979-494d-b857-2729f71fd737",
-  "FromUser": "3e10eb70-4979-494d-b857-2729f71fd737",
+  "WalletName": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
+  "FromUser": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
   "State": 0,
   "CreatedAt": "0001-01-01T00:00:00Z",
   "UpdatedAt": "0001-01-01T00:00:00Z"
@@ -894,7 +919,7 @@ Inputs:
 ]
 ```
 
-Response: `"3e10eb70-4979-494d-b857-2729f71fd737"`
+Response: `"63f292b3-b804-4e59-86d4-f4c2fd3e275a"`
 
 ### MessagerWaitMessage
 messager
@@ -905,7 +930,7 @@ Perms: read
 Inputs:
 ```json
 [
-  "3e10eb70-4979-494d-b857-2729f71fd737",
+  "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
   42
 ]
 ```
@@ -1107,8 +1132,8 @@ Inputs:
 [
   {
     "SectorNumber": 9,
-    "SealPath": "3e10eb70-4979-494d-b857-2729f71fd737",
-    "StorePath": "3e10eb70-4979-494d-b857-2729f71fd737"
+    "SealPath": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
+    "StorePath": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1141,7 +1166,37 @@ Inputs:
   },
   {
     "Code": 0,
-    "Message": "3e10eb70-4979-494d-b857-2729f71fd737"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
+  }
+]
+```
+
+Response: `{}`
+
+### ReturnDataCid
+
+
+Perms: admin
+
+Inputs:
+```json
+[
+  {
+    "Sector": {
+      "Miner": 1000,
+      "Number": 9
+    },
+    "ID": "d5c7e3cb-f35a-4f98-b509-ca8ce5922fab"
+  },
+  {
+    "Size": 1032,
+    "PieceCID": {
+      "/": "bafy2bzacea3wsdh6y3a36tb3skempjoxqpuyompjbmfeyf34fi3uy6uue42v4"
+    }
+  },
+  {
+    "Code": 0,
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1165,7 +1220,7 @@ Inputs:
   },
   {
     "Code": 0,
-    "Message": "3e10eb70-4979-494d-b857-2729f71fd737"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1189,7 +1244,7 @@ Inputs:
   },
   {
     "Code": 0,
-    "Message": "3e10eb70-4979-494d-b857-2729f71fd737"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1213,7 +1268,7 @@ Inputs:
   },
   {
     "Code": 0,
-    "Message": "3e10eb70-4979-494d-b857-2729f71fd737"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1237,7 +1292,7 @@ Inputs:
   },
   {
     "Code": 0,
-    "Message": "3e10eb70-4979-494d-b857-2729f71fd737"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1261,7 +1316,7 @@ Inputs:
   },
   {
     "Code": 0,
-    "Message": "3e10eb70-4979-494d-b857-2729f71fd737"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1288,7 +1343,7 @@ Inputs:
   ],
   {
     "Code": 0,
-    "Message": "3e10eb70-4979-494d-b857-2729f71fd737"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1313,7 +1368,7 @@ Inputs:
   "Bw==",
   {
     "Code": 0,
-    "Message": "3e10eb70-4979-494d-b857-2729f71fd737"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1338,7 +1393,7 @@ Inputs:
   true,
   {
     "Code": 0,
-    "Message": "3e10eb70-4979-494d-b857-2729f71fd737"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1362,7 +1417,7 @@ Inputs:
   },
   {
     "Code": 0,
-    "Message": "3e10eb70-4979-494d-b857-2729f71fd737"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1394,7 +1449,7 @@ Inputs:
   },
   {
     "Code": 0,
-    "Message": "3e10eb70-4979-494d-b857-2729f71fd737"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1419,7 +1474,7 @@ Inputs:
   "Bw==",
   {
     "Code": 0,
-    "Message": "3e10eb70-4979-494d-b857-2729f71fd737"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1444,7 +1499,7 @@ Inputs:
   "Bw==",
   {
     "Code": 0,
-    "Message": "3e10eb70-4979-494d-b857-2729f71fd737"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1469,7 +1524,7 @@ Inputs:
   "Bw==",
   {
     "Code": 0,
-    "Message": "3e10eb70-4979-494d-b857-2729f71fd737"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1501,7 +1556,7 @@ Inputs:
   },
   {
     "Code": 0,
-    "Message": "3e10eb70-4979-494d-b857-2729f71fd737"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1525,7 +1580,7 @@ Inputs:
   },
   {
     "Code": 0,
-    "Message": "3e10eb70-4979-494d-b857-2729f71fd737"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1608,8 +1663,8 @@ Response:
     "FailedSectors": {
       "123": "can't acquire read lock"
     },
-    "Msg": "3e10eb70-4979-494d-b857-2729f71fd737",
-    "Error": "3e10eb70-4979-494d-b857-2729f71fd737"
+    "Msg": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
+    "Error": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1694,8 +1749,8 @@ Response:
       123,
       124
     ],
-    "Msg": "3e10eb70-4979-494d-b857-2729f71fd737",
-    "Error": "3e10eb70-4979-494d-b857-2729f71fd737"
+    "Msg": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
+    "Error": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1806,7 +1861,7 @@ Perms: admin
 
 Inputs: `null`
 
-Response: `"3e10eb70-4979-494d-b857-2729f71fd737"`
+Response: `"63f292b3-b804-4e59-86d4-f4c2fd3e275a"`
 
 ### SectorTerminatePending
 SectorTerminatePending returns a list of pending sector terminations to be sent in the next batch message
@@ -1900,21 +1955,21 @@ Response:
       "Value": "Bw==",
       "Epoch": 10101
     },
-    "PreCommitMsg": "3e10eb70-4979-494d-b857-2729f71fd737",
-    "CommitMsg": "3e10eb70-4979-494d-b857-2729f71fd737",
+    "PreCommitMsg": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
+    "CommitMsg": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
     "Retries": 42,
     "ToUpgrade": true,
     "CCUpdate": true,
     "UpdateSealed": null,
     "UpdateUnsealed": null,
-    "ReplicaUpdateMessage": "3e10eb70-4979-494d-b857-2729f71fd737",
-    "LastErr": "3e10eb70-4979-494d-b857-2729f71fd737",
+    "ReplicaUpdateMessage": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
+    "LastErr": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
     "Log": [
       {
-        "Kind": "3e10eb70-4979-494d-b857-2729f71fd737",
+        "Kind": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
         "Timestamp": 42,
-        "Trace": "3e10eb70-4979-494d-b857-2729f71fd737",
-        "Message": "3e10eb70-4979-494d-b857-2729f71fd737"
+        "Trace": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
+        "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
       }
     ],
     "SealProof": 8,
@@ -2055,21 +2110,21 @@ Response:
     "Value": "Bw==",
     "Epoch": 10101
   },
-  "PreCommitMsg": "3e10eb70-4979-494d-b857-2729f71fd737",
-  "CommitMsg": "3e10eb70-4979-494d-b857-2729f71fd737",
+  "PreCommitMsg": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
+  "CommitMsg": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
   "Retries": 42,
   "ToUpgrade": true,
   "CCUpdate": true,
   "UpdateSealed": null,
   "UpdateUnsealed": null,
-  "ReplicaUpdateMessage": "3e10eb70-4979-494d-b857-2729f71fd737",
-  "LastErr": "3e10eb70-4979-494d-b857-2729f71fd737",
+  "ReplicaUpdateMessage": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
+  "LastErr": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
   "Log": [
     {
-      "Kind": "3e10eb70-4979-494d-b857-2729f71fd737",
+      "Kind": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
       "Timestamp": 42,
-      "Trace": "3e10eb70-4979-494d-b857-2729f71fd737",
-      "Message": "3e10eb70-4979-494d-b857-2729f71fd737"
+      "Trace": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
+      "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
     }
   ],
   "SealProof": 8,
@@ -2149,7 +2204,7 @@ Perms: admin
 Inputs:
 ```json
 [
-  "3e10eb70-4979-494d-b857-2729f71fd737"
+  "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
 ]
 ```
 
@@ -2166,17 +2221,17 @@ Inputs:
   {
     "ID": "d5c7e3cb-f35a-4f98-b509-ca8ce5922fab",
     "URLs": [
-      "3e10eb70-4979-494d-b857-2729f71fd737"
+      "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
     ],
     "Weight": 42,
     "MaxStorage": 42,
     "CanSeal": true,
     "CanStore": true,
     "Groups": [
-      "3e10eb70-4979-494d-b857-2729f71fd737"
+      "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
     ],
     "AllowTo": [
-      "3e10eb70-4979-494d-b857-2729f71fd737"
+      "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
     ]
   },
   {
@@ -2212,17 +2267,17 @@ Response:
   {
     "ID": "d5c7e3cb-f35a-4f98-b509-ca8ce5922fab",
     "URLs": [
-      "3e10eb70-4979-494d-b857-2729f71fd737"
+      "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
     ],
     "Weight": 42,
     "MaxStorage": 42,
     "CanSeal": true,
     "CanStore": true,
     "Groups": [
-      "3e10eb70-4979-494d-b857-2729f71fd737"
+      "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
     ],
     "AllowTo": [
-      "3e10eb70-4979-494d-b857-2729f71fd737"
+      "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
     ]
   }
 ]
@@ -2291,7 +2346,7 @@ Response:
   {
     "ID": "d5c7e3cb-f35a-4f98-b509-ca8ce5922fab",
     "URLs": [
-      "3e10eb70-4979-494d-b857-2729f71fd737"
+      "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
     ],
     "Weight": 42,
     "CanSeal": true,
@@ -2353,17 +2408,17 @@ Response:
 {
   "ID": "d5c7e3cb-f35a-4f98-b509-ca8ce5922fab",
   "URLs": [
-    "3e10eb70-4979-494d-b857-2729f71fd737"
+    "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   ],
   "Weight": 42,
   "MaxStorage": 42,
   "CanSeal": true,
   "CanStore": true,
   "Groups": [
-    "3e10eb70-4979-494d-b857-2729f71fd737"
+    "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   ],
   "AllowTo": [
-    "3e10eb70-4979-494d-b857-2729f71fd737"
+    "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   ]
 }
 ```
@@ -2439,7 +2494,7 @@ Inputs:
       "Max": 9,
       "Used": 9
     },
-    "Err": "3e10eb70-4979-494d-b857-2729f71fd737"
+    "Err": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -2501,7 +2556,7 @@ Inputs:
 ```json
 [
   5432,
-  "3e10eb70-4979-494d-b857-2729f71fd737"
+  "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
 ]
 ```
 
@@ -2519,7 +2574,7 @@ Perms: admin
 Inputs:
 ```json
 [
-  "3e10eb70-4979-494d-b857-2729f71fd737"
+  "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
 ]
 ```
 
@@ -2551,7 +2606,7 @@ Response:
       "Task": "seal/v0/addpiece",
       "RunWait": 123,
       "Start": "0001-01-01T00:00:00Z",
-      "Hostname": "3e10eb70-4979-494d-b857-2729f71fd737"
+      "Hostname": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
     }
   ]
 }
@@ -2569,7 +2624,7 @@ Response:
 {
   "d5c7e3cb-f35a-4f98-b509-ca8ce5922fab": {
     "Info": {
-      "Hostname": "3e10eb70-4979-494d-b857-2729f71fd737",
+      "Hostname": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
       "IgnoreResources": true,
       "Resources": {
         "MemPhysical": 42,
@@ -2578,7 +2633,7 @@ Response:
         "MemSwapUsed": 42,
         "CPUs": 42,
         "GPUs": [
-          "3e10eb70-4979-494d-b857-2729f71fd737"
+          "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
         ],
         "Resources": {
           "seal/v0/addpiece": {

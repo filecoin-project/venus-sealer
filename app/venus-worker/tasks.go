@@ -22,6 +22,7 @@ var tasksCmd = &cli.Command{
 
 var allowSetting = map[types.TaskType]struct{}{
 	types.TTAddPiece:            {},
+	types.TTDataCid:             {},
 	types.TTPreCommit1:          {},
 	types.TTPreCommit2:          {},
 	types.TTCommit2:             {},

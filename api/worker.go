@@ -26,6 +26,7 @@ type WorkerStruct struct {
 		Paths     func(context.Context) ([]stores.StoragePath, error)        `perm:"admin"`
 		Info      func(context.Context) (storiface.WorkerInfo, error)        `perm:"admin"`
 
+		DataCid                   func(ctx context.Context, pieceSize abi.UnpaddedPieceSize, pieceData storage.Data) (types.CallID, error)                                                                                  `perm:"admin"`
 		AddPiece                  func(ctx context.Context, sector storage.SectorRef, pieceSizes []abi.UnpaddedPieceSize, newPieceSize abi.UnpaddedPieceSize, pieceData storage.Data) (types.CallID, error)                 `perm:"admin"`
 		SealPreCommit1            func(ctx context.Context, sector storage.SectorRef, ticket abi.SealRandomness, pieces []abi.PieceInfo) (types.CallID, error)                                                              `perm:"admin"`
 		SealPreCommit2            func(ctx context.Context, sector storage.SectorRef, pc1o storage.PreCommit1Out) (types.CallID, error)                                                                                     `perm:"admin"`
@@ -77,6 +78,10 @@ func (w *WorkerStruct) Paths(ctx context.Context) ([]stores.StoragePath, error) 
 
 func (w *WorkerStruct) Info(ctx context.Context) (storiface.WorkerInfo, error) {
 	return w.Internal.Info(ctx)
+}
+
+func (w *WorkerStruct) DataCid(ctx context.Context, pieceSize abi.UnpaddedPieceSize, pieceData storage.Data) (types.CallID, error) {
+	return w.Internal.DataCid(ctx, pieceSize, pieceData)
 }
 
 func (w *WorkerStruct) AddPiece(ctx context.Context, sector storage.SectorRef, pieceSizes []abi.UnpaddedPieceSize, newPieceSize abi.UnpaddedPieceSize, pieceData storage.Data) (types.CallID, error) {

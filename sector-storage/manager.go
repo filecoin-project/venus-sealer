@@ -157,7 +157,7 @@ func New(ctx context.Context, lstor *stores.Local, stor *stores.Remote, ls store
 	}
 
 	if sc.AllowAddPiece {
-		localTasks = append(localTasks, types.TTAddPiece)
+		localTasks = append(localTasks, types.TTAddPiece, types.TTDataCid)
 	}
 	if sc.AllowPreCommit1 {
 		localTasks = append(localTasks, types.TTPreCommit1)
@@ -296,6 +296,27 @@ func (m *Manager) SectorsUnsealPiece(ctx context.Context, sector storage.SectorR
 func (m *Manager) NewSector(ctx context.Context, sector storage.SectorRef) error {
 	log.Warnf("stub NewSector")
 	return nil
+}
+
+func (m *Manager) DataCid(ctx context.Context, pieceSize abi.UnpaddedPieceSize, pieceData storage.Data) (abi.PieceInfo, error) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	selector := newTaskSelector()
+
+	var out abi.PieceInfo
+	err := m.sched.Schedule(ctx, storage.NoSectorRef, types.TTDataCid, selector, schedNop, func(ctx context.Context, w Worker) error {
+		p, err := m.waitSimpleCall(ctx)(w.DataCid(ctx, pieceSize, pieceData))
+		if err != nil {
+			return err
+		}
+		if p != nil {
+			out = p.(abi.PieceInfo)
+		}
+		return nil
+	})
+
+	return out, err
 }
 
 func (m *Manager) AddPiece(ctx context.Context, sector storage.SectorRef, existingPieces []abi.UnpaddedPieceSize, sz abi.UnpaddedPieceSize, r io.Reader) (abi.PieceInfo, error) {
@@ -953,6 +974,10 @@ func (m *Manager) ProveReplicaUpdate2(ctx context.Context, sector storage.Sector
 	}
 
 	return out, waitErr
+}
+
+func (m *Manager) ReturnDataCid(ctx context.Context, callID types.CallID, pi abi.PieceInfo, err *storiface.CallError) error {
+	return m.returnResult(ctx, callID, pi, err)
 }
 
 func (m *Manager) ReturnAddPiece(ctx context.Context, callID types.CallID, pi abi.PieceInfo, err *storiface.CallError) error {

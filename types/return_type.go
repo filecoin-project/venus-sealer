@@ -3,6 +3,7 @@ package types
 type ReturnType string
 
 const (
+	ReturnDataCid               ReturnType = "ReturnDataCid"
 	ReturnAddPiece              ReturnType = "ReturnAddPiece"
 	ReturnSealPreCommit1        ReturnType = "ReturnSealPreCommit1"
 	ReturnSealPreCommit2        ReturnType = "ReturnSealPreCommit2"

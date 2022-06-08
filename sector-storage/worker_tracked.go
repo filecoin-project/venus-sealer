@@ -161,6 +161,12 @@ func (t *trackedWorker) SealCommit2(ctx context.Context, sector storage.SectorRe
 	return t.tracker.track(ctx, t.execute, t.wid, t.workerInfo, sector, types.TTCommit2, func() (types.CallID, error) { return t.Worker.SealCommit2(ctx, sector, c1o) })
 }
 
+func (t *trackedWorker) DataCid(ctx context.Context, pieceSize abi.UnpaddedPieceSize, pieceData storage.Data) (types.CallID, error) {
+	return t.tracker.track(ctx, t.execute, t.wid, t.workerInfo, storage.NoSectorRef, types.TTDataCid, func() (types.CallID, error) {
+		return t.Worker.DataCid(ctx, pieceSize, pieceData)
+	})
+}
+
 func (t *trackedWorker) FinalizeSector(ctx context.Context, sector storage.SectorRef, keepUnsealed []storage.Range) (types.CallID, error) {
 	return t.tracker.track(ctx, t.execute, t.wid, t.workerInfo, sector, types.TTFinalize, func() (types.CallID, error) { return t.Worker.FinalizeSector(ctx, sector, keepUnsealed) })
 }
