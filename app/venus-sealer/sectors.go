@@ -20,17 +20,19 @@ import (
 	"github.com/filecoin-project/go-bitfield"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
-	"github.com/filecoin-project/go-state-types/network"
-
 	"github.com/filecoin-project/go-state-types/builtin"
 	"github.com/filecoin-project/go-state-types/builtin/v8/miner"
+	"github.com/filecoin-project/go-state-types/network"
+
 	"github.com/filecoin-project/venus/venus-shared/actors"
 	"github.com/filecoin-project/venus/venus-shared/actors/adt"
 	lminer "github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
 	"github.com/filecoin-project/venus/venus-shared/actors/policy"
 	"github.com/filecoin-project/venus/venus-shared/types"
+	"github.com/filecoin-project/venus/venus-shared/types/messager"
 
 	"github.com/filecoin-project/venus-sealer/api"
+	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus-sealer/lib/blockstore"
 	"github.com/filecoin-project/venus-sealer/lib/tablewriter"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
@@ -61,6 +63,7 @@ var sectorsCmd = &cli.Command{
 		sectorsCapacityCollateralCmd,
 		sectorsBatching,
 		sectorsRefreshPieceMatchingCmd,
+		sectorsCompactPartitionsCmd,
 		sectorsRedoCmd,
 	},
 }
@@ -922,8 +925,6 @@ var sectorsRenewCmd = &cli.Command{
 			return err
 		}
 
-		spec := &types.MessageSendSpec{MaxFee: abi.TokenAmount(mf)}
-
 		fullApi, nCloser, err := api.GetFullNodeAPIV2(cctx)
 		if err != nil {
 			return err
@@ -1189,18 +1190,18 @@ var sectorsRenewCmd = &cli.Command{
 				return xerrors.Errorf("serializing params: %w", err)
 			}
 
-			smsg, err := fullApi.MpoolPushMessage(ctx, &types.Message{
+			uid, err := nodeApi.MessagerPushMessage(ctx, &types.Message{
 				From:   mi.Worker,
 				To:     maddr,
 				Method: builtin.MethodsMiner.ExtendSectorExpiration,
 				Value:  big.Zero(),
 				Params: sp,
-			}, spec)
+			}, &messager.SendSpec{MaxFee: abi.TokenAmount(mf)})
 			if err != nil {
 				return xerrors.Errorf("mpool push message: %w", err)
 			}
 
-			fmt.Println(smsg.Cid())
+			fmt.Println(uid)
 		}
 
 		fmt.Printf("%d sectors renewed\n", stotal)
@@ -2196,6 +2197,119 @@ var sectorsRefreshPieceMatchingCmd = &cli.Command{
 		ctx := api.ReqContext(cctx)
 
 		if err := nodeApi.SectorMatchPendingPiecesToOpenSectors(ctx); err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
+var sectorsCompactPartitionsCmd = &cli.Command{
+	Name:  "compact-partitions",
+	Usage: "removes dead sectors from partitions and reduces the number of partitions used if possible",
+	Flags: []cli.Flag{
+		&cli.Uint64Flag{
+			Name:     "deadline",
+			Usage:    "the deadline to compact the partitions in",
+			Required: true,
+		},
+		&cli.Int64SliceFlag{
+			Name:     "partitions",
+			Usage:    "list of partitions to compact sectors in",
+			Required: true,
+		},
+		&cli.BoolFlag{
+			Name:  "really-do-it",
+			Usage: "Actually send transaction performing the action",
+			Value: false,
+		},
+		&cli.StringFlag{
+			Name:  "actor",
+			Usage: "Specify the address of the miner to run this command",
+		},
+		&cli.IntFlag{
+			Name:  "confidence",
+			Usage: "number of block confirmations to wait for",
+			Value: int(constants.MessageConfidence),
+		},
+	},
+	Action: func(cctx *cli.Context) error {
+		if !cctx.Bool("really-do-it") {
+			fmt.Println("Pass --really-do-it to actually execute this action")
+			return nil
+		}
+
+		nApi, nCloser, err := api.GetFullNodeAPIV2(cctx)
+		if err != nil {
+			return err
+		}
+		defer nCloser()
+
+		mApi, mCloser, err := api.GetStorageMinerAPI(cctx)
+		if err != nil {
+			return err
+		}
+		defer mCloser()
+
+		ctx := api.ReqContext(cctx)
+
+		maddr, err := getActorAddress(ctx, mApi, cctx.String("actor"))
+		if err != nil {
+			return err
+		}
+
+		minfo, err := nApi.StateMinerInfo(ctx, maddr, types.EmptyTSK)
+		if err != nil {
+			return err
+		}
+
+		deadline := cctx.Uint64("deadline")
+		if deadline > miner.WPoStPeriodDeadlines {
+			return fmt.Errorf("deadline %d out of range", deadline)
+		}
+
+		parts := cctx.Int64Slice("partitions")
+		if len(parts) <= 0 {
+			return fmt.Errorf("must include at least one partition to compact")
+		}
+		fmt.Printf("compacting %d paritions\n", len(parts))
+
+		partitions := bitfield.New()
+		for _, partition := range parts {
+			partitions.Set(uint64(partition))
+		}
+
+		params := miner.CompactPartitionsParams{
+			Deadline:   deadline,
+			Partitions: partitions,
+		}
+
+		sp, err := actors.SerializeParams(&params)
+		if err != nil {
+			return fmt.Errorf("serializing params: %w", err)
+		}
+
+		uid, err := mApi.MessagerPushMessage(ctx, &types.Message{
+			From:   minfo.Worker,
+			To:     maddr,
+			Method: builtin.MethodsMiner.CompactPartitions,
+			Value:  big.Zero(),
+			Params: sp,
+		}, nil)
+		if err != nil {
+			return xerrors.Errorf("push message: %w", err)
+		}
+
+		fmt.Printf("Requested compact partitions in message %s\n", uid)
+		fmt.Printf("waiting for %d epochs for confirmation\n", uint64(cctx.Int("confidence")))
+		wait, err := mApi.MessagerWaitMessage(ctx, uid, uint64(cctx.Int("confidence")))
+		if err != nil {
+			return err
+		}
+
+		// check it executed successfully
+		if wait.Receipt.ExitCode != 0 {
+			fmt.Println(cctx.App.Writer, "compact partitions failed!")
 			return err
 		}
 
