@@ -11,11 +11,11 @@ FROM filvenus/venus-runtime
 # DIR for app
 WORKDIR /app
 
-# 拷贝当前目录下 可以执行文件
+# copy the sealer app
 COPY --from=buildenv  /go/venus-sealer/venus-sealer /app/venus-sealer
 
 
-# 拷贝依赖库
+# copy ddl
 COPY --from=buildenv   /usr/lib/x86_64-linux-gnu/libhwloc.so.5  \
                         /usr/lib/x86_64-linux-gnu/libOpenCL.so.1  \
                         /lib/x86_64-linux-gnu/libgcc_s.so.1  \
@@ -31,8 +31,7 @@ COPY --from=buildenv   /usr/lib/x86_64-linux-gnu/libhwloc.so.5  \
 
 COPY ./docker/script  /script
 
-# 暴露端口
+
 EXPOSE 2345
 
-# 运行golang程序的命令
 ENTRYPOINT ["/script/init.sh"]
