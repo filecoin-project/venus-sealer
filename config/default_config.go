@@ -464,10 +464,10 @@ func DefaultButterflyStorageMiner() *StorageMiner {
 			CommitControl:    []string{},
 		},
 		NetParams: NetParamsConfig{
-			UpgradeIgnitionHeight: -2,
+			UpgradeIgnitionHeight: -3,
 			UpgradeOhSnapHeight:   240,
 			ForkLengthThreshold:   policy.ChainFinality,
-			BlockDelaySecs:        4,
+			BlockDelaySecs:        30,
 		},
 		DB: DbConfig{
 			Type: "sqlite",
