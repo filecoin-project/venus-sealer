@@ -36,6 +36,3 @@ EXPOSE 2345
 
 # 运行golang程序的命令
 ENTRYPOINT ["/script/init.sh"]
-# ENTRYPOINT ["/bin/bash"]
-
-
