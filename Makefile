@@ -58,7 +58,7 @@ clean:
 
 # docker
 .PHONY: docker
-BUILD_DOCKER_PROXY=
+
 
 docker:
 	docker build --build-arg https_proxy=$(BUILD_DOCKER_PROXY) -t venus-sealer .
