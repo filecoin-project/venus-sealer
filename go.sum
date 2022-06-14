@@ -411,12 +411,13 @@ github.com/filecoin-project/specs-storage v0.4.0/go.mod h1:Z2eK6uMwAOSLjek6+sy0j
 github.com/filecoin-project/storetheindex v0.3.5 h1:KoS9TvjPm6zIZfUH8atAHJbVHOO7GTP1MdTG+v0eE+Q=
 github.com/filecoin-project/storetheindex v0.3.5/go.mod h1:0r3d0kSpK63O6AvLr1CjAINLi+nWD49clzcnKV+GLpI=
 github.com/filecoin-project/test-vectors/schema v0.0.5/go.mod h1:iQ9QXLpYWL3m7warwvK1JC/pTri8mnfEmKygNDqqY6E=
-github.com/filecoin-project/venus v1.6.0-pre-rc1 h1:xZ+Jk5L0nYTOdLTO5Yi9PdckD6g7Y6RoZ0npw+5JFMk=
 github.com/filecoin-project/venus v1.6.0-pre-rc1/go.mod h1:1Y8eUXLJ3BO3rEEg1ZKR5toyvSR6kfBbNQ3CEVr0I9M=
+github.com/filecoin-project/venus v1.6.0-pre-rc1.0.20220614014034-ad37f66f2e2a h1:h0ePARQtCUEpJvpF0uqomsLczUhXVZKd2O/Jh07doQ4=
+github.com/filecoin-project/venus v1.6.0-pre-rc1.0.20220614014034-ad37f66f2e2a/go.mod h1:1Y8eUXLJ3BO3rEEg1ZKR5toyvSR6kfBbNQ3CEVr0I9M=
 github.com/filecoin-project/venus-auth v1.6.0-pre-rc1/go.mod h1:x/Cv3zz9z5O+/uqIKgYtk5UsL7nYu+CtiPjyVQ8Lywg=
-github.com/filecoin-project/venus-market/v2 v2.2.0-pre-rc1 h1:RFcv5j6lrke+RpLexUF69Rz3PFun2ROK0hNzYhLeSrQ=
-github.com/filecoin-project/venus-market/v2 v2.2.0-pre-rc1/go.mod h1:Fj0HDFTsH5TRXL1+1J1ev0jkK/ZqdbSECsUhdSl00Wo=
-github.com/filecoin-project/venus-messager v1.6.0-pre-rc1/go.mod h1:T1+zzqqrbQE4xa9OQGYbeO01GlA2IRJvWLlgsZqgQtg=
+github.com/filecoin-project/venus-market/v2 v2.2.0-pre-rc1.0.20220614022111-76fa7d3fac33 h1:k4KHVXlZUFoVYwW4xiPP8Aq34kxjJz5iUQl6djLXx74=
+github.com/filecoin-project/venus-market/v2 v2.2.0-pre-rc1.0.20220614022111-76fa7d3fac33/go.mod h1:lmgUdQQ61lSUSFw5cWvgddwQukyn88UqcyJKjPzS//k=
+github.com/filecoin-project/venus-messager v1.6.0-pre-rc1.0.20220614014937-a6ea4b882904/go.mod h1:2kpF4VGJQ4Ictm+yq8aHkdT5wCSNCzXv32zQx+BlO7M=
 github.com/flynn/go-shlex v0.0.0-20150515145356-3f9db97f8568/go.mod h1:xEzjJPgXI435gkrCt3MPfRiAkVrwSbHsst4LCFVfpJc=
 github.com/flynn/noise v0.0.0-20180327030543-2492fe189ae6/go.mod h1:1i71OnUq3iUe1ma7Lr6yG6/rjvM3emb6yoL7xLFzcVQ=
 github.com/flynn/noise v1.0.0 h1:DlTHqmzmvcEiKj+4RYo/imoswx/4r6iBlCMfVtrMXpQ=

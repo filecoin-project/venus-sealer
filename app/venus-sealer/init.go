@@ -10,9 +10,6 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/filecoin-project/venus-sealer/lib/blockstore"
-	builtinactors "github.com/filecoin-project/venus/venus-shared/builtin-actors"
-
 	"github.com/filecoin-project/go-address"
 	paramfetch "github.com/filecoin-project/go-paramfetch"
 	"github.com/filecoin-project/go-state-types/abi"
@@ -236,11 +233,6 @@ var initCmd = &cli.Command{
 			err = config.SaveConfig(defaultCfg.ConfigPath, defaultCfg)
 			if err != nil {
 				return err
-			}
-
-			bs := blockstore.NewMemory()
-			if err := builtinactors.FetchAndLoadBundles(cctx.Context, bs, builtinactors.BuiltinActorReleases); err != nil {
-				return xerrors.Errorf("error loading actor manifest: %w", err)
 			}
 
 			var localPaths []stores.LocalPath
