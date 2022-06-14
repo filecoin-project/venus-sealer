@@ -29,8 +29,6 @@ import (
 	"github.com/filecoin-project/venus-sealer/types"
 )
 
-const arp = abi.RegisteredAggregationProof_SnarkPackV1
-
 var aggFeeNum = big.NewInt(110)
 var aggFeeDen = big.NewInt(100)
 
@@ -212,13 +210,22 @@ func (b *CommitBatcher) maybeStartBatch(notif bool) ([]sealiface.CommitBatchRes,
 
 	var res []sealiface.CommitBatchRes
 
-	individual := (total < cfg.MinCommitBatch) || (total < miner.MinAggregatedSectors)
+	tok, h, err := b.api.ChainHead(b.mctx)
+	if err != nil {
+		return nil, err
+	}
+
+	blackedOut := func() bool {
+		const nv16BlackoutWindow = abi.ChainEpoch(20) // a magik number
+		if h <= abi.ChainEpoch(b.networkParams.UpgradeSkyrHeight) && abi.ChainEpoch(b.networkParams.UpgradeSkyrHeight)-h < nv16BlackoutWindow {
+			return true
+		}
+		return false
+	}
+
+	individual := (total < cfg.MinCommitBatch) || (total < miner.MinAggregatedSectors) || blackedOut()
 
 	if !individual && !cfg.AggregateAboveBaseFee.Equals(big.Zero()) {
-		tok, _, err := b.api.ChainHead(b.mctx)
-		if err != nil {
-			return nil, err
-		}
 
 		bf, err := b.api.ChainBaseFee(b.mctx, tok)
 		if err != nil {
@@ -320,6 +327,17 @@ func (b *CommitBatcher) processBatch(cfg sealiface.Config) ([]sealiface.CommitBa
 		return []sealiface.CommitBatchRes{res}, xerrors.Errorf("getting miner id: %w", err)
 	}
 
+	nv, err := b.api.StateNetworkVersion(b.mctx, tok)
+	if err != nil {
+		log.Errorf("getting network version: %s", err)
+		return []sealiface.CommitBatchRes{res}, xerrors.Errorf("getting network version: %s", err)
+	}
+
+	arp, err := b.aggregateProofType(nv)
+	if err != nil {
+		return []sealiface.CommitBatchRes{res}, xerrors.Errorf("getting aggregate proof type: %w", err)
+	}
+
 	params.AggregateProof, err = b.prover.AggregateSealProofs(proof.AggregateSealVerifyProofAndInfos{
 		Miner:          abi.ActorID(mid),
 		SealProof:      b.todo[infos[0].Number].Spt,
@@ -345,12 +363,6 @@ func (b *CommitBatcher) processBatch(cfg sealiface.Config) ([]sealiface.CommitBa
 	bf, err := b.api.ChainBaseFee(b.mctx, tok)
 	if err != nil {
 		return []sealiface.CommitBatchRes{res}, xerrors.Errorf("couldn't get base fee: %w", err)
-	}
-
-	nv, err := b.api.StateNetworkVersion(b.mctx, tok)
-	if err != nil {
-		log.Errorf("getting network version: %s", err)
-		return []sealiface.CommitBatchRes{res}, xerrors.Errorf("getting network version: %s", err)
 	}
 
 	aggFeeRaw, err := policy.AggregateProveCommitNetworkFee(nv, len(infos), bf)
@@ -630,4 +642,10 @@ func (b *CommitBatcher) getSectorCollateral(sn abi.SectorNumber, tok types.TipSe
 	}
 
 	return collateral, nil
+}
+func (b *CommitBatcher) aggregateProofType(nv network.Version) (abi.RegisteredAggregationProof, error) {
+	if nv < network.Version16 {
+		return abi.RegisteredAggregationProof_SnarkPackV1, nil
+	}
+	return abi.RegisteredAggregationProof_SnarkPackV2, nil
 }

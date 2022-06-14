@@ -361,6 +361,7 @@ type FeeConfig struct {
 type NetParamsConfig struct {
 	UpgradeIgnitionHeight   abi.ChainEpoch
 	UpgradeOhSnapHeight     int64
+	UpgradeSkyrHeight       int64
 	ForkLengthThreshold     abi.ChainEpoch
 	BlockDelaySecs          uint64
 	PreCommitChallengeDelay abi.ChainEpoch
