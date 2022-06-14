@@ -146,22 +146,14 @@ var loadActorsWithCmdBefore = func(cctx *cli.Context) error {
 			return err
 		}
 	}
+
 	nt, err := networkNameToNetworkType(networkName)
 	if err != nil {
 		return err
 	}
-	repoPath, err := homedir.Expand(cctx.String("repo"))
-	if err != nil {
-		return err
-	}
-	builtinactors.SetNetworkBundle(nt)
-	if err := os.Setenv(builtinactors.RepoPath, repoPath); err != nil {
-		return xerrors.Errorf("failed to set env %s", builtinactors.RepoPath)
-	}
 
-	bs := blockstore.NewMemory()
-	if err := builtinactors.FetchAndLoadBundles(cctx.Context, bs, builtinactors.BuiltinActorReleases); err != nil {
-		panic(fmt.Errorf("error loading actor manifest: %w", err))
+	if err := builtinactors.SetNetworkBundle(nt); err != nil {
+		return fmt.Errorf("set network bundle: %w", err)
 	}
 
 	return nil
