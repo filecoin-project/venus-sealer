@@ -103,7 +103,7 @@ func (s *WindowPoStScheduler) Run(ctx context.Context) {
 
 	latest, err := s.api.ChainHead(ctx)
 	if err != nil {
-		log.Errorf("error to get latest chain head %v", err)
+		log.Errorf("get chain head: %v", err)
 	}
 	s.update(ctx, nil, latest)
 
@@ -113,35 +113,47 @@ func (s *WindowPoStScheduler) Run(ctx context.Context) {
 	for {
 		select {
 		case <-tm.C:
-			current, err := s.api.ChainHead(ctx)
-			if err != nil {
-				log.Errorf("error to get latest chain head %v", err)
-				continue
-			}
-			changes, err := s.api.ChainGetPath(ctx, latest.Key(), current.Key())
-			if err != nil {
-				log.Errorf("error to get chain path %v", err)
-				continue
-			}
-
-			var lowest, highest *types.TipSet = nil, nil
-
-			for _, change := range changes {
-				if change.Val == nil {
-					log.Errorf("change.Val was nil")
+			{
+				current, err := s.api.ChainHead(ctx)
+				if err != nil {
+					log.Errorf("get chain head %v", err)
+					continue
 				}
-				switch change.Type {
-				case types.HCRevert:
-					lowest = change.Val
-				case types.HCApply:
-					highest = change.Val
-				}
-			}
 
-			s.update(ctx, lowest, highest)
-			latest = current
+				if current.String() == latest.String() {
+					log.Debug("window PoSt schedule, head not change")
+					continue
+				}
+
+				changes, err := s.api.ChainGetPath(ctx, latest.Key(), current.Key())
+				if err != nil {
+					log.Errorf("error to get chain path %v", err)
+					continue
+				}
+
+				var lowest, highest *types.TipSet = nil, nil
+
+				for _, change := range changes {
+					if change.Val == nil {
+						log.Errorf("change.Val was nil")
+					}
+					switch change.Type {
+					case types.HCRevert:
+						lowest = change.Val
+					case types.HCApply:
+						highest = change.Val
+					}
+				}
+
+				if highest.String() == latest.String() {
+					log.Debug("window PoSt schedule,head not change")
+					continue
+				}
+
+				s.update(ctx, lowest, highest)
+				latest = current
+			}
 		case <-ctx.Done():
-
 			log.Warnf("cancel windows post scheduler")
 			return
 		}
@@ -153,6 +165,7 @@ func (s *WindowPoStScheduler) update(ctx context.Context, revert, apply *types.T
 		log.Error("no new tipset in window post WindowPoStScheduler.update")
 		return
 	}
+
 	err := s.ch.update(ctx, revert, apply)
 	if err != nil {
 		log.Errorf("handling head updates in window post sched: %+v", err)

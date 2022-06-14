@@ -368,11 +368,6 @@ func StorageMiner(fc config.MinerFeeConfig) func(params StorageMinerParams) (*st
 
 		ctx := LifecycleCtx(mctx, lc)
 
-		fps, err := storage.NewWindowedPoStScheduler(api, messager, fc, as, sealer, verif, sealer, j, maddr, np)
-		if err != nil {
-			return nil, err
-		}
-
 		sm, err := storage.NewMiner(api, ps, messager, marketClient, maddr, metadataService, sectorinfoService, logService, sealer, sc, verif, prover, gsd, fc, j, as, np)
 		if err != nil {
 			return nil, err
@@ -380,7 +375,6 @@ func StorageMiner(fc config.MinerFeeConfig) func(params StorageMinerParams) (*st
 
 		lc.Append(fx.Hook{
 			OnStart: func(context.Context) error {
-				go fps.Run(ctx)
 				return sm.Run(ctx)
 			},
 			OnStop: sm.Stop,

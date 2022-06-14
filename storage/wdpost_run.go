@@ -563,6 +563,12 @@ func (s *WindowPoStScheduler) runPoStCycle(ctx context.Context, manual bool, di 
 		return nil, err
 	}
 
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorf("recover: %s", r)
+		}
+	}()
+
 	// Generate proofs in batches
 	posts := make([]miner.SubmitWindowedPoStParams, 0, len(partitionBatches))
 	for batchIdx, batch := range partitionBatches {
@@ -658,11 +664,6 @@ func (s *WindowPoStScheduler) runPoStCycle(ctx context.Context, manual bool, di 
 				return nil, err
 			}
 
-			defer func() {
-				if r := recover(); r != nil {
-					log.Errorf("recover: %s", r)
-				}
-			}()
 			postOut, ps, err := s.prover.GenerateWindowPoSt(ctx, abi.ActorID(mid), xsinfos, append(abi.PoStRandomness{}, rand...))
 			elapsed := time.Since(tsStart)
 			log.Infow("computing window post", "batch", batchIdx, "elapsed", elapsed)
@@ -906,7 +907,7 @@ func (s *WindowPoStScheduler) submitPoStMessage(ctx context.Context, proof *mine
 			return
 		}
 
-		log.Errorf("Submitting window post  uid %s failed: exit %d", uid, rec.Receipt.ExitCode)
+		log.Errorf("Submitting window post uid %s failed: exit %d", uid, rec.Receipt.ExitCode)
 	}()
 
 	return uid, nil
