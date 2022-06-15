@@ -66,7 +66,7 @@ type schedTestWorker struct {
 	ignoreResources bool
 }
 
-func (s *schedTestWorker) DataCid(ctx context.Context, pieceSize abi.UnpaddedPieceSize, pieceData storage.Data) (storiface.CallID, error) {
+func (s *schedTestWorker) DataCid(ctx context.Context, pieceSize abi.UnpaddedPieceSize, pieceData storage.Data) (types.CallID, error) {
 	panic("implement me")
 }
 
