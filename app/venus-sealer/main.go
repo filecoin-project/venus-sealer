@@ -6,7 +6,6 @@ import (
 
 	"github.com/filecoin-project/go-address"
 	logging "github.com/ipfs/go-log/v2"
-	"github.com/mitchellh/go-homedir"
 	"github.com/urfave/cli/v2"
 	"go.opencensus.io/trace"
 	"golang.org/x/xerrors"
@@ -15,7 +14,6 @@ import (
 	"github.com/filecoin-project/venus-sealer/api"
 	panicreporter "github.com/filecoin-project/venus-sealer/app/panic-reporter"
 	"github.com/filecoin-project/venus-sealer/constants"
-	"github.com/filecoin-project/venus-sealer/lib/blockstore"
 	"github.com/filecoin-project/venus-sealer/lib/tracing"
 	"github.com/filecoin-project/venus-sealer/types"
 	builtinactors "github.com/filecoin-project/venus/venus-shared/builtin-actors"
