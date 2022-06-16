@@ -5,17 +5,19 @@ import (
 	"os"
 
 	"github.com/filecoin-project/go-address"
-
 	logging "github.com/ipfs/go-log/v2"
 	"github.com/urfave/cli/v2"
 	"go.opencensus.io/trace"
 	"golang.org/x/xerrors"
 
 	sealer "github.com/filecoin-project/venus-sealer"
+	"github.com/filecoin-project/venus-sealer/api"
+	panicreporter "github.com/filecoin-project/venus-sealer/app/panic-reporter"
 	"github.com/filecoin-project/venus-sealer/constants"
 	"github.com/filecoin-project/venus-sealer/lib/tracing"
-
-	"github.com/filecoin-project/venus-sealer/app/panic-reporter"
+	"github.com/filecoin-project/venus-sealer/types"
+	builtinactors "github.com/filecoin-project/venus/venus-shared/builtin-actors"
+	vtypes "github.com/filecoin-project/venus/venus-shared/types"
 )
 
 var log = logging.Logger("main")
@@ -41,9 +43,11 @@ func main() {
 			jaeger = tracing.SetupJaegerTracing("venus-sealer/" + cmd.Name)
 
 			if originBefore != nil {
-				return originBefore(cctx)
+				if err := originBefore(cctx); err != nil {
+					return err
+				}
 			}
-			return nil
+			return loadActorsWithCmdBefore(cctx)
 		}
 	}
 
@@ -123,5 +127,50 @@ func RunApp(app *cli.App) {
 			_ = cli.ShowCommandHelp(phe.Ctx, phe.Ctx.Command.Name)
 		}
 		os.Exit(1)
+	}
+}
+
+var loadActorsWithCmdBefore = func(cctx *cli.Context) error {
+	networkName := types.NetworkName(cctx.String("network"))
+	if cctx.Command.Name != "init" {
+		nodeApi, ncloser, err := api.GetFullNodeAPIV2(cctx)
+		if err != nil {
+			return xerrors.Errorf("getting full node api: %w", err)
+		}
+		defer ncloser()
+
+		networkName, err = nodeApi.StateNetworkName(cctx.Context)
+		if err != nil {
+			return err
+		}
+	}
+
+	nt, err := networkNameToNetworkType(networkName)
+	if err != nil {
+		return err
+	}
+
+	if err := builtinactors.SetNetworkBundle(nt); err != nil {
+		return fmt.Errorf("set network bundle: %w", err)
+	}
+
+	return nil
+}
+
+func networkNameToNetworkType(networkName types.NetworkName) (vtypes.NetworkType, error) {
+	switch networkName {
+	case "":
+		return vtypes.NetworkDefault, xerrors.Errorf("network name is empty")
+	case "mainnet":
+		return vtypes.NetworkMainnet, nil
+	case "calibrationnet", "calibration":
+		return vtypes.NetworkCalibnet, nil
+	case "butterflynet", "butterfly":
+		return vtypes.NetworkButterfly, nil
+	case "interopnet", "interop":
+		return vtypes.NetworkInterop, nil
+	default:
+		// include 2k force
+		return vtypes.Network2k, nil
 	}
 }

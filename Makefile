@@ -31,7 +31,6 @@ deps:
 api-docs-gen:
 	go run ./tool/api-docs-gen/cmd ./api/storage_struct.go StorageMiner api ./api/ > ./docs/api-documents.md
 
-
 lotus-fix:
 	rm -f lotus-fix
 	go build -o lotus-fix ./tool/convert-with-lotus/to-lotus

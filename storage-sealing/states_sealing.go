@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/ipfs/go-cid"
-	"golang.org/x/xerrors"
 	"io/ioutil"
 	"strings"
 	"time"
+
+	"github.com/ipfs/go-cid"
+	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/go-commp-utils/zerocomm"
 	"github.com/filecoin-project/go-state-types/abi"
@@ -19,12 +20,13 @@ import (
 	"github.com/filecoin-project/go-statemachine"
 	"github.com/filecoin-project/specs-storage/storage"
 
+	"github.com/filecoin-project/go-state-types/builtin"
+	"github.com/filecoin-project/go-state-types/builtin/v8/miner"
 	builtin2 "github.com/filecoin-project/specs-actors/v2/actors/builtin"
 	actors "github.com/filecoin-project/venus/venus-shared/actors"
-	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
 	"github.com/filecoin-project/venus/venus-shared/actors/policy"
 
-	"github.com/filecoin-project/specs-actors/v5/actors/runtime/proof"
+	"github.com/filecoin-project/go-state-types/proof"
 
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/constants"
@@ -90,7 +92,7 @@ func (m *Sealing) handlePacking(ctx statemachine.Context, sector types.SectorInf
 		}
 	}
 
-	fillerPieces, err := m.padSector(sector.SealingCtx(ctx.Context()), m.minerSector(sector.SectorType, sector.SectorNumber), deals>0, sector.ExistingPieceSizes(), fillerSizes...)
+	fillerPieces, err := m.padSector(sector.SealingCtx(ctx.Context()), m.minerSector(sector.SectorType, sector.SectorNumber), deals > 0, sector.ExistingPieceSizes(), fillerSizes...)
 	if err != nil {
 		return xerrors.Errorf("filling up the sector (%v): %w", fillerSizes, err)
 	}
@@ -378,14 +380,6 @@ func (m *Sealing) handlePreCommit2(ctx statemachine.Context, sector types.Sector
 	})
 }
 
-// TODO: We should probably invoke this method in most (if not all) state transition failures after handlePreCommitting
-func (m *Sealing) remarkForUpgrade(ctx context.Context, sid abi.SectorNumber) {
-	err := m.MarkForUpgrade(ctx, sid)
-	if err != nil {
-		log.Errorf("error re-marking sector %d as for upgrade: %+v", sid, err)
-	}
-}
-
 func (m *Sealing) preCommitParams(ctx statemachine.Context, sector types.SectorInfo) (*miner.SectorPreCommitInfo, big.Int, types.TipSetToken, error) {
 	tok, height, err := m.api.ChainHead(ctx.Context())
 	if err != nil {
@@ -459,16 +453,12 @@ func (m *Sealing) preCommitParams(ctx statemachine.Context, sector types.SectorI
 		DealIDs:       sector.DealIDs(),
 	}
 
-	depositMinimum := m.tryUpgradeSector(ctx.Context(), params)
-
 	collateral, err := m.api.StateMinerPreCommitDepositForPower(ctx.Context(), m.maddr, *params, tok)
 	if err != nil {
 		return nil, big.Zero(), nil, xerrors.Errorf("getting initial pledge collateral: %w", err)
 	}
 
-	deposit := big.Max(depositMinimum, collateral)
-
-	return params, deposit, tok, nil
+	return params, collateral, tok, nil
 }
 
 func (m *Sealing) handlePreCommitting(ctx statemachine.Context, sector types.SectorInfo) error {
@@ -520,11 +510,8 @@ func (m *Sealing) handlePreCommitting(ctx statemachine.Context, sector types.Sec
 	}
 
 	log.Infof("submitting precommit for sector %d (deposit: %s): ", sector.SectorNumber, deposit)
-	uid, err := m.api.MessagerSendMsg(ctx.Context(), from, m.maddr, miner.Methods.PreCommitSector, deposit, big.Int(m.feeCfg.MaxPreCommitGasFee), enc.Bytes())
+	uid, err := m.api.MessagerSendMsg(ctx.Context(), from, m.maddr, builtin.MethodsMiner.PreCommitSector, deposit, big.Int(m.feeCfg.MaxPreCommitGasFee), enc.Bytes())
 	if err != nil {
-		if params.ReplaceCapacity {
-			m.remarkForUpgrade(ctx.Context(), params.ReplaceSectorNumber)
-		}
 		return ctx.Send(SectorChainPreCommitFailed{xerrors.Errorf("pushing message to mpool: %w", err)})
 	}
 
@@ -826,7 +813,7 @@ func (m *Sealing) handleSubmitCommit(ctx statemachine.Context, sector types.Sect
 	}
 
 	// TODO: check seed / ticket / deals are up to date
-	uid, err := m.api.MessagerSendMsg(ctx.Context(), from, m.maddr, miner.Methods.ProveCommitSector, collateral, big.Int(m.feeCfg.MaxCommitGasFee), enc.Bytes())
+	uid, err := m.api.MessagerSendMsg(ctx.Context(), from, m.maddr, builtin.MethodsMiner.ProveCommitSector, collateral, big.Int(m.feeCfg.MaxCommitGasFee), enc.Bytes())
 	if err != nil {
 		return ctx.Send(SectorCommitFailed{xerrors.Errorf("pushing message to mpool: %w", err)})
 	}
@@ -884,8 +871,6 @@ func (m *Sealing) handleCommitWait(ctx statemachine.Context, sector types.Sector
 		return ctx.Send(SectorCommitFailed{xerrors.Errorf("entered commit wait with no commit cid")})
 	}
 
-
-
 	mw, err := m.api.MessagerWaitMsg(ctx.Context(), sector.CommitMessage)
 	if err != nil {
 		if isUnRecoverError(err.Error()) {
@@ -926,8 +911,12 @@ func (m *Sealing) handleFinalizeSector(ctx statemachine.Context, sector types.Se
 		return xerrors.Errorf("getting sealing config: %w", err)
 	}
 
-	if err := m.sealer.FinalizeSector(sector.SealingCtx(ctx.Context()), m.minerSector(sector.SectorType, sector.SectorNumber), sector.KeepUnsealedRanges(false, cfg.AlwaysKeepUnsealedCopy)); err != nil {
+	if err := m.sealer.FinalizeSector(sector.SealingCtx(ctx.Context()), m.minerSector(sector.SectorType, sector.SectorNumber), sector.KeepUnsealedRanges(sector.Pieces, false, cfg.AlwaysKeepUnsealedCopy)); err != nil {
 		return ctx.Send(SectorFinalizeFailed{xerrors.Errorf("finalize sector: %w", err)})
+	}
+
+	if cfg.MakeCCSectorsAvailable && !sector.HasDeals() {
+		return ctx.Send(SectorFinalizedAvailable{})
 	}
 
 	return ctx.Send(SectorFinalized{})

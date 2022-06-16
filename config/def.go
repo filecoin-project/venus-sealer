@@ -14,7 +14,7 @@ import (
 
 	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
 
-	"github.com/filecoin-project/venus-market/config"
+	"github.com/filecoin-project/venus-market/v2/config"
 
 	"github.com/filecoin-project/venus/venus-shared/types"
 )
@@ -227,11 +227,20 @@ type SealingConfig struct {
 	// 0 = no limit
 	MaxWaitDealsSectors uint64
 
-	// includes failed, 0 = no limit
+	// Upper bound on how many sectors can be sealing+upgrading at the same time when creating new CC sectors (0 = unlimited)
 	MaxSealingSectors uint64
 
-	// includes failed, 0 = no limit
+	// Upper bound on how many sectors can be sealing+upgrading at the same time when creating new sectors with deals (0 = unlimited)
 	MaxSealingSectorsForDeals uint64
+
+	// Prefer creating new sectors even if there are sectors Available for upgrading.
+	// This setting combined with MaxUpgradingSectors set to a value higher than MaxSealingSectorsForDeals makes it
+	// possible to use fast sector upgrades to handle high volumes of storage deals, while still using the simple sealing
+	// flow when the volume of storage deals is lower.
+	PreferNewSectorsForDeals bool
+
+	// Upper bound on how many sectors can be sealing+upgrading at the same time when upgrading CC sectors with deals (0 = MaxSealingSectorsForDeals)
+	MaxUpgradingSectors uint64
 
 	WaitDealsDelay Duration
 
@@ -245,6 +254,11 @@ type SealingConfig struct {
 
 	// Run sector finalization before submitting sector proof to the chain
 	FinalizeEarly bool
+
+	// Whether new sectors are created to pack incoming deals
+	// When this is set to false no new sectors will be created for sealing incoming deals
+	// This is useful for forcing all deals to be assigned as snap deals to sectors marked for upgrade
+	MakeNewSectorForDeals bool
 
 	// enable / disable precommit batching (takes effect after nv13)
 	BatchPreCommits bool
@@ -347,6 +361,7 @@ type FeeConfig struct {
 type NetParamsConfig struct {
 	UpgradeIgnitionHeight   abi.ChainEpoch
 	UpgradeOhSnapHeight     int64
+	UpgradeSkyrHeight       int64
 	ForkLengthThreshold     abi.ChainEpoch
 	BlockDelaySecs          uint64
 	PreCommitChallengeDelay abi.ChainEpoch

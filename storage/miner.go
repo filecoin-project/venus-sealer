@@ -3,8 +3,9 @@ package storage
 import (
 	"context"
 	"errors"
-	"github.com/filecoin-project/venus/venus-shared/api/market"
 	"time"
+
+	"github.com/filecoin-project/venus/venus-shared/api/market"
 
 	"github.com/ipfs/go-cid"
 	logging "github.com/ipfs/go-log/v2"
@@ -18,11 +19,12 @@ import (
 	"github.com/filecoin-project/go-state-types/network"
 	"github.com/filecoin-project/specs-storage/storage"
 
-	"github.com/filecoin-project/venus-market/piecestorage"
+	"github.com/filecoin-project/venus-market/v2/piecestorage"
 
+	"github.com/filecoin-project/go-state-types/builtin/v8/miner"
 	"github.com/filecoin-project/venus/pkg/events"
 	"github.com/filecoin-project/venus/venus-shared/actors/builtin"
-	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	lminer "github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
 	"github.com/filecoin-project/venus/venus-shared/actors/policy"
 	"github.com/filecoin-project/venus/venus-shared/types"
 
@@ -48,7 +50,7 @@ var log = logging.Logger("storageminer")
 //
 // Miner#Run starts the sealing FSM.
 type Miner struct {
-	pieceStorage      piecestorage.IPieceStorage
+	pieceStorageMrg   *piecestorage.PieceStorageManager
 	messager          api.IMessager
 	marketClient      market.IMarket
 	metadataService   *service.MetadataService
@@ -92,8 +94,8 @@ type fullNodeFilteredAPI interface {
 	StateMinerSectors(context.Context, address.Address, *bitfield.BitField, types.TipSetKey) ([]*miner.SectorOnChainInfo, error)
 	StateSectorPreCommitInfo(context.Context, address.Address, abi.SectorNumber, types.TipSetKey) (miner.SectorPreCommitOnChainInfo, error)
 	StateSectorGetInfo(context.Context, address.Address, abi.SectorNumber, types.TipSetKey) (*miner.SectorOnChainInfo, error)
-	StateSectorPartition(ctx context.Context, maddr address.Address, sectorNumber abi.SectorNumber, tok types.TipSetKey) (*miner.SectorLocation, error)
-	StateMinerInfo(context.Context, address.Address, types.TipSetKey) (miner.MinerInfo, error)
+	StateSectorPartition(ctx context.Context, maddr address.Address, sectorNumber abi.SectorNumber, tok types.TipSetKey) (*lminer.SectorLocation, error)
+	StateMinerInfo(context.Context, address.Address, types.TipSetKey) (types.MinerInfo, error)
 	StateMinerAvailableBalance(context.Context, address.Address, types.TipSetKey) (types.BigInt, error)
 	StateMinerActiveSectors(context.Context, address.Address, types.TipSetKey) ([]*miner.SectorOnChainInfo, error)
 	StateMinerDeadlines(context.Context, address.Address, types.TipSetKey) ([]types.Deadline, error)
@@ -139,7 +141,7 @@ type fullNodeFilteredAPI interface {
 }
 
 func NewMiner(api fullNodeFilteredAPI,
-	pieceStorage piecestorage.IPieceStorage,
+	pieceStorageMgr *piecestorage.PieceStorageManager,
 	messager api.IMessager,
 	marketClient market.IMarket,
 	maddr address.Address,
@@ -172,7 +174,7 @@ func NewMiner(api fullNodeFilteredAPI,
 		getSealConfig:     gsd,
 		journal:           journal,
 		logService:        logService,
-		pieceStorage:      pieceStorage,
+		pieceStorageMrg:   pieceStorageMgr,
 		sealingEvtType:    journal.RegisterEventType("storage", "sealing_states"),
 	}
 
@@ -209,13 +211,13 @@ func (m *Miner) Run(ctx context.Context) error {
 	pcp := sealing.NewBasicPreCommitPolicy(adaptedAPI, cfg, provingBuffer)
 
 	// address selector.
-	as := func(ctx context.Context, mi miner.MinerInfo, use api.AddrUse, goodFunds, minFunds abi.TokenAmount) (address.Address, abi.TokenAmount, error) {
+	as := func(ctx context.Context, mi types.MinerInfo, use api.AddrUse, goodFunds, minFunds abi.TokenAmount) (address.Address, abi.TokenAmount, error) {
 		return m.addrSel.AddressFor(ctx, m.api, m.messager, mi, use, goodFunds, minFunds)
 	}
 
 	// Instantiate the sealing FSM.
 	m.sealing = sealing.New(ctx, adaptedAPI, m.feeCfg, evtsAdapter, m.maddr, m.metadataService, m.sectorInfoService, m.logService, m.sealer, m.sc, m.verif, m.prover,
-		&pcp, cfg, m.handleSealingNotifications, as, m.networkParams, m.pieceStorage)
+		&pcp, cfg, m.handleSealingNotifications, as, m.networkParams, m.pieceStorageMrg)
 
 	// Run the sealing FSM.
 	go m.sealing.Run(ctx) //nolint:errcheck // logged intside the function

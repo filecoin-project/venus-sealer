@@ -2,6 +2,16 @@ package docgen
 
 import (
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"os"
+	"path/filepath"
+	"reflect"
+	"strings"
+	"time"
+	"unicode"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-bitfield"
 	datatransfer "github.com/filecoin-project/go-data-transfer"
@@ -16,6 +26,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
 	stype "github.com/filecoin-project/venus-sealer/types"
+	"github.com/filecoin-project/venus/venus-shared/types/market"
 	types "github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/google/uuid"
 	"github.com/ipfs/go-cid"
@@ -26,15 +37,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/multiformats/go-multiaddr"
-	"go/ast"
-	"go/parser"
-	"go/token"
-	"os"
-	"path/filepath"
-	"reflect"
-	"strings"
-	"time"
-	"unicode"
 )
 
 var ExampleValues = map[reflect.Type]interface{}{
@@ -101,7 +103,7 @@ func init() {
 	addExample(abi.SectorSize(32 * 1024 * 1024 * 1024))
 	addExample(network.Connected)
 	addExample(time.Minute)
-	addExample(graphsync.RequestID(4))
+	addExample(graphsync.NewRequestID().String())
 	addExample(datatransfer.TransferID(3))
 	addExample(datatransfer.Ongoing)
 	addExample(clientEvent)
@@ -111,6 +113,7 @@ func init() {
 	addExample(network.ReachabilityPublic)
 	addExample(map[string]int{"name": 42})
 	addExample(map[string]time.Time{"name": time.Unix(1615243938, 0).UTC()})
+	addExample(market.PieceStatus(""))
 	addExample(map[string]*pubsub.TopicScoreSnapshot{
 		"/blocks": {
 			TimeInMesh:               time.Minute,

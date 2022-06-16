@@ -113,6 +113,7 @@ var fsmPlanners = map[types.SectorState]func(events []statemachine.Event, state 
 	types.Committing: planCommitting,
 	types.CommitFinalize: planOne(
 		on(SectorFinalized{}, types.SubmitCommit),
+		on(SectorFinalizedAvailable{}, types.SubmitCommit),
 		on(SectorFinalizeFailed{}, types.CommitFinalizeFailed),
 	),
 	types.SubmitCommit: planOne(
@@ -138,6 +139,7 @@ var fsmPlanners = map[types.SectorState]func(events []statemachine.Event, state 
 
 	types.FinalizeSector: planOne(
 		on(SectorFinalized{}, types.Proving),
+		on(SectorFinalizedAvailable{}, types.Available),
 		on(SectorFinalizeFailed{}, types.FinalizeFailed),
 	),
 
@@ -166,24 +168,24 @@ var fsmPlanners = map[types.SectorState]func(events []statemachine.Event, state 
 		on(SectorAbortUpgrade{}, types.AbortUpgrade),
 	),
 	types.ProveReplicaUpdate: planOne(
-		on(SectorProveReplicaUpdate{}, types.SubmitReplicaUpdate),
+		on(SectorProveReplicaUpdate{}, types.FinalizeReplicaUpdate),
 		on(SectorProveReplicaUpdateFailed{}, types.ReplicaUpdateFailed),
 		on(SectorDealsExpired{}, types.SnapDealsDealsExpired),
 		on(SectorInvalidDealIDs{}, types.SnapDealsRecoverDealIDs),
 		on(SectorAbortUpgrade{}, types.AbortUpgrade),
+	),
+	types.FinalizeReplicaUpdate: planOne(
+		on(SectorFinalized{}, types.SubmitReplicaUpdate),
+		on(SectorFinalizeFailed{}, types.FinalizeReplicaUpdateFailed),
 	),
 	types.SubmitReplicaUpdate: planOne(
 		on(SectorReplicaUpdateSubmitted{}, types.ReplicaUpdateWait),
 		on(SectorSubmitReplicaUpdateFailed{}, types.ReplicaUpdateFailed),
 	),
 	types.ReplicaUpdateWait: planOne(
-		on(SectorReplicaUpdateLanded{}, types.FinalizeReplicaUpdate),
+		on(SectorReplicaUpdateLanded{}, types.UpdateActivating),
 		on(SectorSubmitReplicaUpdateFailed{}, types.ReplicaUpdateFailed),
 		on(SectorAbortUpgrade{}, types.AbortUpgrade),
-	),
-	types.FinalizeReplicaUpdate: planOne(
-		on(SectorFinalized{}, types.UpdateActivating),
-		on(SectorFinalizeFailed{}, types.FinalizeReplicaUpdateFailed),
 	),
 	types.UpdateActivating: planOne(
 		on(SectorUpdateActive{}, types.ReleaseSectorKey),
@@ -284,7 +286,11 @@ var fsmPlanners = map[types.SectorState]func(events []statemachine.Event, state 
 	types.Proving: planOne(
 		on(SectorFaultReported{}, types.FaultReported),
 		on(SectorFaulty{}, types.Faulty),
+		on(SectorMarkForUpdate{}, types.Available),
+	),
+	types.Available: planOne(
 		on(SectorStartCCUpdate{}, types.SnapDealsWaitDeals),
+		on(SectorAbortUpgrade{}, types.Proving),
 	),
 	types.Terminating: planOne(
 		on(SectorTerminating{}, types.TerminateWait),
@@ -386,7 +392,7 @@ func (m *Sealing) plan(events []statemachine.Event, state *types.SectorInfo) (fu
 
 	processed, err := p(events, state)
 	if err != nil {
-		return nil, 0, xerrors.Errorf("running planner for state %s failed: %w", state.State, err)
+		return nil, processed, xerrors.Errorf("running planner for state %s failed: %w", state.State, err)
 	}
 
 	/////
@@ -551,6 +557,8 @@ func (m *Sealing) plan(events []statemachine.Event, state *types.SectorInfo) (fu
 	// Post-seal
 	case types.Proving:
 		return m.handleProvingSector, processed, nil
+	case types.Available:
+		return m.handleAvailableSector, processed, nil
 	case types.Terminating:
 		return m.handleTerminating, processed, nil
 	case types.TerminateWait:

@@ -10,7 +10,7 @@ import (
 
 	cborutil "github.com/filecoin-project/go-cbor-util"
 	"github.com/filecoin-project/go-state-types/abi"
-	market2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
+	"github.com/filecoin-project/go-state-types/builtin/v8/market"
 	tutils "github.com/filecoin-project/specs-actors/v2/support/testing"
 )
 
@@ -28,7 +28,7 @@ func TestSectorInfoSerialization(t *testing.T) {
 			StartEpoch: 0,
 			EndEpoch:   100,
 		},
-		DealProposal: &market2.DealProposal{
+		DealProposal: &market.DealProposal{
 			PieceCID:             dummyCid,
 			PieceSize:            5,
 			Client:               tutils.NewActorAddr(t, "client"),

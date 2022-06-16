@@ -44,12 +44,36 @@ type Remote struct {
 	pfHandler PartialFileHandler
 }
 
-func (r *Remote) RemoveCopies(ctx context.Context, s abi.SectorID, types storiface.SectorFileType) error {
-	// TODO: do this on remotes too
-	//  (not that we really need to do that since it's always called by the
-	//   worker which pulled the copy)
+func (r *Remote) RemoveCopies(ctx context.Context, s abi.SectorID, typ storiface.SectorFileType) error {
+	if bits.OnesCount(uint(typ)) != 1 {
+		return xerrors.New("RemoveCopies expects one file type")
+	}
 
-	return r.local.RemoveCopies(ctx, s, types)
+	if err := r.local.RemoveCopies(ctx, s, typ); err != nil {
+		return xerrors.Errorf("removing local copies: %w", err)
+	}
+
+	si, err := r.index.StorageFindSector(ctx, s, typ, 0, false)
+	if err != nil {
+		return xerrors.Errorf("finding existing sector %d(t:%d) failed: %w", s, typ, err)
+	}
+
+	var hasPrimary bool
+	var keep []ID
+	for _, info := range si {
+		if info.Primary {
+			hasPrimary = true
+			keep = append(keep, info.ID)
+			break
+		}
+	}
+
+	if !hasPrimary {
+		log.Warnf("remote RemoveCopies: no primary copies of sector %v (%s), not removing anything", s, typ)
+		return nil
+	}
+
+	return r.Remove(ctx, s, typ, true, keep)
 }
 
 func NewRemote(local Store, index SectorIndex, auth http.Header, fetchLimit int, pfHandler PartialFileHandler) *Remote {
@@ -70,6 +94,8 @@ func (r *Remote) AcquireSector(ctx context.Context, s storage.SectorRef, existin
 		return storiface.SectorPaths{}, storiface.SectorPaths{}, xerrors.New("can't both find and allocate a sector")
 	}
 
+	// First make sure that no other goroutines are trying to fetch this sector;
+	// wait if there are any.
 	for {
 		r.fetchLk.Lock()
 
@@ -97,6 +123,7 @@ func (r *Remote) AcquireSector(ctx context.Context, s storage.SectorRef, existin
 		r.fetchLk.Unlock()
 	}()
 
+	// Try to get the sector from local storage
 	paths, stores, err := r.local.AcquireSector(ctx, s, existing, allocate, pathType, op)
 	if err != nil {
 		return storiface.SectorPaths{}, storiface.SectorPaths{}, xerrors.Errorf("local acquire error: %w", err)
@@ -123,6 +150,9 @@ func (r *Remote) AcquireSector(ctx context.Context, s storage.SectorRef, existin
 		odt = storiface.FsOverheadFinalized
 	}
 
+	// If any path types weren't found in local storage, try fetching them
+
+	// First reserve storage
 	releaseStorage, err := r.local.Reserve(ctx, s, toFetch, ids, odt)
 	if err != nil {
 		return storiface.SectorPaths{}, storiface.SectorPaths{}, xerrors.Errorf("reserving storage space: %w", err)
@@ -156,7 +186,7 @@ func (r *Remote) AcquireSector(ctx context.Context, s storage.SectorRef, existin
 
 		if op == storiface.AcquireMove {
 			id := ID(storageID)
-			if err := r.deleteFromRemote(ctx, url, &id); err != nil {
+			if err := r.deleteFromRemote(ctx, url, []ID{id}); err != nil {
 				log.Warnf("deleting sector %v from %s (delete %s): %+v", s, storageID, url, err)
 			}
 		}
@@ -355,7 +385,7 @@ storeLoop:
 			}
 		}
 		for _, url := range info.URLs {
-			if err := r.deleteFromRemote(ctx, url, nil); err != nil {
+			if err := r.deleteFromRemote(ctx, url, keepIn); err != nil {
 				log.Warnf("remove %s: %+v", url, err)
 				continue
 			}
@@ -366,9 +396,9 @@ storeLoop:
 	return nil
 }
 
-func (r *Remote) deleteFromRemote(ctx context.Context, url string, keepIn *ID) error {
+func (r *Remote) deleteFromRemote(ctx context.Context, url string, keepIn IDList) error {
 	if keepIn != nil {
-		url = url + "?keep=" + string(*keepIn)
+		url = url + "?keep=" + keepIn.String()
 	}
 
 	log.Infof("Delete %s", url)

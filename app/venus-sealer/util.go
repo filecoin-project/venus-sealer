@@ -85,6 +85,7 @@ var stateOrder = map[types2.SectorState]stateMeta{}
 var stateList = []stateMeta{
 	{col: 39, state: "Total"},
 	{col: color.FgGreen, state: types2.Proving},
+	{col: color.FgGreen, state: types2.Available},
 	{col: color.FgGreen, state: types2.UpdateActivating},
 
 	{col: color.FgBlue, state: types2.Empty},
@@ -164,4 +165,18 @@ func getActorAddress(ctx context.Context, nodeAPI api.StorageMiner, overrideMadd
 	}
 
 	return maddr, nil
+}
+
+func isController(mi types.MinerInfo, addr address.Address) bool {
+	if addr == mi.Owner || addr == mi.Worker {
+		return true
+	}
+
+	for _, ca := range mi.ControlAddresses {
+		if addr == ca {
+			return true
+		}
+	}
+
+	return false
 }

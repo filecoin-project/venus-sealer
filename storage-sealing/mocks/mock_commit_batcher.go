@@ -12,9 +12,9 @@ import (
 	abi "github.com/filecoin-project/go-state-types/abi"
 	big "github.com/filecoin-project/go-state-types/big"
 	network "github.com/filecoin-project/go-state-types/network"
-	miner "github.com/filecoin-project/specs-actors/actors/builtin/miner"
+	miner "github.com/filecoin-project/go-state-types/builtin/v8/miner"
 	types "github.com/filecoin-project/venus-sealer/types"
-	miner0 "github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	types2 "github.com/filecoin-project/venus/venus-shared/types"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -103,10 +103,10 @@ func (mr *MockCommitBatcherApiMockRecorder) StateMinerAvailableBalance(arg0, arg
 }
 
 // StateMinerInfo mocks base method.
-func (m *MockCommitBatcherApi) StateMinerInfo(arg0 context.Context, arg1 address.Address, arg2 types.TipSetToken) (miner0.MinerInfo, error) {
+func (m *MockCommitBatcherApi) StateMinerInfo(arg0 context.Context, arg1 address.Address, arg2 types.TipSetToken) (types2.MinerInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StateMinerInfo", arg0, arg1, arg2)
-	ret0, _ := ret[0].(miner0.MinerInfo)
+	ret0, _ := ret[0].(types2.MinerInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -148,10 +148,10 @@ func (mr *MockCommitBatcherApiMockRecorder) StateNetworkVersion(arg0, arg1 inter
 }
 
 // StateSectorPreCommitInfo mocks base method.
-func (m *MockCommitBatcherApi) StateSectorPreCommitInfo(arg0 context.Context, arg1 address.Address, arg2 abi.SectorNumber, arg3 types.TipSetToken) (*miner0.SectorPreCommitOnChainInfo, error) {
+func (m *MockCommitBatcherApi) StateSectorPreCommitInfo(arg0 context.Context, arg1 address.Address, arg2 abi.SectorNumber, arg3 types.TipSetToken) (*miner.SectorPreCommitOnChainInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StateSectorPreCommitInfo", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(*miner0.SectorPreCommitOnChainInfo)
+	ret0, _ := ret[0].(*miner.SectorPreCommitOnChainInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

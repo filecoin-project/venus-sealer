@@ -8,7 +8,6 @@ import (
 
 	"github.com/filecoin-project/venus-sealer/api"
 
-	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
 	"github.com/filecoin-project/venus/venus-shared/types"
 )
 
@@ -27,7 +26,7 @@ type AddressSelector struct {
 	api.AddressConfig
 }
 
-func (as *AddressSelector) AddressFor(ctx context.Context, a addrSelectApi, am addrMessager, mi miner.MinerInfo, use api.AddrUse, goodFunds, minFunds abi.TokenAmount) (address.Address, abi.TokenAmount, error) {
+func (as *AddressSelector) AddressFor(ctx context.Context, a addrSelectApi, am addrMessager, mi types.MinerInfo, use api.AddrUse, goodFunds, minFunds abi.TokenAmount) (address.Address, abi.TokenAmount, error) {
 	var addrs []address.Address
 	switch use {
 	case api.PreCommitAddr:
@@ -88,7 +87,7 @@ func (as *AddressSelector) AddressFor(ctx context.Context, a addrSelectApi, am a
 	return pickAddress(ctx, a, am, mi, goodFunds, minFunds, addrs)
 }
 
-func pickAddress(ctx context.Context, a addrSelectApi, am addrMessager, mi miner.MinerInfo, goodFunds, minFunds abi.TokenAmount, addrs []address.Address) (address.Address, abi.TokenAmount, error) {
+func pickAddress(ctx context.Context, a addrSelectApi, am addrMessager, mi types.MinerInfo, goodFunds, minFunds abi.TokenAmount, addrs []address.Address) (address.Address, abi.TokenAmount, error) {
 	leastBad := mi.Worker
 	bestAvail := minFunds
 

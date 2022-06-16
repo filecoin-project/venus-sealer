@@ -23,6 +23,10 @@ type testExec struct {
 	apch chan chan apres
 }
 
+func (t *testExec) DataCid(ctx context.Context, pieceSize abi.UnpaddedPieceSize, pieceData storage.Data) (abi.PieceInfo, error) {
+	panic("implement me")
+}
+
 func (t *testExec) GenerateWinningPoSt(ctx context.Context, minerID abi.ActorID, sectorInfo []proof.ExtendedSectorInfo, randomness abi.PoStRandomness) ([]proof.PoStProof, error) {
 	panic("implement me")
 }
@@ -103,6 +107,13 @@ func (t *testExec) UnsealPiece(ctx context.Context, sector storage.SectorRef, of
 }
 
 func (t *testExec) ReadPiece(ctx context.Context, writer io.Writer, sector storage.SectorRef, offset storiface.UnpaddedByteIndex, size abi.UnpaddedPieceSize) (bool, error) {
+	panic("implement me")
+}
+
+func (t *testExec) GenerateWinningPoStWithVanilla(ctx context.Context, proofType abi.RegisteredPoStProof, minerID abi.ActorID, randomness abi.PoStRandomness, proofs [][]byte) ([]proof.PoStProof, error) {
+	panic("implement me")
+}
+func (t *testExec) GenerateWindowPoStWithVanilla(ctx context.Context, proofType abi.RegisteredPoStProof, minerID abi.ActorID, randomness abi.PoStRandomness, proofs [][]byte, partitionIdx int) (proof.PoStProof, error) {
 	panic("implement me")
 }
 

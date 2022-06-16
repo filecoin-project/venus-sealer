@@ -98,6 +98,7 @@ func DefaultMainnetStorageMiner() *StorageMiner {
 		NetParams: NetParamsConfig{
 			UpgradeIgnitionHeight: 94000,
 			UpgradeOhSnapHeight:   1594680,
+			UpgradeSkyrHeight:     99999999999999,
 			ForkLengthThreshold:   policy.ChainFinality,
 			BlockDelaySecs:        30,
 		},
@@ -180,6 +181,7 @@ func DefaultForceNetStorageMiner() *StorageMiner {
 		NetParams: NetParamsConfig{
 			UpgradeIgnitionHeight:   94000,
 			UpgradeOhSnapHeight:     999999999999,
+			UpgradeSkyrHeight:       999999999999,
 			ForkLengthThreshold:     policy.ChainFinality,
 			PreCommitChallengeDelay: 10,
 			BlockDelaySecs:          30,
@@ -264,6 +266,8 @@ func DefaultCalibrationStorageMiner() *StorageMiner {
 			UpgradeIgnitionHeight: -3,
 			// 2022-02-10T19:23:00Z
 			UpgradeOhSnapHeight: 682006,
+			// 2022-06-16T17:30:00Z
+			UpgradeSkyrHeight:   1044660,
 			ForkLengthThreshold: policy.ChainFinality,
 			BlockDelaySecs:      30,
 		},
@@ -380,6 +384,7 @@ func Default2kStorageMiner() *StorageMiner {
 		NetParams: NetParamsConfig{
 			UpgradeIgnitionHeight:   -2,
 			UpgradeOhSnapHeight:     -18,
+			UpgradeSkyrHeight:       -19,
 			ForkLengthThreshold:     policy.ChainFinality,
 			BlockDelaySecs:          4,
 			PreCommitChallengeDelay: 10,
@@ -464,10 +469,11 @@ func DefaultButterflyStorageMiner() *StorageMiner {
 			CommitControl:    []string{},
 		},
 		NetParams: NetParamsConfig{
-			UpgradeIgnitionHeight: -2,
-			UpgradeOhSnapHeight:   240,
+			UpgradeIgnitionHeight: -3,
+			UpgradeOhSnapHeight:   -18,
+			UpgradeSkyrHeight:     50,
 			ForkLengthThreshold:   policy.ChainFinality,
-			BlockDelaySecs:        4,
+			BlockDelaySecs:        30,
 		},
 		DB: DbConfig{
 			Type: "sqlite",
@@ -513,6 +519,7 @@ var defSealing = SealingConfig{
 	WaitDealsDelay:            Duration(time.Hour * 6),
 	AlwaysKeepUnsealedCopy:    false, // todo
 	FinalizeEarly:             false,
+	MakeNewSectorForDeals:     true,
 
 	BatchPreCommits:    false,                              // todo
 	MaxPreCommitBatch:  miner5.PreCommitSectorBatchMaxSize, // up to 256 sectors

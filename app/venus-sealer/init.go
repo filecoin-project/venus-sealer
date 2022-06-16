@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/filecoin-project/venus-market/piecestorage"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -15,9 +14,9 @@ import (
 	paramfetch "github.com/filecoin-project/go-paramfetch"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
-	market2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/market"
+	market8 "github.com/filecoin-project/go-state-types/builtin/v8/market"
 	power2 "github.com/filecoin-project/specs-actors/v2/actors/builtin/power"
-	"github.com/filecoin-project/venus/fixtures/asset"
+	"github.com/filecoin-project/venus/fixtures/assets"
 	"github.com/filecoin-project/venus/pkg/gen/genesis"
 
 	power6 "github.com/filecoin-project/specs-actors/v6/actors/builtin/power"
@@ -35,7 +34,6 @@ import (
 	"github.com/filecoin-project/venus/venus-shared/actors/builtin/power"
 	"github.com/filecoin-project/venus/venus-shared/actors/policy"
 	"github.com/filecoin-project/venus/venus-shared/types"
-
 	types3 "github.com/filecoin-project/venus/venus-shared/types/messager"
 
 	"github.com/filecoin-project/venus-sealer/api"
@@ -192,11 +190,11 @@ var initCmd = &cli.Command{
 
 		log.Info("Checking proof parameters")
 
-		ps, err := asset.Asset("fixtures/_assets/proof-params/parameters.json")
+		ps, err := assets.GetProofParams()
 		if err != nil {
 			return err
 		}
-		srs, err := asset.Asset("fixtures/_assets/proof-params/srs-inner-product.json")
+		srs, err := assets.GetSrs()
 		if err != nil {
 			return err
 		}
@@ -386,11 +384,12 @@ func parseServiceFlag(cfg *config.StorageMiner, cctx *cli.Context) error {
 		}
 	}
 
-	if cctx.IsSet("piecestorage") {
-		if err := piecestorage.ParserProtocol(cctx.String("piecestorage"), &cfg.PieceStorage); err != nil {
-			return err
-		}
-	}
+	//if cctx.IsSet("piecestorage") {
+	//	piecestorage.
+	//	if err := piecestorage.ParserProtocol(cctx.String("piecestorage"), &cfg.PieceStorage); err != nil {
+	//		return err
+	//	}
+	//}
 	return nil
 }
 
@@ -757,7 +756,7 @@ func migratePreSealMeta(ctx context.Context, api api.FullNode, metadata string, 
 	return metadataService.SetStorageCounter(uint64(maxSectorID))
 }
 
-func findMarketDealID(ctx context.Context, api api.FullNode, deal market2.DealProposal) (abi.DealID, error) {
+func findMarketDealID(ctx context.Context, api api.FullNode, deal market8.DealProposal) (abi.DealID, error) {
 	// TODO: find a better way
 	//  (this is only used by genesis miners)
 

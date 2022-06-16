@@ -28,7 +28,7 @@ func GetFullNodeAPIV2(cctx *cli.Context) (FullNode, jsonrpc.ClientCloser, error)
 	apiInfo, err := GetFullNodeAPIFromConfig(cctx)
 	if err != nil {
 		if !cctx.IsSet("node-url") || !cctx.IsSet("node-token") {
-			return nil, nil, xerrors.New("must set url or token")
+			return nil, nil, xerrors.Errorf("must set url or token %w", err)
 		}
 
 		apiInfo = apiinfo.APIInfo{

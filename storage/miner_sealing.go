@@ -5,6 +5,8 @@ import (
 	"io"
 	"time"
 
+	"golang.org/x/xerrors"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/specs-storage/storage"
@@ -99,11 +101,7 @@ func (m *Miner) MarkForUpgrade(ctx context.Context, id abi.SectorNumber, snap bo
 	if snap {
 		return m.sealing.MarkForSnapUpgrade(ctx, id)
 	}
-	return m.sealing.MarkForUpgrade(ctx, id)
-}
-
-func (m *Miner) IsMarkedForUpgrade(id abi.SectorNumber) bool {
-	return m.sealing.IsMarkedForUpgrade(id)
+	return xerrors.Errorf("Old CC upgrade deprecated, use snap deals CC upgrade")
 }
 
 func (m *Miner) SectorAbortUpgrade(sectorNum abi.SectorNumber) error {

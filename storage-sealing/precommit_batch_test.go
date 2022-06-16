@@ -16,7 +16,7 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
-	miner0 "github.com/filecoin-project/specs-actors/actors/builtin/miner"
+	"github.com/filecoin-project/go-state-types/builtin/v8/miner"
 	miner6 "github.com/filecoin-project/specs-actors/v6/actors/builtin/miner"
 
 	"github.com/filecoin-project/venus/venus-shared/actors/policy"
@@ -28,7 +28,6 @@ import (
 	"github.com/filecoin-project/venus-sealer/storage-sealing/mocks"
 	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 	types2 "github.com/filecoin-project/venus-sealer/types"
-	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
 )
 
 var fc = config.MinerFeeConfig{
@@ -45,7 +44,7 @@ func TestPrecommitBatcher(t *testing.T) {
 
 	ctx := context.Background()
 
-	as := func(ctx context.Context, mi miner.MinerInfo, use api.AddrUse, goodFunds, minFunds abi.TokenAmount) (address.Address, abi.TokenAmount, error) {
+	as := func(ctx context.Context, mi types.MinerInfo, use api.AddrUse, goodFunds, minFunds abi.TokenAmount) (address.Address, abi.TokenAmount, error) {
 		return t0123, big.Zero(), nil
 	}
 
@@ -116,7 +115,7 @@ func TestPrecommitBatcher(t *testing.T) {
 
 			go func() {
 				defer done.Unlock()
-				pcres, pcerr = pcb.AddPreCommit(ctx, si, big.Zero(), &miner0.SectorPreCommitInfo{
+				pcres, pcerr = pcb.AddPreCommit(ctx, si, big.Zero(), &miner.SectorPreCommitInfo{
 					SectorNumber: si.SectorNumber,
 					SealedCID:    fakePieceCid(t),
 					DealIDs:      nil,

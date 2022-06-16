@@ -3,6 +3,9 @@ package storage
 import (
 	"bytes"
 	"context"
+
+	"github.com/filecoin-project/go-bitfield"
+	"github.com/filecoin-project/venus-market/v2/blockstore"
 	mapi "github.com/filecoin-project/venus/venus-shared/api/market"
 	market3 "github.com/filecoin-project/venus/venus-shared/types/market"
 
@@ -12,6 +15,7 @@ import (
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-state-types/big"
+	"github.com/filecoin-project/go-state-types/builtin/v8/miner"
 	"github.com/filecoin-project/go-state-types/crypto"
 	"github.com/filecoin-project/go-state-types/dline"
 	"github.com/filecoin-project/go-state-types/network"
@@ -25,7 +29,7 @@ import (
 	constants2 "github.com/filecoin-project/venus/pkg/constants"
 	"github.com/filecoin-project/venus/venus-shared/actors"
 	"github.com/filecoin-project/venus/venus-shared/actors/builtin/market"
-	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	lminer "github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
 	"github.com/filecoin-project/venus/venus-shared/types"
 	types3 "github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/ipfs/go-cid"
@@ -70,10 +74,10 @@ func (s SealingAPIAdapter) StateMinerInitialPledgeCollateral(ctx context.Context
 	return s.delegate.StateMinerInitialPledgeCollateral(ctx, a, pci, tsk)
 }
 
-func (s SealingAPIAdapter) StateMinerInfo(ctx context.Context, maddr address.Address, tok types2.TipSetToken) (miner.MinerInfo, error) {
+func (s SealingAPIAdapter) StateMinerInfo(ctx context.Context, maddr address.Address, tok types2.TipSetToken) (types.MinerInfo, error) {
 	tsk, err := types.TipSetKeyFromBytes(tok)
 	if err != nil {
-		return miner.MinerInfo{}, xerrors.Errorf("failed to unmarshal TipSetToken to TipSetKey: %w", err)
+		return types.MinerInfo{}, xerrors.Errorf("failed to unmarshal TipSetToken to TipSetKey: %w", err)
 	}
 
 	// TODO: update storage-fsm to just StateMinerInfo
@@ -116,13 +120,25 @@ func (s SealingAPIAdapter) StateMinerSectorAllocated(ctx context.Context, maddr 
 	return s.delegate.StateMinerSectorAllocated(ctx, maddr, sid, tsk)
 }
 
-func (s SealingAPIAdapter) StateMinerActiveSectors(ctx context.Context, maddr address.Address, tok types2.TipSetToken) ([]*miner.SectorOnChainInfo, error) {
+func (s SealingAPIAdapter) StateMinerActiveSectors(ctx context.Context, maddr address.Address, tok types2.TipSetToken) (bitfield.BitField, error) {
 	tsk, err := types.TipSetKeyFromBytes(tok)
 	if err != nil {
-		return nil, xerrors.Errorf("failed to unmarshal TipSetToken to TipSetKey: %w", err)
+		return bitfield.BitField{}, xerrors.Errorf("failed to unmarshal TipSetToken to TipSetKey: %w", err)
 	}
 
-	return s.delegate.StateMinerActiveSectors(ctx, maddr, tsk)
+	act, err := s.delegate.StateGetActor(ctx, maddr, tsk)
+	if err != nil {
+		return bitfield.BitField{}, xerrors.Errorf("getting miner actor: temp error: %+v", err)
+	}
+
+	stor := chain2.ActorStore(ctx, blockstore.NewAPIBlockstore(s.delegate))
+
+	state, err := lminer.Load(stor, act)
+	if err != nil {
+		return bitfield.BitField{}, xerrors.Errorf("loading miner state: %+v", err)
+	}
+
+	return lminer.AllPartSectors(state, lminer.Partition.ActiveSectors)
 }
 
 func (s SealingAPIAdapter) StateWaitMsg(ctx context.Context, mcid cid.Cid) (types2.MsgLookup, error) {
@@ -244,7 +260,7 @@ func (s SealingAPIAdapter) StateSectorPreCommitInfo(ctx context.Context, maddr a
 
 	stor := chain2.ActorStore(ctx, api.NewAPIBlockstore(s.delegate))
 
-	state, err := miner.Load(stor, act)
+	state, err := lminer.Load(stor, act)
 	if err != nil {
 		return nil, xerrors.Errorf("handleSealFailed(%d): temp error: loading miner state: %+v", sectorNumber, err)
 	}

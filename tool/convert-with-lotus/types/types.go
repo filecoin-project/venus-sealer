@@ -2,9 +2,9 @@ package types
 
 import (
 	"context"
-	"github.com/filecoin-project/specs-actors/actors/builtin/miner"
-	"github.com/filecoin-project/specs-actors/v7/actors/builtin/market"
-	miner0 "github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+
+	"github.com/filecoin-project/go-state-types/builtin/v8/market"
+	"github.com/filecoin-project/go-state-types/builtin/v8/miner"
 	"github.com/filecoin-project/venus/venus-shared/types/messager"
 	"github.com/ipfs/go-cid"
 
@@ -13,7 +13,7 @@ import (
 	"github.com/filecoin-project/specs-storage/storage"
 )
 
-type SectorPreCommitInfo = miner0.SectorPreCommitInfo
+type SectorPreCommitInfo = miner.SectorPreCommitInfo
 
 type PieceWithDealInfo struct {
 	Piece    abi.PieceInfo
@@ -118,7 +118,6 @@ type SectorInfo struct {
 type msgCidGetter interface {
 	GetMessageByUid(context.Context, string) (*messager.Message, error)
 }
-
 
 func (t *SectorInfo) pieceInfos() []abi.PieceInfo {
 	out := make([]abi.PieceInfo, len(t.Pieces))

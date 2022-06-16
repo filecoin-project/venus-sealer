@@ -3,9 +3,11 @@ package sealing
 import (
 	"context"
 	"errors"
-	market2 "github.com/filecoin-project/venus/venus-shared/types/market"
 	"sync"
 	"time"
+
+	"github.com/filecoin-project/go-bitfield"
+	market2 "github.com/filecoin-project/venus/venus-shared/types/market"
 
 	"github.com/ipfs/go-cid"
 	logging "github.com/ipfs/go-log/v2"
@@ -20,8 +22,9 @@ import (
 	"github.com/filecoin-project/go-statemachine"
 	"github.com/filecoin-project/specs-storage/storage"
 
+	"github.com/filecoin-project/go-state-types/builtin/v8/miner"
 	"github.com/filecoin-project/venus/venus-shared/actors/builtin/market"
-	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	lminer "github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
 	"github.com/filecoin-project/venus/venus-shared/types"
 
 	"github.com/filecoin-project/venus-sealer/api"
@@ -32,12 +35,12 @@ import (
 	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 	types2 "github.com/filecoin-project/venus-sealer/types"
 
-	"github.com/filecoin-project/venus-market/piecestorage"
+	"github.com/filecoin-project/venus-market/v2/piecestorage"
 )
 
 var log = logging.Logger("sectors")
 
-type SectorLocation = miner.SectorLocation
+type SectorLocation = lminer.SectorLocation
 
 var ErrSectorAllocated = errors.New("sectorNumber is allocated, but PreCommit info wasn't found on chain")
 
@@ -55,10 +58,10 @@ type SealingAPI interface {
 	StateMinerWorkerAddress(ctx context.Context, maddr address.Address, tok types2.TipSetToken) (address.Address, error)
 	StateMinerPreCommitDepositForPower(context.Context, address.Address, miner.SectorPreCommitInfo, types2.TipSetToken) (big.Int, error)
 	StateMinerInitialPledgeCollateral(context.Context, address.Address, miner.SectorPreCommitInfo, types2.TipSetToken) (big.Int, error)
-	StateMinerInfo(context.Context, address.Address, types2.TipSetToken) (miner.MinerInfo, error)
+	StateMinerInfo(context.Context, address.Address, types2.TipSetToken) (types.MinerInfo, error)
 	StateMinerAvailableBalance(context.Context, address.Address, types2.TipSetToken) (big.Int, error)
 	StateMinerSectorAllocated(context.Context, address.Address, abi.SectorNumber, types2.TipSetToken) (bool, error)
-	StateMinerActiveSectors(context.Context, address.Address, types2.TipSetToken) ([]*miner.SectorOnChainInfo, error)
+	StateMinerActiveSectors(context.Context, address.Address, types2.TipSetToken) (bitfield.BitField, error)
 	StateMarketStorageDeal(context.Context, abi.DealID, types2.TipSetToken) (*types.MarketDeal, error)
 	StateMarketStorageDealProposal(context.Context, abi.DealID, types2.TipSetToken) (market.DealProposal, error)
 	StateNetworkVersion(ctx context.Context, tok types2.TipSetToken) (network.Version, error)
@@ -85,7 +88,7 @@ type SealingAPI interface {
 
 type SectorStateNotifee func(before, after types2.SectorInfo)
 
-type AddrSel func(ctx context.Context, mi miner.MinerInfo, use api.AddrUse, goodFunds, minFunds abi.TokenAmount) (address.Address, abi.TokenAmount, error)
+type AddrSel func(ctx context.Context, mi types.MinerInfo, use api.AddrUse, goodFunds, minFunds abi.TokenAmount) (address.Address, abi.TokenAmount, error)
 
 type Sealing struct {
 	api      SealingAPI
@@ -109,10 +112,9 @@ type Sealing struct {
 	sectorTimers   map[abi.SectorID]*time.Timer
 	pendingPieces  map[cid.Cid]*pendingPiece
 	assignedPieces map[abi.SectorID][]cid.Cid
-	creating       *abi.SectorNumber // used to prevent a race where we could create a new sector more than once
+	nextDealSector *abi.SectorNumber // used to prevent a race where we could create a new sector more than once
 
-	upgradeLk sync.Mutex
-	toUpgrade map[abi.SectorNumber]struct{}
+	available map[abi.SectorID]struct{}
 
 	networkParams *config.NetParamsConfig
 	notifee       SectorStateNotifee
@@ -124,8 +126,8 @@ type Sealing struct {
 	precommiter *PreCommitBatcher
 	commiter    *CommitBatcher
 
-	getConfig    types2.GetSealingConfigFunc
-	pieceStorage piecestorage.IPieceStorage
+	getConfig       types2.GetSealingConfigFunc
+	pieceStorageMrg *piecestorage.PieceStorageManager
 	//service
 	logService *service.LogService
 }
@@ -138,11 +140,11 @@ type openSector struct {
 	maybeAccept func(cid.Cid) error // called with inputLk
 }
 
-func (o *openSector) dealFitsInLifetime(dealEnd abi.ChainEpoch, expF func(sn abi.SectorNumber) (abi.ChainEpoch, error)) (bool, error) {
+func (o *openSector) dealFitsInLifetime(dealEnd abi.ChainEpoch, expF expFn) (bool, error) {
 	if !o.ccUpdate {
 		return true, nil
 	}
-	expiration, err := expF(o.number)
+	expiration, _, err := expF(o.number)
 	if err != nil {
 		return false, err
 	}
@@ -178,27 +180,45 @@ func (pp *pendingPiece) waitAddPieceResp(ctx context.Context) (*pieceAcceptResp,
 	}
 }
 
-func New(mctx context.Context, api SealingAPI, fc config.MinerFeeConfig, events Events, maddr address.Address, metaDataService *service.MetadataService, sectorInfoService *service.SectorInfoService, logService *service.LogService, sealer sectorstorage.SectorManager, sc types2.SectorIDCounter, verif ffiwrapper.Verifier, prov ffiwrapper.Prover, pcp PreCommitPolicy, gc types2.GetSealingConfigFunc, notifee SectorStateNotifee, as AddrSel, networkParams *config.NetParamsConfig, pieceStorage piecestorage.IPieceStorage) *Sealing {
+func New(mctx context.Context,
+	api SealingAPI,
+	fc config.MinerFeeConfig,
+	events Events,
+	maddr address.Address,
+	metaDataService *service.MetadataService,
+	sectorInfoService *service.SectorInfoService,
+	logService *service.LogService,
+	sealer sectorstorage.SectorManager,
+	sc types2.SectorIDCounter,
+	verif ffiwrapper.Verifier,
+	prov ffiwrapper.Prover,
+	pcp PreCommitPolicy,
+	gc types2.GetSealingConfigFunc,
+	notifee SectorStateNotifee,
+	as AddrSel,
+	networkParams *config.NetParamsConfig,
+	pieceStorageMgr *piecestorage.PieceStorageManager) *Sealing {
 	s := &Sealing{
 		api:      api,
 		DealInfo: &CurrentDealInfoManager{api},
 		feeCfg:   fc,
 		events:   events,
 
-		pieceStorage:  pieceStorage,
-		networkParams: networkParams,
-		maddr:         maddr,
-		sealer:        sealer,
-		sc:            sc,
-		verif:         verif,
-		pcp:           pcp,
-		logService:    logService,
+		pieceStorageMrg: pieceStorageMgr,
+		networkParams:   networkParams,
+		maddr:           maddr,
+		sealer:          sealer,
+		sc:              sc,
+		verif:           verif,
+		pcp:             pcp,
+		logService:      logService,
 
 		openSectors:    map[abi.SectorID]*openSector{},
 		sectorTimers:   map[abi.SectorID]*time.Timer{},
 		pendingPieces:  map[cid.Cid]*pendingPiece{},
 		assignedPieces: map[abi.SectorID][]cid.Cid{},
-		toUpgrade:      map[abi.SectorNumber]struct{}{},
+
+		available: map[abi.SectorID]struct{}{},
 
 		notifee: notifee,
 		addrSel: as,
@@ -288,7 +308,7 @@ func (m *Sealing) currentSealProof(ctx context.Context) (abi.RegisteredSealProof
 		return 0, err
 	}
 
-	return miner.PreferredSealProofTypeFromWindowPoStType(ver, mi.WindowPoStProofType)
+	return lminer.PreferredSealProofTypeFromWindowPoStType(ver, mi.WindowPoStProofType)
 }
 
 func (m *Sealing) minerSector(spt abi.RegisteredSealProof, num abi.SectorNumber) storage.SectorRef {

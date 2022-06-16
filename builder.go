@@ -2,7 +2,7 @@ package venus_sealer
 
 import (
 	"context"
-	"github.com/filecoin-project/venus/venus-shared/api/market"
+
 	logging "github.com/ipfs/go-log/v2"
 	metricsi "github.com/ipfs/go-metrics-interface"
 	"github.com/multiformats/go-multiaddr"
@@ -12,8 +12,8 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	storage2 "github.com/filecoin-project/specs-storage/storage"
 
-	config3 "github.com/filecoin-project/venus-market/config"
-	"github.com/filecoin-project/venus-market/piecestorage"
+	config3 "github.com/filecoin-project/venus-market/v2/config"
+	"github.com/filecoin-project/venus-market/v2/piecestorage"
 
 	"github.com/filecoin-project/venus-sealer/api"
 	"github.com/filecoin-project/venus-sealer/api/impl"
@@ -23,7 +23,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/models"
 	"github.com/filecoin-project/venus-sealer/models/repo"
 	"github.com/filecoin-project/venus-sealer/proof_client"
-	"github.com/filecoin-project/venus-sealer/sector-storage"
+	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
 	"github.com/filecoin-project/venus-sealer/sector-storage/ffiwrapper"
 	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
 	"github.com/filecoin-project/venus-sealer/sector-storage/storiface"
@@ -31,6 +31,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/storage"
 	"github.com/filecoin-project/venus-sealer/storage/sectorblocks"
 	"github.com/filecoin-project/venus-sealer/types"
+	"github.com/filecoin-project/venus/venus-shared/api/market"
 )
 
 var log = logging.Logger("modules")
@@ -151,6 +152,7 @@ func Online(cfg *config.StorageMiner) Option {
 		Override(new(types.GetSealingConfigFunc), NewGetSealConfigFunc),
 		Override(new(*sectorblocks.SectorBlocks), sectorblocks.NewSectorBlocks),
 		Override(new(*storage.Miner), StorageMiner(config.DefaultMainnetStorageMiner().Fees)),
+		Override(new(*storage.WindowPoStScheduler), WindowPostScheduler(cfg.Fees)),
 		// Override(new(*storage.AddressSelector), AddressSelector(nil)), // venus-sealer run: Call Repo before, Online after,will overwrite the original injection(MinerAddressConfig)
 		Override(new(types.NetworkName), StorageNetworkName),
 
@@ -185,8 +187,7 @@ func Repo(cfg *config.StorageMiner) Option {
 			ConfigAPI(cfg),
 			Override(new(api.IMessager), api.NewMessageRPC),
 			Override(new(market.IMarket), api.NewMarketNodeRPCAPIV0),
-			Override(new(piecestorage.IPreSignOp), NewPreSignS3Op),
-			Override(new(piecestorage.IPieceStorage), NewPieceStorage),
+			Override(new(*piecestorage.PieceStorageManager), NewPieceStorageManager),
 			Override(new(repo.Repo), models.SetDataBase),
 			Providers(
 				service.NewDealRefServiceService,

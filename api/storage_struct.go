@@ -2,10 +2,12 @@ package api
 
 import (
 	"context"
+	"time"
+
+	"github.com/filecoin-project/go-state-types/builtin/v8/miner"
 	mtypes "github.com/filecoin-project/venus/venus-shared/types/market"
 	"github.com/filecoin-project/venus/venus-shared/types/messager"
 	"golang.org/x/xerrors"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/ipfs/go-cid"
@@ -51,6 +53,10 @@ type StorageMiner interface {
 
 	ActorSectorSize(context.Context, address.Address) (abi.SectorSize, error)
 	ActorAddressConfig(ctx context.Context) (AddressConfig, error)
+
+	ComputeWindowPoSt(ctx context.Context, dlIdx uint64, tsk types2.TipSetKey) ([]miner.SubmitWindowedPoStParams, error)
+
+	ComputeDataCid(ctx context.Context, pieceSize abi.UnpaddedPieceSize, pieceData storage.Data) (abi.PieceInfo, error)
 
 	// Temp api for testing
 	PledgeSector(context.Context) (abi.SectorID, error)
@@ -195,6 +201,10 @@ type StorageMinerStruct struct {
 		ActorAddressConfig func(ctx context.Context) (AddressConfig, error)               `perm:"read"`
 		NetParamsConfig    func(ctx context.Context) (*config.NetParamsConfig, error)     `perm:"read"`
 
+		ComputeWindowPoSt func(ctx context.Context, dlIdx uint64, tsk types2.TipSetKey) ([]miner.SubmitWindowedPoStParams, error) `perm:"admin"`
+
+		ComputeDataCid func(ctx context.Context, pieceSize abi.UnpaddedPieceSize, pieceData storage.Data) (abi.PieceInfo, error) `perm:"admin"`
+
 		PledgeSector func(context.Context) (abi.SectorID, error) `perm:"write"`
 
 		CurrentSectorID func(ctx context.Context) (abi.SectorNumber, error) `perm:"read"`
@@ -229,6 +239,7 @@ type StorageMinerStruct struct {
 		WorkerStats   func(context.Context) (map[uuid.UUID]storiface.WorkerStats, error) `perm:"admin"`
 		WorkerJobs    func(context.Context) (map[uuid.UUID][]storiface.WorkerJob, error) `perm:"admin"`
 
+		ReturnDataCid                   func(ctx context.Context, callID types.CallID, pi abi.PieceInfo, err *storiface.CallError) error                           `perm:"admin" retry:"true"`
 		ReturnAddPiece                  func(ctx context.Context, callID types.CallID, pi abi.PieceInfo, err *storiface.CallError) error                           `perm:"admin" retry:"true"`
 		ReturnSealPreCommit1            func(ctx context.Context, callID types.CallID, p1o storage.PreCommit1Out, err *storiface.CallError) error                  `perm:"admin" retry:"true"`
 		ReturnSealPreCommit2            func(ctx context.Context, callID types.CallID, sealed storage.SectorCids, err *storiface.CallError) error                  `perm:"admin" retry:"true"`
@@ -331,6 +342,14 @@ func (c *StorageMinerStruct) ActorSectorSize(ctx context.Context, addr address.A
 
 func (c *StorageMinerStruct) ActorAddressConfig(ctx context.Context) (AddressConfig, error) {
 	return c.Internal.ActorAddressConfig(ctx)
+}
+
+func (c *StorageMinerStruct) ComputeWindowPoSt(ctx context.Context, dlIdx uint64, tsk types2.TipSetKey) ([]miner.SubmitWindowedPoStParams, error) {
+	return c.Internal.ComputeWindowPoSt(ctx, dlIdx, tsk)
+}
+
+func (c *StorageMinerStruct) ComputeDataCid(ctx context.Context, pieceSize abi.UnpaddedPieceSize, pieceData storage.Data) (abi.PieceInfo, error) {
+	return c.Internal.ComputeDataCid(ctx, pieceSize, pieceData)
 }
 
 func (c *StorageMinerStruct) PledgeSector(ctx context.Context) (abi.SectorID, error) {
@@ -451,6 +470,10 @@ func (c *StorageMinerStruct) WorkerStats(ctx context.Context) (map[uuid.UUID]sto
 
 func (c *StorageMinerStruct) WorkerJobs(ctx context.Context) (map[uuid.UUID][]storiface.WorkerJob, error) {
 	return c.Internal.WorkerJobs(ctx)
+}
+
+func (c *StorageMinerStruct) ReturnDataCid(ctx context.Context, callID types.CallID, pi abi.PieceInfo, err *storiface.CallError) error {
+	return c.Internal.ReturnDataCid(ctx, callID, pi, err)
 }
 
 func (c *StorageMinerStruct) ReturnAddPiece(ctx context.Context, callID types.CallID, pi abi.PieceInfo, err *storiface.CallError) error {

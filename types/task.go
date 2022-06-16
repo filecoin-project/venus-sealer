@@ -3,6 +3,7 @@ package types
 type TaskType string
 
 const (
+	TTDataCid    TaskType = "seal/v0/datacid"
 	TTAddPiece   TaskType = "seal/v0/addpiece"
 	TTPreCommit1 TaskType = "seal/v0/precommit/1"
 	TTPreCommit2 TaskType = "seal/v0/precommit/2"
@@ -22,7 +23,8 @@ const (
 )
 
 var order = map[TaskType]int{
-	TTRegenSectorKey:      10, // least priority
+	TTRegenSectorKey:      11, // least priority
+	TTDataCid:             10,
 	TTAddPiece:            9,
 	TTReplicaUpdate:       8,
 	TTProveReplicaUpdate2: 7,
@@ -32,11 +34,13 @@ var order = map[TaskType]int{
 	TTCommit2:             3,
 	TTCommit1:             2,
 	TTUnseal:              1,
-	TTFetch:               -1,
-	TTFinalize:            -2, // most priority
+
+	TTFetch:    -1,
+	TTFinalize: -2, // most priority
 }
 
 var shortNames = map[TaskType]string{
+	TTDataCid:  "DC",
 	TTAddPiece: "AP",
 
 	TTPreCommit1: "PC1",

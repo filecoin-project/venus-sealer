@@ -25,6 +25,7 @@ import (
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/go-jsonrpc/auth"
 	paramfetch "github.com/filecoin-project/go-paramfetch"
+	"github.com/filecoin-project/venus-sealer/lib/ulimit"
 
 	sealer "github.com/filecoin-project/venus-sealer"
 	"github.com/filecoin-project/venus-sealer/api"
@@ -38,7 +39,7 @@ import (
 	"github.com/filecoin-project/venus-sealer/sector-storage/stores"
 	"github.com/filecoin-project/venus-sealer/service"
 	"github.com/filecoin-project/venus-sealer/types"
-	"github.com/filecoin-project/venus/fixtures/asset"
+	"github.com/filecoin-project/venus/fixtures/assets"
 )
 
 var log = logging.Logger("main")
@@ -192,6 +193,18 @@ var runCmd = &cli.Command{
 			}
 		}
 
+		limit, _, err := ulimit.GetLimit()
+		switch {
+		case err == ulimit.ErrUnsupported:
+			log.Errorw("checking file descriptor limit failed", "error", err)
+		case err != nil:
+			return xerrors.Errorf("checking fd limit: %w", err)
+		default:
+			if limit < constants.MinerFDLimit {
+				return xerrors.Errorf("soft file descriptor limit (ulimit -n) too low, want %d, current %d", constants.MinerFDLimit, limit)
+			}
+		}
+
 		// Open repo
 		repoPath := cctx.String("repo")
 		cfgPath := config.FsConfig(repoPath)
@@ -295,13 +308,13 @@ var runCmd = &cli.Command{
 			return err
 		}
 
-		if cctx.Bool("commit") {
-			ps, err := asset.Asset("fixtures/_assets/proof-params/parameters.json")
+		if cctx.Bool("commit") || cctx.Bool("prove-replica-update2") {
+			ps, err := assets.GetProofParams()
 			if err != nil {
 				return err
 			}
 
-			srs, err := asset.Asset("fixtures/_assets/proof-params/srs-inner-product.json")
+			srs, err := assets.GetSrs()
 			if err != nil {
 				return err
 			}
@@ -314,7 +327,7 @@ var runCmd = &cli.Command{
 		var taskTypes []types.TaskType
 		taskTypes = append(taskTypes, types.TTFetch, types.TTCommit1, types.TTFinalize)
 		if cctx.Bool("addpiece") {
-			taskTypes = append(taskTypes, types.TTAddPiece)
+			taskTypes = append(taskTypes, types.TTAddPiece, types.TTDataCid)
 		}
 		if cctx.Bool("precommit1") {
 			taskTypes = append(taskTypes, types.TTPreCommit1)

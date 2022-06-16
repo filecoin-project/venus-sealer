@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/filecoin-project/venus/venus-shared/api/market"
-	mtypes "github.com/filecoin-project/venus/venus-shared/types/market"
-	"github.com/filecoin-project/venus/venus-shared/types/messager"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/filecoin-project/venus/venus-shared/api/market"
+	mtypes "github.com/filecoin-project/venus/venus-shared/types/market"
+	"github.com/filecoin-project/venus/venus-shared/types/messager"
 
 	"github.com/google/uuid"
 	"github.com/ipfs/go-cid"
@@ -26,6 +27,7 @@ import (
 	sto "github.com/filecoin-project/specs-storage/storage"
 	multi "github.com/hashicorp/go-multierror"
 
+	"github.com/filecoin-project/go-state-types/builtin/v8/miner"
 	proof7 "github.com/filecoin-project/specs-actors/v7/actors/runtime/proof"
 
 	"github.com/filecoin-project/venus-sealer/api"
@@ -58,6 +60,8 @@ type StorageMinerAPI struct {
 	storiface.WorkerReturn
 
 	AddrSel *storage.AddressSelector
+
+	WdPoSt *storage.WindowPoStScheduler
 
 	Stor *stores.Remote
 
@@ -92,7 +96,7 @@ func (sm *StorageMinerAPI) UpdateDealStatus(ctx context.Context, dealId abi.Deal
 		return errEmptyMarketClient
 	}
 	addr := sm.Miner.Address()
-	return sm.MarketClient.UpdateDealStatus(ctx, addr, dealId, status)
+	return sm.MarketClient.UpdateDealStatus(ctx, addr, dealId, mtypes.PieceStatus(status))
 }
 
 func (sm *StorageMinerAPI) IsUnsealed(ctx context.Context, sector sto.SectorRef, offset storiface.UnpaddedByteIndex, size abi.UnpaddedPieceSize) (bool, error) {
@@ -135,6 +139,25 @@ func (sm *StorageMinerAPI) ActorSectorSize(ctx context.Context, addr address.Add
 		return 0, err
 	}
 	return mi.SectorSize, nil
+}
+
+func (sm *StorageMinerAPI) ComputeWindowPoSt(ctx context.Context, dlIdx uint64, tsk types.TipSetKey) ([]miner.SubmitWindowedPoStParams, error) {
+	var ts *types.TipSet
+	var err error
+	if tsk == types.EmptyTSK {
+		ts, err = sm.Full.ChainHead(ctx)
+	} else {
+		ts, err = sm.Full.ChainGetTipSet(ctx, tsk)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return sm.WdPoSt.ComputePoSt(ctx, dlIdx, ts)
+}
+
+func (sm *StorageMinerAPI) ComputeDataCid(ctx context.Context, pieceSize abi.UnpaddedPieceSize, pieceData sto.Data) (abi.PieceInfo, error) {
+	return sm.StorageMgr.DataCid(ctx, pieceSize, pieceData)
 }
 
 func (sm *StorageMinerAPI) PledgeSector(ctx context.Context) (abi.SectorID, error) {
@@ -221,7 +244,7 @@ func (sm *StorageMinerAPI) SectorsStatus(ctx context.Context, sid abi.SectorNumb
 		PreCommitMsg: info.PreCommitMessage,
 		CommitMsg:    info.CommitMessage,
 		Retries:      info.InvalidProofs,
-		ToUpgrade:    sm.Miner.IsMarkedForUpgrade(sid),
+		ToUpgrade:    false,
 
 		CCUpdate:             info.CCUpdate,
 		UpdateSealed:         info.UpdateSealed,
@@ -373,7 +396,7 @@ func (sm *StorageMinerAPI) SectorsInfoListInStates(ctx context.Context, states [
 				PreCommitMsg: sector.PreCommitMessage,
 				CommitMsg:    sector.CommitMessage,
 				Retries:      sector.InvalidProofs,
-				ToUpgrade:    sm.Miner.IsMarkedForUpgrade(sector.SectorNumber),
+				ToUpgrade:    false,
 
 				LastErr: sector.LastErr,
 				Log:     log,

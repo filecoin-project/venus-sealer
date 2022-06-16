@@ -3,9 +3,10 @@ package sealing
 import (
 	"bytes"
 	"context"
+	"time"
+
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/venus/venus-shared/actors/policy"
-	"time"
 
 	"golang.org/x/xerrors"
 
@@ -15,7 +16,8 @@ import (
 
 	"github.com/filecoin-project/venus-sealer/api"
 
-	"github.com/filecoin-project/venus/venus-shared/actors/builtin/miner"
+	"github.com/filecoin-project/go-state-types/builtin"
+	"github.com/filecoin-project/go-state-types/builtin/v8/miner"
 
 	"github.com/filecoin-project/venus-sealer/types"
 )
@@ -46,7 +48,7 @@ func (m *Sealing) handleProveReplicaUpdate(ctx statemachine.Context, sector type
 		log.Errorf("handleProveReplicaUpdate: api error, not proceeding: %+v", err)
 		return nil
 	}
-	active, err := sectorActive(ctx.Context(), m.api, m.maddr, tok, sector.SectorNumber)
+	active, err := m.sectorActive(ctx.Context(), tok, sector.SectorNumber)
 	if err != nil {
 		log.Errorf("sector active check: api error, not proceeding: %+v", err)
 		return nil
@@ -174,7 +176,7 @@ func (m *Sealing) handleSubmitReplicaUpdate(ctx statemachine.Context, sector typ
 		return ctx.Send(SectorSubmitReplicaUpdateFailed{})
 	}
 
-	mcid, err := m.api.MessagerSendMsg(ctx.Context(), from, m.maddr, miner.Methods.ProveReplicaUpdates, big.Zero(), big.Int(m.feeCfg.MaxCommitGasFee), enc.Bytes())
+	mcid, err := m.api.MessagerSendMsg(ctx.Context(), from, m.maddr, builtin.MethodsMiner.ProveReplicaUpdates, collateral, big.Int(m.feeCfg.MaxCommitGasFee), enc.Bytes())
 	if err != nil {
 		log.Errorf("handleSubmitReplicaUpdate: error sending message: %+v", err)
 		return ctx.Send(SectorSubmitReplicaUpdateFailed{})
@@ -228,7 +230,7 @@ func (m *Sealing) handleFinalizeReplicaUpdate(ctx statemachine.Context, sector t
 		return xerrors.Errorf("getting sealing config: %w", err)
 	}
 
-	if err := m.sealer.FinalizeReplicaUpdate(sector.SealingCtx(ctx.Context()), m.minerSector(sector.SectorType, sector.SectorNumber), sector.KeepUnsealedRanges(false, cfg.AlwaysKeepUnsealedCopy)); err != nil {
+	if err := m.sealer.FinalizeReplicaUpdate(sector.SealingCtx(ctx.Context()), m.minerSector(sector.SectorType, sector.SectorNumber), sector.KeepUnsealedRanges(sector.Pieces, false, cfg.AlwaysKeepUnsealedCopy)); err != nil {
 		return ctx.Send(SectorFinalizeFailed{xerrors.Errorf("finalize sector: %w", err)})
 	}
 	return ctx.Send(SectorFinalized{})

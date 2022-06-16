@@ -5,6 +5,10 @@ import (
 	"sort"
 	"time"
 
+	"github.com/filecoin-project/go-state-types/big"
+	"github.com/filecoin-project/venus/venus-shared/actors/policy"
+	types2 "github.com/filecoin-project/venus/venus-shared/types"
+
 	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
 
@@ -16,6 +20,7 @@ import (
 
 	sectorstorage "github.com/filecoin-project/venus-sealer/sector-storage"
 	"github.com/filecoin-project/venus-sealer/sector-storage/ffiwrapper"
+	"github.com/filecoin-project/venus-sealer/storage-sealing/lib/nullreader"
 	"github.com/filecoin-project/venus-sealer/storage-sealing/sealiface"
 	"github.com/filecoin-project/venus-sealer/types"
 
@@ -30,8 +35,8 @@ func (m *Sealing) handleWaitDeals(ctx statemachine.Context, sector types.SectorI
 
 	m.inputLk.Lock()
 
-	if m.creating != nil && *m.creating == sector.SectorNumber {
-		m.creating = nil
+	if m.nextDealSector != nil && *m.nextDealSector == sector.SectorNumber {
+		m.nextDealSector = nil
 	}
 
 	sid := m.minerSectorID(sector.SectorNumber)
@@ -201,7 +206,7 @@ func (m *Sealing) handleAddPiece(ctx statemachine.Context, sector types.SectorIn
 				m.minerSector(sector.SectorType, sector.SectorNumber),
 				pieceSizes,
 				p.Unpadded(),
-				NewNullReader(p.Unpadded()))
+				nullreader.NewNullReader(p.Unpadded()))
 			if err != nil {
 				err = xerrors.Errorf("writing padding piece: %w", err)
 				deal.accepted(sector.SectorNumber, offset, err)
@@ -300,25 +305,20 @@ func (m *Sealing) SectorAddPieceToAny(ctx context.Context, size abi.UnpaddedPiec
 		m.inputLk.Unlock()
 
 		// we already have a pre-existing add piece call for this deal, let's wait for it to finish and see if it's successful
-		for {
-			res, err := pp.waitAddPieceResp(ctx)
-			if err != nil {
-				return api.SectorOffset{}, err
-			}
-			//  there was an error waiting for a pre-existing add piece call, let's retry
-			if res.err != nil {
-				m.inputLk.Lock()
-				pp = m.addPendingPiece(ctx, size, data, deal, sp)
-				m.inputLk.Unlock()
-				continue
-			}
+		res, err := pp.waitAddPieceResp(ctx)
+		if err != nil {
+			return api.SectorOffset{}, err
+		}
+		if res.err == nil {
 			// all good, return the response
 			return api.SectorOffset{Sector: res.sn, Offset: res.offset.Padded()}, res.err
 		}
+		// if there was an error waiting for a pre-existing add piece call, let's retry
+		m.inputLk.Lock()
 	}
 
+	// addPendingPiece takes over m.inputLk
 	pp := m.addPendingPiece(ctx, size, data, deal, sp)
-	m.inputLk.Unlock()
 
 	res, err := pp.waitAddPieceResp(ctx)
 	if err != nil {
@@ -327,6 +327,7 @@ func (m *Sealing) SectorAddPieceToAny(ctx context.Context, size abi.UnpaddedPiec
 	return api.SectorOffset{Sector: res.sn, Offset: res.offset.Padded()}, res.err
 }
 
+// called with m.inputLk; transfers the lock to another goroutine!
 func (m *Sealing) addPendingPiece(ctx context.Context, size abi.UnpaddedPieceSize, data storage.Data, deal types.PieceDealInfo, sp abi.RegisteredSealProof) *pendingPiece {
 	doneCh := make(chan struct{})
 	pp := &pendingPiece{
@@ -343,6 +344,7 @@ func (m *Sealing) addPendingPiece(ctx context.Context, size abi.UnpaddedPieceSiz
 
 	m.pendingPieces[proposalCID(deal)] = pp
 	go func() {
+		defer m.inputLk.Unlock()
 		if err := m.updateInput(ctx, sp); err != nil {
 			log.Errorf("%+v", err)
 		}
@@ -362,8 +364,29 @@ func (m *Sealing) MatchPendingPiecesToOpenSectors(ctx context.Context) error {
 	return m.updateInput(ctx, sp)
 }
 
+type expFn func(sn abi.SectorNumber) (abi.ChainEpoch, abi.TokenAmount, error)
+
 // called with m.inputLk
 func (m *Sealing) updateInput(ctx context.Context, sp abi.RegisteredSealProof) error {
+	memo := make(map[abi.SectorNumber]struct {
+		e abi.ChainEpoch
+		p abi.TokenAmount
+	})
+	expF := func(sn abi.SectorNumber) (abi.ChainEpoch, abi.TokenAmount, error) {
+		if e, ok := memo[sn]; ok {
+			return e.e, e.p, nil
+		}
+		onChainInfo, err := m.api.StateSectorGetInfo(ctx, m.maddr, sn, types.TipSetToken{})
+		if err != nil {
+			return 0, big.Zero(), err
+		}
+		memo[sn] = struct {
+			e abi.ChainEpoch
+			p abi.TokenAmount
+		}{e: onChainInfo.Expiration, p: onChainInfo.InitialPledge}
+		return onChainInfo.Expiration, onChainInfo.InitialPledge, nil
+	}
+
 	ssize, err := sp.SectorSize()
 	if err != nil {
 		return err
@@ -389,19 +412,6 @@ func (m *Sealing) updateInput(ctx context.Context, sp abi.RegisteredSealProof) e
 
 		toAssign[proposalCid] = struct{}{}
 
-		memo := make(map[abi.SectorNumber]abi.ChainEpoch)
-		expF := func(sn abi.SectorNumber) (abi.ChainEpoch, error) {
-			if exp, ok := memo[sn]; ok {
-				return exp, nil
-			}
-			onChainInfo, err := m.api.StateSectorGetInfo(ctx, m.maddr, sn, types.TipSetToken{})
-			if err != nil {
-				return 0, err
-			}
-			memo[sn] = onChainInfo.Expiration
-			return onChainInfo.Expiration, nil
-		}
-
 		for id, sector := range m.openSectors {
 			avail := abi.PaddedPieceSize(ssize).Unpadded() - sector.used
 			// check that sector lifetime is long enough to fit deal using latest expiration from on chain
@@ -412,8 +422,8 @@ func (m *Sealing) updateInput(ctx context.Context, sp abi.RegisteredSealProof) e
 				continue
 			}
 			if !ok {
-				exp, _ := expF(sector.number)
-				log.Infof("CC update sector %d cannot fit deal, expiration %d before deal end epoch %d", id, exp, piece.deal.DealProposal.EndEpoch)
+				exp, _, _ := expF(sector.number)
+				log.Debug("CC update sector %d cannot fit deal, expiration %d before deal end epoch %d", id, exp, piece.deal.DealProposal.EndEpoch)
 				continue
 			}
 
@@ -439,6 +449,9 @@ func (m *Sealing) updateInput(ctx context.Context, sp abi.RegisteredSealProof) e
 
 		return matches[i].sector.Number < matches[j].sector.Number // prefer older sectors
 	})
+
+	log.Debugw("updateInput matching", "matches", len(matches), "toAssign", len(toAssign),
+		"openSectors", len(m.openSectors), "pieces", len(m.pendingPieces))
 
 	var assigned int
 	for _, mt := range matches {
@@ -473,9 +486,12 @@ func (m *Sealing) updateInput(ctx context.Context, sp abi.RegisteredSealProof) e
 		}
 	}
 
+	log.Debugw("updateInput matching done", "matches", len(matches), "toAssign", len(toAssign),
+		"assigned", assigned, "openSectors", len(m.openSectors), "pieces", len(m.pendingPieces))
+
 	if len(toAssign) > 0 {
 		log.Errorf("we are trying to create a new sector with open sectors %v", m.openSectors)
-		if err := m.tryCreateDealSector(ctx, sp); err != nil {
+		if err := m.tryGetDealSector(ctx, sp, expF); err != nil {
 			log.Errorw("Failed to create a new sector for deals", "error", err)
 		}
 	}
@@ -483,10 +499,113 @@ func (m *Sealing) updateInput(ctx context.Context, sp abi.RegisteredSealProof) e
 	return nil
 }
 
-func (m *Sealing) tryCreateDealSector(ctx context.Context, sp abi.RegisteredSealProof) error {
+func (m *Sealing) calcTargetExpiration(ctx context.Context, ssize abi.SectorSize) (minTarget, target abi.ChainEpoch, err error) {
+	var candidates []*pendingPiece
+
+	for _, piece := range m.pendingPieces {
+		if piece.assigned {
+			continue // already assigned to a sector, skip
+		}
+		candidates = append(candidates, piece)
+	}
+
+	// earliest expiration first
+	sort.Slice(candidates, func(i, j int) bool {
+		return candidates[i].deal.DealProposal.EndEpoch < candidates[j].deal.DealProposal.EndEpoch
+	})
+
+	var totalBytes uint64
+	for _, candidate := range candidates {
+		totalBytes += uint64(candidate.size)
+
+		if totalBytes >= uint64(abi.PaddedPieceSize(ssize).Unpadded()) {
+			return candidates[0].deal.DealProposal.EndEpoch, candidate.deal.DealProposal.EndEpoch, nil
+		}
+	}
+
+	_, curEpoch, err := m.api.ChainHead(ctx)
+	if err != nil {
+		return 0, 0, xerrors.Errorf("getting current epoch: %w", err)
+	}
+
+	minDur, maxDur := policy.DealDurationBounds(0)
+
+	return curEpoch + minDur, curEpoch + maxDur, nil
+}
+
+func (m *Sealing) maybeUpgradeSector(ctx context.Context, sp abi.RegisteredSealProof, ef expFn) (bool, error) {
+	if len(m.available) == 0 {
+		return false, nil
+	}
+
+	ssize, err := sp.SectorSize()
+	if err != nil {
+		return false, xerrors.Errorf("getting sector size: %w", err)
+	}
+	minExpiration, targetExpiration, err := m.calcTargetExpiration(ctx, ssize)
+	if err != nil {
+		return false, xerrors.Errorf("calculating min target expiration: %w", err)
+	}
+
+	var candidate abi.SectorID
+	var bestExpiration abi.ChainEpoch
+	bestPledge := types2.TotalFilecoinInt
+
+	for s := range m.available {
+		expiration, pledge, err := ef(s.Number)
+		if err != nil {
+			log.Errorw("checking sector expiration", "error", err)
+			continue
+		}
+
+		slowChecks := func(sid abi.SectorNumber) bool {
+			active, err := m.sectorActive(ctx, types.TipSetToken{}, sid)
+			if err != nil {
+				log.Errorw("checking sector active", "error", err)
+				return false
+			}
+			if !active {
+				log.Debugw("skipping available sector", "reason", "not active")
+				return false
+			}
+			return true
+		}
+
+		// if best is below target, we want larger expirations
+		// if best is above target, we want lower pledge, but only if still above target
+
+		if bestExpiration < targetExpiration {
+			if expiration > bestExpiration && slowChecks(s.Number) {
+				bestExpiration = expiration
+				bestPledge = pledge
+				candidate = s
+			}
+			continue
+		}
+
+		if expiration >= targetExpiration && pledge.LessThan(bestPledge) && slowChecks(s.Number) {
+			bestExpiration = expiration
+			bestPledge = pledge
+			candidate = s
+		}
+	}
+
+	if bestExpiration < minExpiration {
+		log.Infow("Not upgrading any sectors", "available", len(m.available), "pieces", len(m.pendingPieces), "bestExp", bestExpiration, "target", targetExpiration, "min", minExpiration, "candidate", candidate)
+		// didn't find a good sector / no sectors were available
+		return false, nil
+	}
+
+	log.Infow("Upgrading sector", "number", candidate.Number, "type", "deal", "proofType", sp, "expiration", bestExpiration, "pledge", types2.FIL(bestPledge))
+	delete(m.available, candidate)
+	m.nextDealSector = &candidate.Number
+	return true, m.sectors.Send(uint64(candidate.Number), SectorStartCCUpdate{})
+}
+
+func (m *Sealing) tryGetDealSector(ctx context.Context, sp abi.RegisteredSealProof, ef expFn) error {
 	m.startupWait.Wait()
 
-	if m.creating != nil {
+	if m.nextDealSector != nil {
 		return nil // new sector is being created right now
 	}
 
@@ -495,26 +614,60 @@ func (m *Sealing) tryCreateDealSector(ctx context.Context, sp abi.RegisteredSeal
 		return xerrors.Errorf("getting storage config: %w", err)
 	}
 
-	if cfg.MaxSealingSectorsForDeals > 0 && m.stats.CurSealing() >= cfg.MaxSealingSectorsForDeals {
-		return nil
-	}
+	// if we're above WaitDeals limit, we don't want to add more staging sectors
 
 	if cfg.MaxWaitDealsSectors > 0 && m.stats.CurStaging() >= cfg.MaxWaitDealsSectors {
 		return nil
 	}
 
-	sid, err := m.createSector(ctx, cfg, sp)
-	if err != nil {
-		return err
+	maxUpgrading := cfg.MaxSealingSectorsForDeals
+	if cfg.MaxUpgradingSectors > 0 {
+		maxUpgrading = cfg.MaxUpgradingSectors
 	}
 
-	m.creating = &sid
+	canCreate := cfg.MakeNewSectorForDeals && !(cfg.MaxSealingSectorsForDeals > 0 && m.stats.CurSealing() >= cfg.MaxSealingSectorsForDeals)
+	canUpgrade := !(maxUpgrading > 0 && m.stats.CurSealing() >= maxUpgrading)
 
-	log.Infow("Creating sector", "number", sid, "type", "deal", "proofType", sp)
-	return m.sectors.Send(uint64(sid), SectorStart{
-		ID:         sid,
-		SectorType: sp,
-	})
+	// we want to try to upgrade when:
+	// - we can upgrade and prefer upgrades
+	// - we don't prefer upgrades, but can't create a new sector
+	shouldUpgrade := canUpgrade && (!cfg.PreferNewSectorsForDeals || !canCreate)
+
+	log.Infow("new deal sector decision",
+		"sealing", m.stats.CurSealing(),
+		"maxSeal", cfg.MaxSealingSectorsForDeals,
+		"maxUpgrade", maxUpgrading,
+		"preferNew", cfg.PreferNewSectorsForDeals,
+		"canCreate", canCreate,
+		"canUpgrade", canUpgrade,
+		"shouldUpgrade", shouldUpgrade)
+
+	if shouldUpgrade {
+		got, err := m.maybeUpgradeSector(ctx, sp, ef)
+		if err != nil {
+			return err
+		}
+		if got {
+			return nil
+		}
+	}
+
+	if canCreate {
+		sid, err := m.createSector(ctx, cfg, sp)
+		if err != nil {
+			return err
+		}
+		m.nextDealSector = &sid
+
+		log.Infow("Creating sector", "number", sid, "type", "deal", "proofType", sp)
+		if err := m.sectors.Send(uint64(sid), SectorStart{
+			ID:         sid,
+			SectorType: sp,
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // call with m.inputLk
@@ -546,6 +699,11 @@ func (m *Sealing) StartPacking(sid abi.SectorNumber) error {
 
 func (m *Sealing) AbortUpgrade(sid abi.SectorNumber) error {
 	m.startupWait.Wait()
+
+	m.inputLk.Lock()
+	// always do this early
+	delete(m.available, m.minerSectorID(sid))
+	m.inputLk.Unlock()
 
 	log.Infow("aborting upgrade of sector", "sector", sid, "trigger", "user")
 	return m.sectors.Send(uint64(sid), SectorAbortUpgrade{xerrors.New("triggered by user")})

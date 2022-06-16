@@ -18,6 +18,14 @@ type Config struct {
 	// includes failed, 0 = no limit
 	MaxSealingSectorsForDeals uint64
 
+	PreferNewSectorsForDeals bool
+
+	MaxUpgradingSectors uint64
+
+	MakeNewSectorForDeals bool
+
+	MakeCCSectorsAvailable bool
+
 	WaitDealsDelay time.Duration
 
 	CommittedCapacitySectorLifetime time.Duration
@@ -45,7 +53,7 @@ type Config struct {
 
 	// network BaseFee below which to stop doing commit aggregation, instead
 	// submitting proofs to the chain individually
-	AggregateAboveBaseFee      abi.TokenAmount
+	AggregateAboveBaseFee abi.TokenAmount
 
 	// network BaseFee below which to stop doing precommit batching, instead
 	// sending precommit messages to the chain individually

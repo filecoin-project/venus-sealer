@@ -108,7 +108,13 @@ func newLocalWorker(executor ExecutorFunc, wcfg WorkerConfig, envLookup EnvFunc,
 
 	go func() {
 		for _, call := range unfinished {
-			err := storiface.Err(storiface.ErrTempWorkerRestart, xerrors.New("worker restarted"))
+			hostname, osErr := os.Hostname()
+			if osErr != nil {
+				log.Errorf("get hostname err: %+v", err)
+				hostname = ""
+			}
+
+			err := storiface.Err(storiface.ErrTempWorkerRestart, xerrors.Errorf("worker [Hostname: %s] restarted", hostname))
 
 			// TODO: Handle restarting PC1 once support is merged
 
@@ -200,6 +206,7 @@ func rfunc(in interface{}) func(context.Context, types.CallID, storiface.WorkerR
 }
 
 var returnFunc = map[types.ReturnType]func(context.Context, types.CallID, storiface.WorkerReturn, interface{}, *storiface.CallError) error{
+	types.ReturnDataCid:               rfunc(storiface.WorkerReturn.ReturnDataCid),
 	types.ReturnAddPiece:              rfunc(storiface.WorkerReturn.ReturnAddPiece),
 	types.ReturnSealPreCommit1:        rfunc(storiface.WorkerReturn.ReturnSealPreCommit1),
 	types.ReturnSealPreCommit2:        rfunc(storiface.WorkerReturn.ReturnSealPreCommit2),
@@ -260,6 +267,15 @@ func (l *LocalWorker) asyncCall(ctx context.Context, sector storage.SectorRef, r
 			}
 		}
 
+		if err != nil {
+			hostname, osErr := os.Hostname()
+			if osErr != nil {
+				log.Errorf("get hostname err: %+v", err)
+			}
+
+			err = xerrors.Errorf("%w [Hostname: %s]", err, hostname)
+		}
+
 		if doReturn(ctx, rt, ci, l.ret, res, toCallError(err)) {
 			if err := l.ct.onReturned(ci); err != nil {
 				log.Errorf("tracking call (done): %+v", err)
@@ -310,6 +326,18 @@ func (l *LocalWorker) NewSector(ctx context.Context, sector storage.SectorRef) e
 
 	return sb.NewSector(ctx, sector)
 }
+
+func (l *LocalWorker) DataCid(ctx context.Context, pieceSize abi.UnpaddedPieceSize, pieceData storage.Data) (types.CallID, error) {
+	sb, err := l.executor()
+	if err != nil {
+		return types.UndefCall, err
+	}
+
+	return l.asyncCall(ctx, storage.NoSectorRef, types.ReturnDataCid, func(ctx context.Context, ci types.CallID) (interface{}, error) {
+		return sb.DataCid(ctx, pieceSize, pieceData)
+	})
+}
+
 
 func (l *LocalWorker) AddPiece(ctx context.Context, sector storage.SectorRef, epcs []abi.UnpaddedPieceSize, sz abi.UnpaddedPieceSize, r io.Reader) (types.CallID, error) {
 	sb, err := l.executor()
@@ -497,7 +525,20 @@ func (l *LocalWorker) Remove(ctx context.Context, sector abi.SectorID) error {
 
 func (l *LocalWorker) MoveStorage(ctx context.Context, sector storage.SectorRef, stypes storiface.SectorFileType) (types.CallID, error) {
 	return l.asyncCall(ctx, sector, types.ReturnMoveStorage, func(ctx context.Context, ci types.CallID) (interface{}, error) {
-		return nil, l.storage.MoveStorage(ctx, sector, stypes)
+		if err := l.storage.MoveStorage(ctx, sector, stypes); err != nil {
+			return nil, xerrors.Errorf("move to storage: %w", err)
+		}
+
+		for _, fileType := range storiface.PathTypes {
+			if fileType&stypes == 0 {
+				continue
+			}
+
+			if err := l.storage.RemoveCopies(ctx, sector.ID, fileType); err != nil {
+				return nil, xerrors.Errorf("rm copies (t:%s, s:%v): %w", fileType, sector, err)
+			}
+		}
+		return nil, nil
 	})
 }
 

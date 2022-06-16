@@ -15,7 +15,9 @@
 * [Check](#Check)
   * [CheckProvable](#CheckProvable)
 * [Compute](#Compute)
+  * [ComputeDataCid](#ComputeDataCid)
   * [ComputeProof](#ComputeProof)
+  * [ComputeWindowPoSt](#ComputeWindowPoSt)
 * [Create](#Create)
   * [CreateBackup](#CreateBackup)
 * [Current](#Current)
@@ -67,7 +69,9 @@
   * [RedoSector](#RedoSector)
 * [Return](#Return)
   * [ReturnAddPiece](#ReturnAddPiece)
+  * [ReturnDataCid](#ReturnDataCid)
   * [ReturnFetch](#ReturnFetch)
+  * [ReturnFinalizeReplicaUpdate](#ReturnFinalizeReplicaUpdate)
   * [ReturnFinalizeSector](#ReturnFinalizeSector)
   * [ReturnGenerateSectorKeyFromData](#ReturnGenerateSectorKeyFromData)
   * [ReturnMoveStorage](#ReturnMoveStorage)
@@ -85,6 +89,7 @@
   * [SealingAbort](#SealingAbort)
   * [SealingSchedDiag](#SealingSchedDiag)
 * [Sector](#Sector)
+  * [SectorAbortUpgrade](#SectorAbortUpgrade)
   * [SectorCommitFlush](#SectorCommitFlush)
   * [SectorCommitPending](#SectorCommitPending)
   * [SectorGetExpectedSealDuration](#SectorGetExpectedSealDuration)
@@ -179,8 +184,8 @@ Inputs: `null`
 Response:
 ```json
 {
-  "Version": "string value",
-  "APIVersion": 66304,
+  "Version": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
+  "APIVersion": 66816,
   "BlockDelay": 42
 }
 ```
@@ -250,7 +255,7 @@ Inputs:
 ```json
 [
   [
-    "string value"
+    "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   ]
 ]
 ```
@@ -265,14 +270,14 @@ Perms: read
 Inputs:
 ```json
 [
-  "string value"
+  "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
 ]
 ```
 
 Response:
 ```json
 [
-  "string value"
+  "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
 ]
 ```
 
@@ -311,6 +316,29 @@ Response:
 ## Compute
 
 
+### ComputeDataCid
+There are not yet any comments for this method.
+
+Perms: admin
+
+Inputs:
+```json
+[
+  1024,
+  {}
+]
+```
+
+Response:
+```json
+{
+  "Size": 1032,
+  "PieceCID": {
+    "/": "bafy2bzacea3wsdh6y3a36tb3skempjoxqpuyompjbmfeyf34fi3uy6uue42v4"
+  }
+}
+```
+
 ### ComputeProof
 There are not yet any comments for this method.
 
@@ -345,6 +373,45 @@ Response:
 ]
 ```
 
+### ComputeWindowPoSt
+There are not yet any comments for this method.
+
+Perms: admin
+
+Inputs:
+```json
+[
+  42,
+  []
+]
+```
+
+Response:
+```json
+[
+  {
+    "Deadline": 42,
+    "Partitions": [
+      {
+        "Index": 42,
+        "Skipped": [
+          5,
+          1
+        ]
+      }
+    ],
+    "Proofs": [
+      {
+        "PoStProof": 8,
+        "ProofBytes": "Ynl0ZSBhcnJheQ=="
+      }
+    ],
+    "ChainCommitEpoch": 10101,
+    "ChainCommitRand": "Bw=="
+  }
+]
+```
+
 ## Create
 
 
@@ -360,7 +427,7 @@ Perms: admin
 Inputs:
 ```json
 [
-  "string value"
+  "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
 ]
 ```
 
@@ -471,7 +538,7 @@ Inputs:
   {
     "/": "bafy2bzacea3wsdh6y3a36tb3skempjoxqpuyompjbmfeyf34fi3uy6uue42v4"
   },
-  "string value"
+  "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
 ]
 ```
 
@@ -496,7 +563,7 @@ Response:
       "VerifiedDeal": true,
       "Client": "t01234",
       "Provider": "t01234",
-      "Label": "string value",
+      "Label": "",
       "StartEpoch": 10101,
       "EndEpoch": 10101,
       "StoragePricePerEpoch": "0",
@@ -663,7 +730,7 @@ Response:
       "VerifiedDeal": true,
       "Client": "t01234",
       "Provider": "t01234",
-      "Label": "string value",
+      "Label": "",
       "StartEpoch": 10101,
       "EndEpoch": 10101,
       "StoragePricePerEpoch": "0",
@@ -674,7 +741,7 @@ Response:
       "Type": 2,
       "Data": "Ynl0ZSBhcnJheQ=="
     },
-    "TransferType": "string value",
+    "TransferType": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
     "Root": {
       "/": "bafy2bzacea3wsdh6y3a36tb3skempjoxqpuyompjbmfeyf34fi3uy6uue42v4"
     },
@@ -682,7 +749,7 @@ Response:
       "/": "bafy2bzacea3wsdh6y3a36tb3skempjoxqpuyompjbmfeyf34fi3uy6uue42v4"
     },
     "FastRetrieval": true,
-    "Status": "string value"
+    "Status": ""
   }
 ]
 ```
@@ -725,7 +792,7 @@ Inputs: `null`
 Response:
 ```json
 [
-  "string value"
+  "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
 ]
 ```
 
@@ -737,8 +804,8 @@ Perms: write
 Inputs:
 ```json
 [
-  "string value",
-  "string value"
+  "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
+  "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
 ]
 ```
 
@@ -774,16 +841,16 @@ Perms: write
 Inputs:
 ```json
 [
-  "string value"
+  "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
 ]
 ```
 
 Response:
 ```json
 {
-  "CID": {
-    "/": "bafy2bzacebbpdegvr3i4cosewthysg5xkxpqfn2wfcz6mv2hmoktwbdxkax4s"
-  },
+  "ID": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
+  "UnsignedCid": null,
+  "SignedCid": null,
   "Version": 42,
   "To": "t01234",
   "From": "t01234",
@@ -793,7 +860,30 @@ Response:
   "GasFeeCap": "0",
   "GasPremium": "0",
   "Method": 1,
-  "Params": "Ynl0ZSBhcnJheQ=="
+  "Params": "Ynl0ZSBhcnJheQ==",
+  "Signature": {
+    "Type": 2,
+    "Data": "Ynl0ZSBhcnJheQ=="
+  },
+  "Height": 9,
+  "Confidence": 9,
+  "Receipt": {
+    "ExitCode": 0,
+    "Return": "Ynl0ZSBhcnJheQ==",
+    "GasUsed": 9
+  },
+  "TipSetKey": [],
+  "Meta": {
+    "expireEpoch": 10101,
+    "gasOverEstimation": 12.3,
+    "maxFee": "0",
+    "maxFeeCap": "0"
+  },
+  "WalletName": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
+  "FromUser": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
+  "State": 0,
+  "CreatedAt": "0001-01-01T00:00:00Z",
+  "UpdatedAt": "0001-01-01T00:00:00Z"
 }
 ```
 
@@ -829,7 +919,7 @@ Inputs:
 ]
 ```
 
-Response: `"string value"`
+Response: `"63f292b3-b804-4e59-86d4-f4c2fd3e275a"`
 
 ### MessagerWaitMessage
 messager
@@ -840,7 +930,7 @@ Perms: read
 Inputs:
 ```json
 [
-  "string value",
+  "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
   42
 ]
 ```
@@ -904,6 +994,7 @@ Response:
 ```json
 {
   "UpgradeIgnitionHeight": 10101,
+  "UpgradeOhSnapHeight": 9,
   "ForkLengthThreshold": 10101,
   "BlockDelaySecs": 42,
   "PreCommitChallengeDelay": 10101
@@ -1041,8 +1132,8 @@ Inputs:
 [
   {
     "SectorNumber": 9,
-    "SealPath": "string value",
-    "StorePath": "string value"
+    "SealPath": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
+    "StorePath": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1075,7 +1166,37 @@ Inputs:
   },
   {
     "Code": 0,
-    "Message": "string value"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
+  }
+]
+```
+
+Response: `{}`
+
+### ReturnDataCid
+
+
+Perms: admin
+
+Inputs:
+```json
+[
+  {
+    "Sector": {
+      "Miner": 1000,
+      "Number": 9
+    },
+    "ID": "d5c7e3cb-f35a-4f98-b509-ca8ce5922fab"
+  },
+  {
+    "Size": 1032,
+    "PieceCID": {
+      "/": "bafy2bzacea3wsdh6y3a36tb3skempjoxqpuyompjbmfeyf34fi3uy6uue42v4"
+    }
+  },
+  {
+    "Code": 0,
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1099,7 +1220,31 @@ Inputs:
   },
   {
     "Code": 0,
-    "Message": "string value"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
+  }
+]
+```
+
+Response: `{}`
+
+### ReturnFinalizeReplicaUpdate
+
+
+Perms: admin
+
+Inputs:
+```json
+[
+  {
+    "Sector": {
+      "Miner": 1000,
+      "Number": 9
+    },
+    "ID": "d5c7e3cb-f35a-4f98-b509-ca8ce5922fab"
+  },
+  {
+    "Code": 0,
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1123,7 +1268,7 @@ Inputs:
   },
   {
     "Code": 0,
-    "Message": "string value"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1147,7 +1292,7 @@ Inputs:
   },
   {
     "Code": 0,
-    "Message": "string value"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1171,7 +1316,7 @@ Inputs:
   },
   {
     "Code": 0,
-    "Message": "string value"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1198,7 +1343,7 @@ Inputs:
   ],
   {
     "Code": 0,
-    "Message": "string value"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1223,7 +1368,7 @@ Inputs:
   "Bw==",
   {
     "Code": 0,
-    "Message": "string value"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1248,7 +1393,7 @@ Inputs:
   true,
   {
     "Code": 0,
-    "Message": "string value"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1272,7 +1417,7 @@ Inputs:
   },
   {
     "Code": 0,
-    "Message": "string value"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1304,7 +1449,7 @@ Inputs:
   },
   {
     "Code": 0,
-    "Message": "string value"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1329,7 +1474,7 @@ Inputs:
   "Bw==",
   {
     "Code": 0,
-    "Message": "string value"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1354,7 +1499,7 @@ Inputs:
   "Bw==",
   {
     "Code": 0,
-    "Message": "string value"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1379,7 +1524,7 @@ Inputs:
   "Bw==",
   {
     "Code": 0,
-    "Message": "string value"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1411,7 +1556,7 @@ Inputs:
   },
   {
     "Code": 0,
-    "Message": "string value"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1435,7 +1580,7 @@ Inputs:
   },
   {
     "Code": 0,
-    "Message": "string value"
+    "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1483,6 +1628,21 @@ Response: `{}`
 ## Sector
 
 
+### SectorAbortUpgrade
+SectorAbortUpgrade can be called on sectors that are in the process of being upgraded to abort it
+
+
+Perms: admin
+
+Inputs:
+```json
+[
+  9
+]
+```
+
+Response: `{}`
+
 ### SectorCommitFlush
 SectorCommitFlush immediately sends a Commit message with sectors aggregated for Commit.
 Returns null if message wasn't sent
@@ -1503,8 +1663,8 @@ Response:
     "FailedSectors": {
       "123": "can't acquire read lock"
     },
-    "Msg": "string value",
-    "Error": "string value"
+    "Msg": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
+    "Error": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1589,8 +1749,8 @@ Response:
       123,
       124
     ],
-    "Msg": "string value",
-    "Error": "string value"
+    "Msg": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
+    "Error": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -1701,7 +1861,7 @@ Perms: admin
 
 Inputs: `null`
 
-Response: `"string value"`
+Response: `"63f292b3-b804-4e59-86d4-f4c2fd3e275a"`
 
 ### SectorTerminatePending
 SectorTerminatePending returns a list of pending sector terminations to be sent in the next batch message
@@ -1772,7 +1932,7 @@ Response:
             "VerifiedDeal": true,
             "Client": "t01234",
             "Provider": "t01234",
-            "Label": "string value",
+            "Label": "",
             "StartEpoch": 10101,
             "EndEpoch": 10101,
             "StoragePricePerEpoch": "0",
@@ -1795,17 +1955,21 @@ Response:
       "Value": "Bw==",
       "Epoch": 10101
     },
-    "PreCommitMsg": "string value",
-    "CommitMsg": "string value",
+    "PreCommitMsg": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
+    "CommitMsg": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
     "Retries": 42,
     "ToUpgrade": true,
-    "LastErr": "string value",
+    "CCUpdate": true,
+    "UpdateSealed": null,
+    "UpdateUnsealed": null,
+    "ReplicaUpdateMessage": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
+    "LastErr": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
     "Log": [
       {
-        "Kind": "string value",
+        "Kind": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
         "Timestamp": 42,
-        "Trace": "string value",
-        "Message": "string value"
+        "Trace": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
+        "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
       }
     ],
     "SealProof": 8,
@@ -1923,7 +2087,7 @@ Response:
           "VerifiedDeal": true,
           "Client": "t01234",
           "Provider": "t01234",
-          "Label": "string value",
+          "Label": "",
           "StartEpoch": 10101,
           "EndEpoch": 10101,
           "StoragePricePerEpoch": "0",
@@ -1946,17 +2110,21 @@ Response:
     "Value": "Bw==",
     "Epoch": 10101
   },
-  "PreCommitMsg": "string value",
-  "CommitMsg": "string value",
+  "PreCommitMsg": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
+  "CommitMsg": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
   "Retries": 42,
   "ToUpgrade": true,
-  "LastErr": "string value",
+  "CCUpdate": true,
+  "UpdateSealed": null,
+  "UpdateUnsealed": null,
+  "ReplicaUpdateMessage": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
+  "LastErr": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
   "Log": [
     {
-      "Kind": "string value",
+      "Kind": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
       "Timestamp": 42,
-      "Trace": "string value",
-      "Message": "string value"
+      "Trace": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
+      "Message": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
     }
   ],
   "SealProof": 8,
@@ -2036,7 +2204,7 @@ Perms: admin
 Inputs:
 ```json
 [
-  "string value"
+  "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
 ]
 ```
 
@@ -2053,17 +2221,17 @@ Inputs:
   {
     "ID": "d5c7e3cb-f35a-4f98-b509-ca8ce5922fab",
     "URLs": [
-      "string value"
+      "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
     ],
     "Weight": 42,
     "MaxStorage": 42,
     "CanSeal": true,
     "CanStore": true,
     "Groups": [
-      "string value"
+      "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
     ],
     "AllowTo": [
-      "string value"
+      "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
     ]
   },
   {
@@ -2099,17 +2267,17 @@ Response:
   {
     "ID": "d5c7e3cb-f35a-4f98-b509-ca8ce5922fab",
     "URLs": [
-      "string value"
+      "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
     ],
     "Weight": 42,
     "MaxStorage": 42,
     "CanSeal": true,
     "CanStore": true,
     "Groups": [
-      "string value"
+      "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
     ],
     "AllowTo": [
-      "string value"
+      "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
     ]
   }
 ]
@@ -2178,7 +2346,7 @@ Response:
   {
     "ID": "d5c7e3cb-f35a-4f98-b509-ca8ce5922fab",
     "URLs": [
-      "string value"
+      "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
     ],
     "Weight": 42,
     "CanSeal": true,
@@ -2240,17 +2408,17 @@ Response:
 {
   "ID": "d5c7e3cb-f35a-4f98-b509-ca8ce5922fab",
   "URLs": [
-    "string value"
+    "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   ],
   "Weight": 42,
   "MaxStorage": 42,
   "CanSeal": true,
   "CanStore": true,
   "Groups": [
-    "string value"
+    "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   ],
   "AllowTo": [
-    "string value"
+    "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   ]
 }
 ```
@@ -2326,7 +2494,7 @@ Inputs:
       "Max": 9,
       "Used": 9
     },
-    "Err": "string value"
+    "Err": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
   }
 ]
 ```
@@ -2388,7 +2556,7 @@ Inputs:
 ```json
 [
   5432,
-  "string value"
+  "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
 ]
 ```
 
@@ -2406,7 +2574,7 @@ Perms: admin
 Inputs:
 ```json
 [
-  "string value"
+  "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
 ]
 ```
 
@@ -2438,7 +2606,7 @@ Response:
       "Task": "seal/v0/addpiece",
       "RunWait": 123,
       "Start": "0001-01-01T00:00:00Z",
-      "Hostname": "string value"
+      "Hostname": "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
     }
   ]
 }
@@ -2456,7 +2624,7 @@ Response:
 {
   "d5c7e3cb-f35a-4f98-b509-ca8ce5922fab": {
     "Info": {
-      "Hostname": "string value",
+      "Hostname": "63f292b3-b804-4e59-86d4-f4c2fd3e275a",
       "IgnoreResources": true,
       "Resources": {
         "MemPhysical": 42,
@@ -2465,7 +2633,7 @@ Response:
         "MemSwapUsed": 42,
         "CPUs": 42,
         "GPUs": [
-          "string value"
+          "63f292b3-b804-4e59-86d4-f4c2fd3e275a"
         ],
         "Resources": {
           "seal/v0/addpiece": {

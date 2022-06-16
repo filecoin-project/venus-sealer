@@ -1,5 +1,4 @@
 //go:build cgo
-// +build cgo
 
 package ffiwrapper
 
@@ -18,15 +17,15 @@ import (
 	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
 
+	"github.com/detailyang/go-fallocate"
 	ffi "github.com/filecoin-project/filecoin-ffi"
 	rlepluslazy "github.com/filecoin-project/go-bitfield/rle"
 	commpffi "github.com/filecoin-project/go-commp-utils/ffiwrapper"
 	"github.com/filecoin-project/go-commp-utils/zerocomm"
 	commcid "github.com/filecoin-project/go-fil-commcid"
 	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/go-state-types/proof"
 	"github.com/filecoin-project/specs-storage/storage"
-
-	"github.com/detailyang/go-fallocate"
 
 	"github.com/filecoin-project/venus-sealer/sector-storage/fr32"
 	"github.com/filecoin-project/venus-sealer/sector-storage/partialfile"
@@ -49,6 +48,120 @@ func (sb *Sealer) NewSector(ctx context.Context, sector storage.SectorRef) error
 	// TODO: Allocate the sector here instead of in addpiece
 
 	return nil
+}
+
+func (sb *Sealer) DataCid(ctx context.Context, pieceSize abi.UnpaddedPieceSize, pieceData storage.Data) (abi.PieceInfo, error) {
+	// TODO: allow tuning those:
+	chunk := abi.PaddedPieceSize(4 << 20)
+	parallel := runtime.NumCPU()
+
+	maxSizeSpt := abi.RegisteredSealProof_StackedDrg64GiBV1_1
+
+	throttle := make(chan []byte, parallel)
+	piecePromises := make([]func() (abi.PieceInfo, error), 0)
+
+	buf := make([]byte, chunk.Unpadded())
+	for i := 0; i < parallel; i++ {
+		if abi.UnpaddedPieceSize(i)*chunk.Unpadded() >= pieceSize {
+			break // won't use this many buffers
+		}
+		throttle <- make([]byte, chunk.Unpadded())
+	}
+
+	for {
+		var read int
+		for rbuf := buf; len(rbuf) > 0; {
+			n, err := pieceData.Read(rbuf)
+			if err != nil && err != io.EOF {
+				return abi.PieceInfo{}, xerrors.Errorf("pr read error: %w", err)
+			}
+
+			rbuf = rbuf[n:]
+			read += n
+
+			if err == io.EOF {
+				break
+			}
+		}
+		if read == 0 {
+			break
+		}
+
+		done := make(chan struct {
+			cid.Cid
+			error
+		}, 1)
+		pbuf := <-throttle
+		copy(pbuf, buf[:read])
+
+		go func(read int) {
+			defer func() {
+				throttle <- pbuf
+			}()
+
+			c, err := sb.pieceCid(maxSizeSpt, pbuf[:read])
+			done <- struct {
+				cid.Cid
+				error
+			}{c, err}
+		}(read)
+
+		piecePromises = append(piecePromises, func() (abi.PieceInfo, error) {
+			select {
+			case e := <-done:
+				if e.error != nil {
+					return abi.PieceInfo{}, e.error
+				}
+
+				return abi.PieceInfo{
+					Size:     abi.UnpaddedPieceSize(read).Padded(),
+					PieceCID: e.Cid,
+				}, nil
+			case <-ctx.Done():
+				return abi.PieceInfo{}, ctx.Err()
+			}
+		})
+	}
+
+	if len(piecePromises) == 1 {
+		return piecePromises[0]()
+	}
+
+	var payloadRoundedBytes abi.PaddedPieceSize
+	pieceCids := make([]abi.PieceInfo, len(piecePromises))
+	for i, promise := range piecePromises {
+		pinfo, err := promise()
+		if err != nil {
+			return abi.PieceInfo{}, err
+		}
+
+		pieceCids[i] = pinfo
+		payloadRoundedBytes += pinfo.Size
+	}
+
+	pieceCID, err := ffi.GenerateUnsealedCID(maxSizeSpt, pieceCids)
+	if err != nil {
+		return abi.PieceInfo{}, xerrors.Errorf("generate unsealed CID: %w", err)
+	}
+
+	// validate that the pieceCID was properly formed
+	if _, err := commcid.CIDToPieceCommitmentV1(pieceCID); err != nil {
+		return abi.PieceInfo{}, err
+	}
+
+	if payloadRoundedBytes < pieceSize.Padded() {
+		paddedCid, err := commpffi.ZeroPadPieceCommitment(pieceCID, payloadRoundedBytes.Unpadded(), pieceSize)
+		if err != nil {
+			return abi.PieceInfo{}, xerrors.Errorf("failed to pad data: %w", err)
+		}
+
+		pieceCID = paddedCid
+	}
+
+	return abi.PieceInfo{
+		Size:     pieceSize.Padded(),
+		PieceCID: pieceCID,
+	}, nil
 }
 
 func (sb *Sealer) AddPiece(ctx context.Context, sector storage.SectorRef, existingPieceSizes []abi.UnpaddedPieceSize, pieceSize abi.UnpaddedPieceSize, file storage.Data) (abi.PieceInfo, error) {
@@ -529,7 +642,7 @@ func (sb *Sealer) ReadPiece(ctx context.Context, writer io.Writer, sector storag
 }
 
 func (sb *Sealer) SealPreCommit1(ctx context.Context, sector storage.SectorRef, ticket abi.SealRandomness, pieces []abi.PieceInfo) (out storage.PreCommit1Out, err error) {
-	paths, done, err := sb.sectors.AcquireSector(ctx, sector, storiface.FTNone, storiface.FTUnsealed|storiface.FTSealed|storiface.FTCache, storiface.PathSealing)
+	paths, done, err := sb.sectors.AcquireSector(ctx, sector, storiface.FTUnsealed, storiface.FTSealed|storiface.FTCache, storiface.PathSealing)
 	if err != nil {
 		return nil, xerrors.Errorf("acquiring sector paths: %w", err)
 	}
@@ -710,7 +823,7 @@ func (sb *Sealer) SealCommit2(ctx context.Context, sector storage.SectorRef, pha
 
 func (sb *Sealer) ReplicaUpdate(ctx context.Context, sector storage.SectorRef, pieces []abi.PieceInfo) (storage.ReplicaUpdateOut, error) {
 	empty := storage.ReplicaUpdateOut{}
-	paths, done, err := sb.sectors.AcquireSector(ctx, sector, storiface.FTSealed|storiface.FTUnsealed|storiface.FTCache, storiface.FTUpdate|storiface.FTUpdateCache, storiface.PathSealing)
+	paths, done, err := sb.sectors.AcquireSector(ctx, sector, storiface.FTUnsealed|storiface.FTSealed|storiface.FTCache, storiface.FTUpdate|storiface.FTUpdateCache, storiface.PathSealing)
 	if err != nil {
 		return empty, xerrors.Errorf("failed to acquire sector paths: %w", err)
 	}
@@ -755,7 +868,6 @@ func (sb *Sealer) ReplicaUpdate(ctx context.Context, sector storage.SectorRef, p
 	if err != nil {
 		return empty, xerrors.Errorf("failed to update replica %d with new deal data: %w", sector.ID.Number, err)
 	}
-
 	return storage.ReplicaUpdateOut{NewSealed: sealed, NewUnsealed: unsealed}, nil
 }
 
@@ -875,6 +987,7 @@ func (sb *Sealer) freeUnsealed(ctx context.Context, sector storage.SectorRef, ke
 		}
 
 	}
+
 	return nil
 }
 
@@ -887,6 +1000,7 @@ func (sb *Sealer) FinalizeSector(ctx context.Context, sector storage.SectorRef, 
 	if err := sb.freeUnsealed(ctx, sector, keepUnsealed); err != nil {
 		return err
 	}
+
 	paths, done, err := sb.sectors.AcquireSector(ctx, sector, storiface.FTCache, 0, storiface.PathStorage)
 	if err != nil {
 		return xerrors.Errorf("acquiring sector cache path: %w", err)
@@ -1017,4 +1131,24 @@ func GenerateUnsealedCID(proofType abi.RegisteredSealProof, pieces []abi.PieceIn
 	}
 
 	return ffi.GenerateUnsealedCID(proofType, allPieces)
+}
+
+func (sb *Sealer) GenerateWinningPoStWithVanilla(ctx context.Context, proofType abi.RegisteredPoStProof, minerID abi.ActorID, randomness abi.PoStRandomness, vanillas [][]byte) ([]proof.PoStProof, error) {
+	return ffi.GenerateWinningPoStWithVanilla(proofType, minerID, randomness, vanillas)
+}
+
+func (sb *Sealer) GenerateWindowPoStWithVanilla(ctx context.Context, proofType abi.RegisteredPoStProof, minerID abi.ActorID, randomness abi.PoStRandomness, proofs [][]byte, partitionIdx int) (proof.PoStProof, error) {
+	pp, err := ffi.GenerateSinglePartitionWindowPoStWithVanilla(proofType, minerID, randomness, proofs, uint(partitionIdx))
+	if err != nil {
+		return proof.PoStProof{}, err
+	}
+	if pp == nil {
+		// should be impossible, but just in case do not panic
+		return proof.PoStProof{}, xerrors.New("postproof was nil")
+	}
+
+	return proof.PoStProof{
+		PoStProof:  pp.PoStProof,
+		ProofBytes: pp.ProofBytes,
+	}, nil
 }
