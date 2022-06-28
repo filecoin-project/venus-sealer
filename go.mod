@@ -36,8 +36,8 @@ require (
 	github.com/filecoin-project/specs-actors/v7 v7.0.1
 	github.com/filecoin-project/specs-actors/v8 v8.0.1
 	github.com/filecoin-project/specs-storage v0.4.1
-	github.com/filecoin-project/venus v1.6.0-rc2
-	github.com/filecoin-project/venus-market/v2 v2.2.0-rc2
+	github.com/filecoin-project/venus v1.6.0
+	github.com/filecoin-project/venus-market/v2 v2.2.0
 	github.com/gbrlsnchs/jwt/v3 v3.0.1
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.3.0
