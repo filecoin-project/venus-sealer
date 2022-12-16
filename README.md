@@ -1,3 +1,7 @@
+# ⚠️WARNING⚠️
+
+`venus-sealer` has been [deprecated](https://filecoinproject.slack.com/archives/C0283DTH1NK/p1656295820397749) since `network version 16` and is no longer maintained. For Venus users, please use [venus-cluster](https://github.com/ipfs-force-community/venus-cluster) (`Damocles`) instead for growing and maintaining your storage power. Please feel free to reach out to us on Slack [#fil-venus](https://filecoinproject.slack.com/archives/CEHHJNJS3) if you have any questions!
+
 # Venus Sealer
 
 This project is a mining system supporting venus.
